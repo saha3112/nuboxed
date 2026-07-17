@@ -1,0 +1,286 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Page Not Found - 404</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+    <link rel="stylesheet" href="{% static 'shared/icon-fallback.css' %}">
+    <style>
+        :root {
+            --primary: #e04420;
+            --primary-dark: #b9381c;
+            --bg: #f1f5f9;
+            --surface: #ffffff;
+            --surface-soft: #f8fafc;
+            --ink: #1c2434;
+            --muted: #64748b;
+            --line: #e2e8f0;
+            --danger: #ef4444;
+        }
+
+        body.dark-mode {
+            --bg: #0f172a;
+            --surface: #111827;
+            --surface-soft: #172033;
+            --ink: #e5edf9;
+            --muted: #94a3b8;
+            --line: #243041;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--ink);
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at top right, rgba(224, 68, 32, 0.08), transparent 18rem),
+                radial-gradient(circle at bottom left, rgba(224, 68, 32, 0.05), transparent 20rem),
+                var(--bg);
+        }
+
+        .error-container {
+            width: 100%;
+            max-width: 560px;
+            text-align: center;
+            animation: slideUp 0.6s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .error-icon {
+            font-size: 120px;
+            color: var(--danger);
+            margin-bottom: 24px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .error-code {
+            font-size: 72px;
+            font-weight: 800;
+            color: var(--primary);
+            line-height: 1;
+            margin-bottom: 16px;
+            letter-spacing: -2px;
+        }
+
+        .error-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--ink);
+            margin-bottom: 12px;
+        }
+
+        .error-message {
+            font-size: 15px;
+            color: var(--muted);
+            line-height: 1.6;
+            margin-bottom: 32px;
+        }
+
+        .error-details {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 20px;
+            margin-bottom: 32px;
+            text-align: left;
+            font-size: 12px;
+            color: var(--muted);
+            font-family: 'Courier New', monospace;
+            overflow-x: auto;
+            box-shadow: 0 1px 3px rgba(16, 24, 40, 0.06);
+        }
+
+        .error-details code {
+            color: var(--ink);
+            word-break: break-all;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.2s ease;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(224, 68, 32, 0.2);
+        }
+
+        .btn-ghost {
+            background: var(--surface);
+            color: var(--ink);
+            border: 1px solid var(--line);
+            box-shadow: 0 1px 3px rgba(16, 24, 40, 0.06);
+        }
+
+        .btn-ghost:hover {
+            background: var(--surface-soft);
+            border-color: var(--primary);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .decoration {
+            position: fixed;
+            pointer-events: none;
+            opacity: 0.03;
+        }
+
+        .decoration-1 { top: -50px; right: -50px; width: 300px; height: 300px; background: radial-gradient(circle, var(--primary), transparent); }
+        .decoration-2 { bottom: -100px; left: -100px; width: 400px; height: 400px; background: radial-gradient(circle, var(--primary), transparent); }
+
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.2s ease;
+            color: var(--muted);
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        body.dark-mode .theme-toggle {
+            background: var(--surface-soft);
+        }
+
+        .dark-mode {
+            --bg: #0f172a;
+            --surface: #111827;
+            --surface-soft: #172033;
+            --ink: #e5edf9;
+            --muted: #94a3b8;
+            --line: #243041;
+        }
+    </style>
+</head>
+<body>
+    <div class="decoration decoration-1"></div>
+    <div class="decoration decoration-2"></div>
+
+    <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">
+        <i class="ph ph-moon" id="theme-icon"></i>
+    </button>
+
+    <div class="error-container">
+        <div class="error-icon">
+            <i class="ph-fill ph-warning-circle"></i>
+        </div>
+
+        <div class="error-code">404</div>
+
+        <h1 class="error-title">Page Not Found</h1>
+
+        <p class="error-message">
+            The page you're looking for doesn't exist or has been moved. Please check the URL and try again.
+        </p>
+
+        <div class="error-details">
+            <code>{{ request.path }}</code>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn btn-primary" onclick="window.history.back()">
+                <i class="ph ph-arrow-left"></i>
+                Go Back
+            </button>
+            <a href="/" class="btn btn-ghost">
+                <i class="ph ph-house"></i>
+                Go Home
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Theme toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const htmlElement = document.documentElement;
+
+        // Check for saved theme preference or default to light
+        const currentTheme = localStorage.getItem('theme') || 'light';
+        if (currentTheme === 'dark') {
+            htmlElement.classList.add('dark-mode');
+            document.body.classList.add('dark-mode');
+            themeIcon.className = 'ph ph-sun';
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const isDark = htmlElement.classList.toggle('dark-mode');
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            themeIcon.className = isDark ? 'ph ph-sun' : 'ph ph-moon';
+        });
+    </script>
+</body>
+</html>

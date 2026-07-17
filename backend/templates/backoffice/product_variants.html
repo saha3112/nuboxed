@@ -1,0 +1,377 @@
+{% extends "backoffice/base.html" %}
+
+{% block content %}
+<div style="padding: 24px;">
+    <!-- Page Header -->
+    <div style="margin-bottom: 32px;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+            <h1 style="font-size: 28px; font-weight: 700; color: var(--text-main); margin: 0;">Product Variants</h1>
+        </div>
+        <p style="color: var(--muted); font-size: 14px; line-height: 1.6;">
+            View all product variants, manage stock, and delete/restore variants as needed.
+        </p>
+    </div>
+
+    <!-- Toolbar -->
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap;">
+        <a href="{% url 'backoffice:create-product-variant' %}" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 24px; border-radius: 8px; font-weight: 600; text-decoration: none; background: var(--primary); color: #fff;">
+            <i class="ph ph-plus"></i> Create Variant
+        </a>
+
+        <button id="delete-btn" type="button" style="display: none; background: transparent; color: #ef4444; border: 1px solid #ef4444; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s ease;">
+            🗑️ Delete Selected
+        </button>
+
+        <button id="restore-btn" type="button" style="display: none; background: transparent; color: #22c55e; border: 1px solid #22c55e; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s ease;">
+            ✓ Restore Selected
+        </button>
+
+        <button id="permanent-delete-btn" type="button" style="display: none; background: transparent; color: #7c2d12; border: 1px solid #7c2d12; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s ease;">
+            🔥 Permanently Delete
+        </button>
+
+        <select id="status-filter" style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-main); font-size: 14px; cursor: pointer;">
+            <option value="active">Active Only</option>
+            <option value="deleted">Deleted Only</option>
+            <option value="all">All Variants</option>
+        </select>
+    </div>
+
+    <!-- Variants Table -->
+    <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead>
+                <tr style="background: var(--surface-soft); border-bottom: 1px solid var(--border);">
+                    <th style="padding: 12px 16px; text-align: center; width: 40px;">
+                        <input type="checkbox" id="select-all" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary);">
+                    </th>
+                    <th style="padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--muted);">Product</th>
+                    <th style="padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--muted);">Variant Name</th>
+                    <th style="padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--muted);">SKU</th>
+                    <th style="padding: 12px 16px; text-align: center; font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--muted);">Price</th>
+                    <th style="padding: 12px 16px; text-align: center; font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--muted);">Status</th>
+                </tr>
+            </thead>
+            <tbody id="variants-body">
+                {% for variant_data in variants %}
+                    <tr class="variant-row" data-variant-id="{{ variant_data.variant.id }}" data-deleted="{% if variant_data.variant.deleted_at %}true{% else %}false{% endif %}" style="border-bottom: 1px solid var(--border); {% if variant_data.variant.deleted_at %}opacity: 0.6; background: rgba(239, 68, 68, 0.02);{% endif %}">
+                        <td style="padding: 12px 16px; text-align: center;">
+                            <input type="checkbox" class="variant-checkbox" value="{{ variant_data.variant.id }}" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary);">
+                        </td>
+                        <td style="padding: 12px 16px; color: var(--text-main); font-size: 14px; font-weight: 500;">
+                            {{ variant_data.variant.product.name }}
+                        </td>
+                        <td style="padding: 12px 16px; color: var(--text-main); font-size: 14px;">
+                            {{ variant_data.variant.name }}
+                        </td>
+                        <td style="padding: 12px 16px; color: var(--text-main); font-size: 13px;">
+                            <code style="background: var(--surface-soft); padding: 4px 8px; border-radius: 4px; font-family: monospace;">{{ variant_data.variant.sku }}</code>
+                        </td>
+                        <td style="padding: 12px 16px; text-align: center; color: var(--text-main); font-size: 14px; font-weight: 600;">
+                            ₹{{ variant_data.variant.price }}
+                        </td>
+                        <td style="padding: 12px 16px; text-align: center;">
+                            {% if variant_data.variant.deleted_at %}
+                                <span style="display: inline-block; background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;">DELETED</span>
+                            {% else %}
+                                <span style="display: inline-block; background: rgba(34, 197, 94, 0.1); color: #22c55e; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;">ACTIVE</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="6" style="padding: 40px 16px; text-align: center; color: var(--muted);">
+                            No variants found. <a href="{% url 'backoffice:create-product-variant' %}" style="color: var(--primary); text-decoration: none; font-weight: 600;">Create one</a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+    #delete-btn:hover, #restore-btn:hover {
+        opacity: 0.8;
+    }
+
+    body.dark-mode #delete-btn {
+        border-color: #ef4444;
+        color: #fca5a5;
+    }
+
+    body.dark-mode #restore-btn {
+        border-color: #22c55e;
+        color: #86efac;
+    }
+
+    #permanent-delete-btn:hover {
+        opacity: 0.8;
+    }
+
+    body.dark-mode #permanent-delete-btn {
+        border-color: #7c2d12;
+        color: #fdba74;
+    }
+
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    @keyframes slideIn {
+        from { transform: translateX(420px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(420px); opacity: 0; }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const selectAllCheckbox = document.getElementById('select-all');
+    const variantCheckboxes = document.querySelectorAll('.variant-checkbox');
+    const deleteBtn = document.getElementById('delete-btn');
+    const restoreBtn = document.getElementById('restore-btn');
+    const permanentDeleteBtn = document.getElementById('permanent-delete-btn');
+    const statusFilter = document.getElementById('status-filter');
+    const variantRows = document.querySelectorAll('.variant-row');
+
+    let selectedVariants = new Set();
+
+    function confirmVariantAction(title, message, confirmText, tone = 'danger') {
+        if (window.appConfirm) {
+            return window.appConfirm({ title, message, confirmText, tone });
+        }
+        return Promise.resolve(false);
+    }
+
+    // Handle select all
+    selectAllCheckbox.addEventListener('change', function() {
+        variantCheckboxes.forEach(checkbox => {
+            const row = checkbox.closest('.variant-row');
+            if (row.style.display !== 'none') {
+                checkbox.checked = this.checked;
+                if (this.checked) {
+                    selectedVariants.add(checkbox.value);
+                } else {
+                    selectedVariants.delete(checkbox.value);
+                }
+            }
+        });
+        updateActionButtons();
+    });
+
+    // Handle individual checkboxes
+    variantCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            if (this.checked) {
+                selectedVariants.add(this.value);
+            } else {
+                selectedVariants.delete(this.value);
+            }
+            updateActionButtons();
+        });
+    });
+
+    // Handle status filter
+    statusFilter.addEventListener('change', function() {
+        const filterValue = this.value;
+        selectAllCheckbox.checked = false;
+        selectedVariants.clear();
+
+        variantRows.forEach(row => {
+            const isDeleted = row.dataset.deleted === 'true';
+            let show = true;
+
+            if (filterValue === 'active') show = !isDeleted;
+            else if (filterValue === 'deleted') show = isDeleted;
+
+            row.style.display = show ? '' : 'none';
+        });
+
+        updateActionButtons();
+    });
+
+    // Delete variants
+    deleteBtn.addEventListener('click', async function() {
+        if (selectedVariants.size === 0) return;
+
+        const message = selectedVariants.size === 1 ? 'Delete this variant?' : `Delete ${selectedVariants.size} variants?`;
+        const confirmed = await confirmVariantAction('Delete variants', message, 'Delete');
+        if (!confirmed) return;
+
+        deleteBtn.disabled = true;
+        deleteBtn.innerHTML = '<i class="ph ph-spinner" style="animation: spin 1s linear infinite;"></i> Deleting...';
+
+        Array.from(selectedVariants).forEach(variantId => {
+            fetch(`/admin/modules/variants/${variantId}/delete/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const row = document.querySelector(`[data-variant-id="${variantId}"]`);
+                    if (row) {
+                        row.dataset.deleted = 'true';
+                        row.style.opacity = '0.6';
+                        row.style.background = 'rgba(239, 68, 68, 0.02)';
+                        row.querySelector('td:nth-child(6)').innerHTML =
+                            '<span style="display: inline-block; background: rgba(239, 68, 68, 0.1); color: #ef4444; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;">DELETED</span>';
+                    }
+                }
+            });
+        });
+
+        setTimeout(() => {
+            selectedVariants.clear();
+            variantCheckboxes.forEach(cb => cb.checked = false);
+            deleteBtn.disabled = false;
+            deleteBtn.innerHTML = '🗑️ Delete Selected';
+            updateActionButtons();
+            showToast('✓ Variants deleted', 'success');
+        }, 500);
+    });
+
+    // Restore variants
+    restoreBtn.addEventListener('click', async function() {
+        if (selectedVariants.size === 0) return;
+
+        const message = selectedVariants.size === 1 ? 'Restore this variant?' : `Restore ${selectedVariants.size} variants?`;
+        const confirmed = await confirmVariantAction('Restore variants', message, 'Restore', 'restore');
+        if (!confirmed) return;
+
+        restoreBtn.disabled = true;
+        restoreBtn.innerHTML = '<i class="ph ph-spinner" style="animation: spin 1s linear infinite;"></i> Restoring...';
+
+        Array.from(selectedVariants).forEach(variantId => {
+            fetch(`/admin/modules/variants/${variantId}/restore/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const row = document.querySelector(`[data-variant-id="${variantId}"]`);
+                    if (row) {
+                        row.dataset.deleted = 'false';
+                        row.style.opacity = '1';
+                        row.style.background = '';
+                        row.querySelector('td:nth-child(6)').innerHTML =
+                            '<span style="display: inline-block; background: rgba(34, 197, 94, 0.1); color: #22c55e; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600;">ACTIVE</span>';
+                    }
+                }
+            });
+        });
+
+        setTimeout(() => {
+            selectedVariants.clear();
+            variantCheckboxes.forEach(cb => cb.checked = false);
+            restoreBtn.disabled = false;
+            restoreBtn.innerHTML = '✓ Restore Selected';
+            updateActionButtons();
+            showToast('✓ Variants restored', 'success');
+        }, 500);
+    });
+
+    // Permanent delete variants
+    permanentDeleteBtn.addEventListener('click', async function() {
+        if (selectedVariants.size === 0) return;
+
+        const message = selectedVariants.size === 1 ? 'Permanently delete this variant? This cannot be undone.' : `Permanently delete ${selectedVariants.size} variants? This cannot be undone.`;
+        const confirmed = await confirmVariantAction('Delete variants permanently', message, 'Delete Permanently');
+        if (!confirmed) return;
+
+        permanentDeleteBtn.disabled = true;
+        permanentDeleteBtn.innerHTML = '<i class="ph ph-spinner" style="animation: spin 1s linear infinite;"></i> Deleting...';
+
+        Array.from(selectedVariants).forEach(variantId => {
+            fetch(`/admin/modules/variants/${variantId}/delete-permanent/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') }
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    const row = document.querySelector(`[data-variant-id="${variantId}"]`);
+                    if (row) {
+                        row.style.opacity = '0.3';
+                        row.style.pointerEvents = 'none';
+                    }
+                }
+            });
+        });
+
+        setTimeout(() => {
+            selectedVariants.clear();
+            variantCheckboxes.forEach(cb => cb.checked = false);
+            permanentDeleteBtn.disabled = false;
+            permanentDeleteBtn.innerHTML = '🔥 Permanently Delete';
+            updateActionButtons();
+            showToast('✓ Variants permanently deleted', 'success');
+            location.reload();
+        }, 500);
+    });
+
+    function updateActionButtons() {
+        const hasActive = Array.from(selectedVariants).some(id => {
+            const row = document.querySelector(`[data-variant-id="${id}"]`);
+            return row && row.dataset.deleted === 'false';
+        });
+
+        const hasDeleted = Array.from(selectedVariants).some(id => {
+            const row = document.querySelector(`[data-variant-id="${id}"]`);
+            return row && row.dataset.deleted === 'true';
+        });
+
+        deleteBtn.style.display = hasActive ? 'inline-flex' : 'none';
+        restoreBtn.style.display = hasDeleted ? 'inline-flex' : 'none';
+        permanentDeleteBtn.style.display = hasDeleted ? 'inline-flex' : 'none';
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie) {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${type === 'success' ? '#f0fdf4' : '#fef2f2'};
+            border-left: 4px solid ${type === 'success' ? '#22c55e' : '#ef4444'};
+            color: ${type === 'success' ? '#065f46' : '#991b1b'};
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            z-index: 9999;
+            font-weight: 500;
+            animation: slideIn 0.3s ease-out;
+        `;
+        toast.innerHTML = message;
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.animation = 'slideOut 0.3s ease-out forwards';
+            setTimeout(() => toast.remove(), 300);
+        }, 2500);
+    }
+});
+</script>
+{% endblock %}

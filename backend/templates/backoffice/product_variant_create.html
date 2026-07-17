@@ -1,0 +1,374 @@
+{% extends "backoffice/base.html" %}
+
+{% block content %}
+<div style="padding: 24px;">
+    <!-- Page Header -->
+    <div style="margin-bottom: 32px;">
+        <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px;">
+            <a href="{% url 'backoffice:product-variants' %}" style="color: var(--primary); text-decoration: none; font-weight: 500; display: flex; align-items: center; gap: 6px;">
+                <i class="ph ph-arrow-left"></i> Back to Variants
+            </a>
+        </div>
+        <h1 style="font-size: 28px; font-weight: 700; color: var(--text-main); margin-bottom: 8px;">Create Product Variants</h1>
+        <p style="color: var(--muted); font-size: 14px; line-height: 1.6;">
+            Select multiple products and enter variant name to create variants for all selected products.
+        </p>
+    </div>
+
+    <!-- Selected Products Display -->
+    <div id="selected-products-container" style="display: none; margin-bottom: 32px;">
+        <h2 style="font-size: 18px; font-weight: 700; color: var(--text-main); margin-bottom: 16px;">Selected Products</h2>
+        <div id="selected-products-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px;">
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div style="display: grid; grid-template-columns: 1fr 320px; gap: 24px; align-items: start;">
+
+        <!-- Left Column -->
+        <div>
+            <!-- Product Selection Card -->
+            <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                    <div style="width: 32px; height: 32px; background: var(--primary); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 14px;">1</div>
+                    <h3 style="font-size: 16px; font-weight: 700; color: var(--text-main); margin: 0;">Select Products</h3>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 8px; max-height: 350px; overflow-y: auto;">
+                    {% for product in products %}
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 10px; border-radius: 6px; background: var(--surface-soft); transition: all 0.2s ease; hover: background-color: var(--border);">
+                        <input type="checkbox" class="product-checkbox" value="{{ product.id }}" data-name="{{ product.name }}" style="width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary);">
+                        <span style="flex: 1; color: var(--text-main); font-weight: 500;">{{ product.name }}</span>
+                        <span style="color: var(--muted); font-size: 12px;">₹{{ product.price }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <small style="display: block; color: var(--muted); margin-top: 12px;">Select one or more products</small>
+            </div>
+
+            <!-- Variant Name Input -->
+            <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                    <div style="width: 32px; height: 32px; background: var(--primary); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 700; font-size: 14px;">2</div>
+                    <h3 style="font-size: 16px; font-weight: 700; color: var(--text-main); margin: 0;">Variant Name</h3>
+                </div>
+
+                <input type="text" id="variant-name" placeholder="e.g., Red, Blue, Large, Gold, etc." style="width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-soft); color: var(--text-main); font-size: 14px;" />
+                <small style="display: block; color: var(--muted); margin-top: 8px;">This variant name will be applied to all selected products</small>
+            </div>
+
+            <!-- Info Message -->
+            <div style="background: rgba(224, 68, 32, 0.05); border: 1px solid rgba(224, 68, 32, 0.1); border-radius: 12px; padding: 16px; margin-bottom: 24px;">
+                <div style="display: flex; gap: 12px;">
+                    <div style="color: var(--primary); font-size: 18px; flex-shrink: 0;">ℹ️</div>
+                    <div>
+                        <p style="color: var(--text-main); font-weight: 600; margin: 0 0 4px 0;">How it works</p>
+                        <p style="color: var(--muted); margin: 0; font-size: 13px;">Select products, enter a variant name, and click Create. Variants will be created for each selected product with auto-generated SKUs.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Sidebar -->
+        <div>
+            <div style="background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; position: sticky; top: 24px;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border);">
+                    <div style="width: 28px; height: 28px; background: var(--surface-soft); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--primary); font-size: 14px; font-weight: 700;">
+                        <i class="ph ph-info"></i>
+                    </div>
+                    <h4 style="font-size: 14px; font-weight: 700; color: var(--text-main); margin: 0;">Summary</h4>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 12px; font-size: 13px; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: var(--muted);">Products:</span>
+                        <strong id="summary-products" style="color: var(--text-main);">0 selected</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: var(--muted);">Variant Name:</span>
+                        <strong id="summary-name" style="color: var(--text-main);">Not entered</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="color: var(--muted);">Total Variants:</span>
+                        <strong id="summary-total" style="color: var(--text-main);">0</strong>
+                    </div>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 8px;">
+                    <button type="button" id="create-variants-btn" disabled style="width: 100%; padding: 10px 14px; background: var(--primary); color: #fff; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; opacity: 0.5; transition: all 0.2s ease;">
+                        <i class="ph ph-plus"></i> Create Variants
+                    </button>
+                    <a href="{% url 'backoffice:product-variants' %}" style="text-align: center; padding: 10px 14px; background: transparent; color: var(--text-main); border: 1px solid var(--border); border-radius: 8px; font-weight: 600; text-decoration: none; transition: all 0.2s ease;">
+                        Cancel
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    #create-variants-btn {
+        background: var(--primary) !important;
+        color: #fff !important;
+    }
+
+    #create-variants-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    #create-variants-btn:not(:disabled) {
+        background: var(--primary) !important;
+        color: #fff !important;
+    }
+
+    #create-variants-btn:not(:disabled):hover {
+        background: #b9381c !important;
+        box-shadow: 0 8px 16px rgba(224, 68, 32, 0.2) !important;
+    }
+
+    body.dark-mode #create-variants-btn:not(:disabled) {
+        background: #e04420 !important;
+        color: #fff !important;
+    }
+
+    body.dark-mode #create-variants-btn:not(:disabled):hover {
+        background: #5a70ff !important;
+        box-shadow: 0 8px 16px rgba(224, 68, 32, 0.3) !important;
+    }
+
+    #variant-name:focus {
+        outline: none;
+        border-color: var(--primary) !important;
+        background: var(--surface) !important;
+        box-shadow: 0 0 0 3px rgba(224, 68, 32, 0.1);
+    }
+
+    body.dark-mode #variant-name {
+        background: #172033 !important;
+        border-color: #243041 !important;
+        color: #e5edf9 !important;
+    }
+
+    body.dark-mode #variant-name:focus {
+        background: #0f172a !important;
+        border-color: #e04420 !important;
+    }
+
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    @keyframes slideIn {
+        from { transform: translateX(420px); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(420px); opacity: 0; }
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const productCheckboxes = document.querySelectorAll('.product-checkbox');
+    const variantNameInput = document.getElementById('variant-name');
+    const createBtn = document.getElementById('create-variants-btn');
+    const summaryProducts = document.getElementById('summary-products');
+    const summaryName = document.getElementById('summary-name');
+    const summaryTotal = document.getElementById('summary-total');
+    const selectedProductsContainer = document.getElementById('selected-products-container');
+    const selectedProductsGrid = document.getElementById('selected-products-grid');
+
+    const productsData = new Map();
+    let selectedProducts = new Set();
+
+    // Load products data
+    {% for product in products %}
+        productsData.set('{{ product.id }}', {
+            id: '{{ product.id }}',
+            name: '{{ product.name }}',
+            sku: '{{ product.sku }}',
+            price: {{ product.price }},
+        });
+    {% endfor %}
+
+    // Handle product selection
+    productCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', handleSelectionChange);
+    });
+
+    function handleSelectionChange() {
+        selectedProducts.clear();
+        productCheckboxes.forEach(cb => {
+            if (cb.checked) {
+                selectedProducts.add(cb.value);
+            }
+        });
+        updateSummary();
+        updateSelectedProductsDisplay();
+    }
+
+    // Handle variant name input
+    variantNameInput.addEventListener('input', updateSummary);
+
+    function updateSummary() {
+        const variantName = variantNameInput.value.trim();
+        const totalVariants = selectedProducts.size * (variantName ? 1 : 0);
+
+        summaryProducts.textContent = `${selectedProducts.size} selected`;
+        summaryName.textContent = variantName || 'Not entered';
+        summaryTotal.textContent = totalVariants;
+
+        // Enable button only if products selected and name entered
+        createBtn.disabled = selectedProducts.size === 0 || !variantName;
+        if (!createBtn.disabled) {
+            createBtn.style.opacity = '1';
+            createBtn.style.cursor = 'pointer';
+        } else {
+            createBtn.style.opacity = '0.5';
+            createBtn.style.cursor = 'not-allowed';
+        }
+    }
+
+    function updateSelectedProductsDisplay() {
+        if (selectedProducts.size === 0) {
+            selectedProductsContainer.style.display = 'none';
+            return;
+        }
+
+        selectedProductsContainer.style.display = 'block';
+        selectedProductsGrid.innerHTML = '';
+
+        selectedProducts.forEach(productId => {
+            const product = productsData.get(productId);
+            if (product) {
+                const card = document.createElement('div');
+                card.style.cssText = `
+                    background: var(--surface);
+                    border: 2px solid var(--primary);
+                    border-radius: 12px;
+                    padding: 16px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                    position: relative;
+                `;
+                card.innerHTML = `
+                    <div>
+                        <h4 style="color: var(--text-main); margin: 0 0 4px 0; font-weight: 600; font-size: 14px;">${product.name}</h4>
+                        <p style="color: var(--muted); margin: 0; font-size: 12px;">SKU: ${product.sku}</p>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="color: var(--text-main); font-weight: 600; font-size: 14px;">₹${product.price}</span>
+                        <button type="button" class="remove-product-btn" data-product-id="${productId}" style="background: transparent; color: #ef4444; border: none; cursor: pointer; font-size: 18px; padding: 0; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center;">
+                            ✕
+                        </button>
+                    </div>
+                `;
+                selectedProductsGrid.appendChild(card);
+            }
+        });
+
+        // Add event listeners to remove buttons
+        document.querySelectorAll('.remove-product-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const productId = this.dataset.productId;
+                const checkbox = document.querySelector(`input[type="checkbox"][value="${productId}"]`);
+                if (checkbox) {
+                    checkbox.checked = false;
+                    handleSelectionChange();
+                }
+            });
+        });
+    }
+
+    // Handle create variants
+    createBtn.addEventListener('click', async function() {
+        const variantName = variantNameInput.value.trim();
+
+        if (selectedProducts.size === 0 || !variantName) {
+            showToast('✕ Please select products and enter variant name', 'error');
+            return;
+        }
+
+        createBtn.disabled = true;
+        createBtn.innerHTML = '<i class="ph ph-spinner" style="animation: spin 1s linear infinite;"></i> Creating...';
+
+        try {
+            const response = await fetch(window.location.href, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken'),
+                },
+                body: JSON.stringify({
+                    product_ids: Array.from(selectedProducts),
+                    variant_name: variantName,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showToast('✓ ' + data.message, 'success');
+                setTimeout(() => {
+                    window.location.href = '{% url "backoffice:product-variants" %}';
+                }, 1500);
+            } else {
+                showToast('✕ ' + data.message, 'error');
+                createBtn.disabled = false;
+                createBtn.innerHTML = '<i class="ph ph-plus"></i> Create Variants';
+            }
+        } catch (error) {
+            showToast('✕ Error creating variants', 'error');
+            createBtn.disabled = false;
+            createBtn.innerHTML = '<i class="ph ph-plus"></i> Create Variants';
+        }
+    });
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function showToast(message, type = 'success') {
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${type === 'success' ? '#f0fdf4' : '#fef2f2'};
+            border-left: 4px solid ${type === 'success' ? '#22c55e' : '#ef4444'};
+            color: ${type === 'success' ? '#065f46' : '#991b1b'};
+            padding: 16px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            z-index: 9999;
+            font-weight: 500;
+            animation: slideIn 0.3s ease-out;
+        `;
+        toast.innerHTML = message;
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.animation = 'slideOut 0.3s ease-out forwards';
+            setTimeout(() => toast.remove(), 300);
+        }, 2500);
+    }
+});
+</script>
+{% endblock %}

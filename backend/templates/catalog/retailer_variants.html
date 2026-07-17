@@ -1,0 +1,485 @@
+{% extends "retailer/base.html" %}
+
+{% block content %}
+<div class="ra-card ra-hero" style="margin-bottom:24px;">
+    <div class="ra-card-body ra-hero-body">
+        <div>
+            <div class="ra-hero-title">Product Variants Workspace</div>
+            <div class="ra-hero-copy">Create, edit, merge, and auto-generate variant combinations (Color, Size, etc.) across your stores.</div>
+        </div>
+        <div class="ra-hero-actions" style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button onclick="openManualVariantModal()" class="ra-btn ra-btn-outline"><i class="ph ph-plus"></i> Add Manual Variant</button>
+            <button onclick="openGeneratorModal()" class="ra-btn ra-btn-outline"><i class="ph ph-sparkle"></i> Bulk Generate Combinations</button>
+            <button onclick="openMergerModal()" class="ra-btn ra-btn-primary"><i class="ph ph-git-merge"></i> Merge Separate Product</button>
+        </div>
+    </div>
+</div>
+
+<!-- Search & Filtering -->
+<div class="ra-card" style="margin-bottom: 24px;">
+    <div class="ra-card-body" style="padding: 16px;">
+        <div style="position: relative;">
+            <i class="ph ph-magnifying-glass" style="position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 18px;"></i>
+            <input type="text" id="variant-search" oninput="filterVariants()" placeholder="Search variants by name, SKU, or parent product..." class="ra-input" style="padding-left: 42px; margin: 0; width: 100%;">
+        </div>
+    </div>
+</div>
+
+<!-- Variants List Card -->
+<div class="ra-card">
+    <div class="ra-card-header">
+        <span class="ra-card-title">All Catalog Variants ({{ variants|length }})</span>
+    </div>
+    <div class="ra-table-shell">
+        <table class="ra-table">
+            <thead>
+                <tr>
+                    <th>Parent Product</th>
+                    <th>Variant Name</th>
+                    <th>SKU</th>
+                    <th>Price</th>
+                    <th>Discount Price</th>
+                    <th>Status</th>
+                    <th class="actions">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="variants-table-body">
+                {% for variant in variants %}
+                <tr class="variant-row" data-product="{{ variant.product.name|lower }}" data-name="{{ variant.name|lower }}" data-sku="{{ variant.sku|lower }}">
+                    <td>
+                        <div style="font-weight: 600; color: var(--text-main);">{{ variant.product.name }}</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Store: {{ variant.product.store.name }}</div>
+                    </td>
+                    <td>
+                        <span class="ra-badge info" style="font-size: 13px;">{{ variant.name }}</span>
+                    </td>
+                    <td>
+                        <code style="background: rgba(255,255,255,0.05); padding: 2px 6px; border-radius: 4px;">{{ variant.sku }}</code>
+                    </td>
+                    <td>€{{ variant.price }}</td>
+                    <td>
+                        {% if variant.discount_price %}
+                            €{{ variant.discount_price }}
+                        {% else %}
+                            <span style="color: var(--text-muted); font-size: 12px;">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if variant.is_default %}
+                            <span class="ra-badge success">Default</span>
+                        {% else %}
+                            <span class="ra-badge secondary">Alternative</span>
+                        {% endif %}
+                    </td>
+                    <td class="actions">
+                        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+                            <a href="{% url 'catalog:retailer-product-variant-edit' variant.id %}?next=variants" class="ra-btn ra-btn-outline ra-btn-sm" title="Edit Variant">
+                                <i class="ph ph-note-pencil"></i> Edit
+                            </a>
+                            <form method="post" action="{% url 'catalog:retailer-product-variant-delete' variant.id %}?next=variants" style="display: inline;" data-confirm="Are you sure you want to delete this variant?" data-confirm-title="Delete variant" data-confirm-text="Delete">
+                                {% csrf_token %}
+                                <button type="submit" class="ra-btn ra-btn-outline ra-btn-sm" style="color: var(--danger); border-color: rgba(239, 68, 68, 0.2);" title="Delete Variant">
+                                    <i class="ph ph-trash"></i> Delete
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 40px; color: var(--text-muted);">
+                        <i class="ph ph-sparkle" style="font-size: 40px; margin-bottom: 12px; display: block; opacity: 0.5;"></i>
+                        No product variants found in your stores. Click "Bulk Generate Combinations" or "Merge Separate Product" to define them.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- MODAL 1: ADD MANUAL VARIANT (SELECT PRODUCT) -->
+<div class="ra-modal" id="manual-variant-modal" style="display: none;">
+    <div class="ra-modal-dialog" style="max-width: 480px;">
+        <div class="ra-modal-header">
+            <span class="ra-modal-title">Select Parent Product</span>
+            <button onclick="closeManualVariantModal()" class="ra-modal-close"><i class="ph ph-x"></i></button>
+        </div>
+        <div class="ra-modal-body">
+            <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 20px;">
+                Choose the parent product to which you want to add a manual variant.
+            </p>
+            <div class="ra-field">
+                <label class="ra-label">Parent Product</label>
+                <select id="manual-parent-select" class="ra-input">
+                    <option value="">Select a product...</option>
+                    {% for prod in products %}
+                    <option value="{{ prod.id }}">{{ prod.name }} ({{ prod.store.name }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="ra-modal-footer">
+            <button onclick="closeManualVariantModal()" class="ra-btn ra-btn-outline">Cancel</button>
+            <button onclick="proceedToManualVariant()" class="ra-btn ra-btn-primary">Proceed</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 2: BULK GENERATE COMBINATIONS -->
+<div class="ra-modal" id="generator-modal" style="display: none;">
+    <div class="ra-modal-dialog" style="max-width: 580px;">
+        <div class="ra-modal-header">
+            <span class="ra-modal-title">Bulk Variant Combination Generator</span>
+            <button onclick="closeGeneratorModal()" class="ra-modal-close"><i class="ph ph-x"></i></button>
+        </div>
+        <div class="ra-modal-body">
+            <div class="ra-field">
+                <label class="ra-label">Select Parent Product</label>
+                <select id="gen-parent-select" class="ra-input" onchange="updateGeneratorPreview()">
+                    <option value="">Select parent product to apply variants...</option>
+                    {% for prod in products %}
+                    <option value="{{ prod.id }}">{{ prod.name }} (Store: {{ prod.store.name }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <p style="font-size: 13px; color: var(--text-muted); margin: 16px 0;">
+                Select or define the attributes and options to automatically generate all variant combinations (e.g. Size & Color combined).
+            </p>
+
+            <div id="generator-attributes-container" style="display: flex; flex-direction: column; gap: 12px;">
+                <!-- Initial Color Row -->
+                <div class="attribute-row" style="display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
+                    <div style="flex: 1;">
+                        <span style="font-size: 12.5px; font-weight:600; color: var(--text-main); display:block; margin-bottom:4px;">Color Attribute</span>
+                        <input type="text" class="ra-input attr-values" placeholder="e.g. Red, Blue, Green (comma separated)" style="margin:0;">
+                        <input type="hidden" class="attr-name" value="Color">
+                    </div>
+                </div>
+                <!-- Initial Size Row -->
+                <div class="attribute-row" style="display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
+                    <div style="flex: 1;">
+                        <span style="font-size: 12.5px; font-weight:600; color: var(--text-main); display:block; margin-bottom:4px;">Size Attribute</span>
+                        <input type="text" class="ra-input attr-values" placeholder="e.g. S, M, L, XL (comma separated)" style="margin:0;">
+                        <input type="hidden" class="attr-name" value="Size">
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="addCustomAttributeRow()" class="ra-btn ra-btn-outline ra-btn-sm" style="margin-top: 12px; border-style: dashed; width: 100%;">
+                <i class="ph ph-plus"></i> Add Custom Attribute (e.g. Material)
+            </button>
+
+            <!-- Real-time Combinatorics Preview -->
+            <div id="combinations-preview" style="margin-top: 20px; padding: 12px; border-radius: 8px; background: rgba(224, 68, 32, 0.05); border: 1px solid rgba(224, 68, 32, 0.2); display:none;">
+                <div style="font-weight: 600; font-size: 13.5px; color: #ee6a43; display:flex; align-items:center; gap:6px; margin-bottom:8px;">
+                    <i class="ph ph-calculator"></i> <span id="combinations-count">0</span> Variant Combinations Calculated
+                </div>
+                <div id="combinations-list" style="display:flex; flex-wrap:wrap; gap:6px; max-height:80px; overflow-y:auto; font-size:11.5px; color: var(--text-muted);">
+                </div>
+            </div>
+        </div>
+        <div class="ra-modal-footer">
+            <button onclick="closeGeneratorModal()" class="ra-btn ra-btn-outline">Cancel</button>
+            <button onclick="submitVariantGenerator()" class="ra-btn ra-btn-primary">Generate Variants</button>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 3: MERGE SEPARATE PRODUCT -->
+<div class="ra-modal" id="merger-modal" style="display: none;">
+    <div class="ra-modal-dialog" style="max-width: 540px;">
+        <div class="ra-modal-header">
+            <span class="ra-modal-title">Merge Product as Variant</span>
+            <button onclick="closeMergerModal()" class="ra-modal-close"><i class="ph ph-x"></i></button>
+        </div>
+        <div class="ra-modal-body">
+            <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 20px;">
+                Convert a separate standalone product listing into a variant of your main product. The separate listing will be archived, and its warehouse stocks will sum up.
+            </p>
+
+            <div class="ra-field">
+                <label class="ra-label">Target Main Product (Keep this listing)</label>
+                <select id="merge-main-select" class="ra-input">
+                    <option value="">Select main product...</option>
+                    {% for prod in products %}
+                    <option value="{{ prod.id }}">{{ prod.name }} (Store: {{ prod.store.name }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="ra-field">
+                <label class="ra-label">Source Separate Product (Merge and archive this listing)</label>
+                <select id="merge-source-select" class="ra-input">
+                    <option value="">Select separate product to merge...</option>
+                    {% for prod in products %}
+                    <option value="{{ prod.id }}">{{ prod.name }} (Store: {{ prod.store.name }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="ra-field">
+                <label class="ra-label">New Variant Option/Name</label>
+                <input type="text" id="merge-variant-name" class="ra-input" placeholder="e.g. Blue, Leather Edition, etc.">
+            </div>
+
+            <div class="ra-form-grid" style="grid-template-columns: 1fr 1fr;">
+                <div class="ra-field">
+                    <label class="ra-label">Color Option (Optional)</label>
+                    <input type="text" id="merge-attr-color" class="ra-input" placeholder="e.g. Red">
+                </div>
+                <div class="ra-field">
+                    <label class="ra-label">Size Option (Optional)</label>
+                    <input type="text" id="merge-attr-size" class="ra-input" placeholder="e.g. M">
+                </div>
+            </div>
+        </div>
+        <div class="ra-modal-footer">
+            <button onclick="closeMergerModal()" class="ra-btn ra-btn-outline">Cancel</button>
+            <button onclick="submitProductMerger()" class="ra-btn ra-btn-primary">Merge Listings</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // JS Filtering
+    function filterVariants() {
+        const query = document.getElementById("variant-search").value.toLowerCase();
+        const rows = document.querySelectorAll(".variant-row");
+        
+        rows.forEach(row => {
+            const product = row.getAttribute("data-product");
+            const name = row.getAttribute("data-name");
+            const sku = row.getAttribute("data-sku");
+            
+            if (product.includes(query) || name.includes(query) || sku.includes(query)) {
+                row.style.display = "";
+            } else {
+                row.style.display = "none";
+            }
+        });
+    }
+
+    // Modal 1: Manual Variant
+    function openManualVariantModal() {
+        document.getElementById("manual-variant-modal").style.display = "flex";
+    }
+    function closeManualVariantModal() {
+        document.getElementById("manual-variant-modal").style.display = "none";
+    }
+    function proceedToManualVariant() {
+        const prodId = document.getElementById("manual-parent-select").value;
+        if (!prodId) {
+            alert("Please select a product first.");
+            return;
+        }
+        window.location.href = `/retailer/catalog/products/${prodId}/variants/new/?next=variants`;
+    }
+
+    // Modal 2: Generator
+    function openGeneratorModal() {
+        document.getElementById("generator-modal").style.display = "flex";
+    }
+    function closeGeneratorModal() {
+        document.getElementById("generator-modal").style.display = "none";
+    }
+
+    // Modal 3: Merger
+    function openMergerModal() {
+        document.getElementById("merger-modal").style.display = "flex";
+    }
+    function closeMergerModal() {
+        document.getElementById("merger-modal").style.display = "none";
+    }
+
+    // Generator logic
+    const container = document.getElementById("generator-attributes-container");
+    container.addEventListener("input", updateGeneratorPreview);
+
+    function addCustomAttributeRow() {
+        const row = document.createElement("div");
+        row.className = "attribute-row";
+        row.style = "display: flex; gap: 10px; align-items: center; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; border: 1px solid var(--border); margin-top: 10px;";
+        row.innerHTML = `
+            <div style="flex: 1;">
+                <input type="text" class="ra-input attr-name" placeholder="Attribute Name (e.g. Material)" style="margin-bottom: 4px; font-weight:600; font-size:12.5px;">
+                <input type="text" class="ra-input attr-values" placeholder="e.g. Cotton, Polyester (comma separated)" style="margin:0;">
+            </div>
+            <button type="button" class="ra-btn ra-btn-outline ra-btn-sm" style="color:var(--danger); border-color:rgba(239,68,68,0.2); padding: 10px;" onclick="this.closest('.attribute-row').remove(); updateGeneratorPreview();">
+                <i class="ph ph-trash"></i>
+            </button>
+        `;
+        container.appendChild(row);
+    }
+
+    function calculateCartesian(arrays) {
+        return arrays.reduce((acc, curr) => {
+            let res = [];
+            acc.forEach(a => {
+                curr.forEach(b => {
+                    res.push(a.concat([b]));
+                });
+            });
+            return res;
+        }, [[]]);
+    }
+
+    function updateGeneratorPreview() {
+        const rows = document.querySelectorAll(".attribute-row");
+        const list = [];
+        const names = [];
+        
+        rows.forEach(r => {
+            const nameField = r.querySelector(".attr-name");
+            const valuesField = r.querySelector(".attr-values");
+            
+            const name = nameField.value.trim();
+            const vals = valuesField.value.split(",")
+                .map(v => v.trim())
+                .filter(v => v.length > 0);
+                
+            if (name && vals.length > 0) {
+                names.push(name);
+                list.push(vals);
+            }
+        });
+        
+        const preview = document.getElementById("combinations-preview");
+        if (list.length === 0) {
+            preview.style.display = "none";
+            return;
+        }
+        
+        const combinations = calculateCartesian(list);
+        document.getElementById("combinations-count").textContent = combinations.length;
+        
+        const listEl = document.getElementById("combinations-list");
+        listEl.innerHTML = "";
+        
+        combinations.forEach(combo => {
+            const label = combo.map((val, idx) => `${names[idx]}: ${val}`).join(", ");
+            const span = document.createElement("span");
+            span.style = "background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 4px; margin-right: 4px;";
+            span.textContent = label;
+            listEl.appendChild(span);
+        });
+        
+        preview.style.display = "block";
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function submitVariantGenerator() {
+        const parentId = document.getElementById("gen-parent-select").value;
+        if (!parentId) {
+            alert("Please select a parent product first.");
+            return;
+        }
+        
+        const rows = document.querySelectorAll(".attribute-row");
+        const data = {};
+        rows.forEach(r => {
+            const name = r.querySelector(".attr-name").value.trim();
+            const vals = r.querySelector(".attr-values").value.split(",")
+                .map(v => v.trim())
+                .filter(v => v.length > 0);
+            if (name && vals.length > 0) {
+                data[name.toLowerCase()] = vals;
+            }
+        });
+        
+        if (Object.keys(data).length === 0) {
+            alert("Please enter values for at least one attribute.");
+            return;
+        }
+        
+        fetch(`/api/products/${parentId}/generate-variants/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie("csrftoken")
+            },
+            body: JSON.stringify({ attributes: data })
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.success) {
+                alert(`Successfully generated ${res.created_count} combinations!`);
+                window.location.reload();
+            } else {
+                alert(res.error || "Failed to generate combinations.");
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Network error occurred.");
+        });
+    }
+
+    // Merger logic
+    function submitProductMerger() {
+        const mainId = document.getElementById("merge-main-select").value;
+        const sourceId = document.getElementById("merge-source-select").value;
+        const name = document.getElementById("merge-variant-name").value.trim();
+        const color = document.getElementById("merge-attr-color").value.trim();
+        const size = document.getElementById("merge-attr-size").value.trim();
+        
+        if (!mainId || !sourceId) {
+            alert("Please select both the main product and the separate product to merge.");
+            return;
+        }
+        if (mainId === sourceId) {
+            alert("Cannot merge a product with itself.");
+            return;
+        }
+        if (!name) {
+            alert("Please enter a variant name for the merged product.");
+            return;
+        }
+        
+        const attributes = {};
+        if (color) attributes["color"] = color;
+        if (size) attributes["size"] = size;
+        
+        fetch(`/api/products/${mainId}/merge-product/`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": getCookie("csrftoken")
+            },
+            body: JSON.stringify({
+                source_product_id: sourceId,
+                name: name,
+                attributes: attributes
+            })
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.success) {
+                alert("Products merged successfully!");
+                window.location.reload();
+            } else {
+                alert(res.error || "Failed to merge products.");
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Network error occurred.");
+        });
+    }
+</script>
+{% endblock %}

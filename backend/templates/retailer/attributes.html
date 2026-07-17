@@ -1,0 +1,410 @@
+{% extends "retailer/base.html" %}
+
+{% block content %}
+<div class="page-container">
+    <div class="page-header">
+        <div>
+            <h1>{{ page_title }}</h1>
+            <p>View all product attributes created by administrators. These attributes are read-only and cannot be modified.</p>
+        </div>
+    </div>
+
+    <div style="margin-bottom: 24px;">
+        <input type="search" id="attribute-search" placeholder="Search attributes by name, code, or type..." style="width: 100%; max-width: 500px; padding: 10px 14px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-main); font-size: 14px;">
+    </div>
+
+    <div class="attributes-grid">
+        {% if attributes %}
+            <div class="attributes-list">
+                {% for attr in attributes %}
+                    <div class="attribute-card">
+                        <div class="attribute-header">
+                            <div>
+                                <h3>{{ attr.name }}</h3>
+                                <p class="attribute-code">Code: <code>{{ attr.code }}</code></p>
+                            </div>
+                            <div class="attribute-badge">
+                                {% if attr.data_type == "color" %}
+                                    <span class="badge badge-color">🎨 Color</span>
+                                {% elif attr.data_type == "text" %}
+                                    <span class="badge badge-text">📝 Text</span>
+                                {% elif attr.data_type == "number" %}
+                                    <span class="badge badge-number">🔢 Number</span>
+                                {% elif attr.data_type == "select" %}
+                                    <span class="badge badge-select">📋 Select</span>
+                                {% elif attr.data_type == "boolean" %}
+                                    <span class="badge badge-boolean">✓ Yes/No</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="attribute-details">
+                            <div class="detail-row">
+                                <span class="label">Type:</span>
+                                <span class="value">{{ attr.get_data_type_display }}</span>
+                            </div>
+                            {% if attr.data_type == "color" %}
+                                <div class="detail-row">
+                                    <span class="label">Color Mode:</span>
+                                    <span class="value">
+                                        {% if attr.color_mode == "single" %}
+                                            Single Color Only
+                                        {% else %}
+                                            Multiple / Mix Colors
+                                        {% endif %}
+                                    </span>
+                                </div>
+                            {% endif %}
+                            <div class="detail-row">
+                                <span class="label">Variant:</span>
+                                <span class="value">
+                                    {% if attr.is_variant_attribute %}
+                                        <span class="status-badge status-yes">✓ Yes</span>
+                                    {% else %}
+                                        <span class="status-badge status-no">✗ No</span>
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="label">Required:</span>
+                                <span class="value">
+                                    {% if attr.is_required %}
+                                        <span class="status-badge status-yes">✓ Yes</span>
+                                    {% else %}
+                                        <span class="status-badge status-no">✗ No</span>
+                                    {% endif %}
+                                </span>
+                            </div>
+                            {% if attr.data_type == "color" and attr.values.count > 0 %}
+                                <div class="detail-row">
+                                    <span class="label">Values:</span>
+                                    <div class="attribute-values">
+                                        {% for value in attr.values.all %}
+                                            <div class="value-chip">
+                                                {% if value.hex_color %}
+                                                    <div class="color-swatch" style="background-color: {{ value.hex_color }};"></div>
+                                                {% endif %}
+                                                <span>{{ value.label }}</span>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="attribute-footer">
+                            <small class="text-muted">Read-only • Cannot be edited</small>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">📭</div>
+                <h3>No Attributes Found</h3>
+                <p>No product attributes have been created yet by administrators.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    .page-container {
+        padding: 24px;
+    }
+
+    .page-header {
+        margin-bottom: 32px;
+    }
+
+    .page-header h1 {
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--text-main);
+        margin-bottom: 8px;
+    }
+
+    .page-header p {
+        color: var(--muted);
+        font-size: 14px;
+    }
+
+    .attributes-grid {
+        display: grid;
+        gap: 24px;
+    }
+
+    .attributes-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 16px;
+    }
+
+    .attribute-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        transition: all 0.2s ease;
+    }
+
+    .attribute-card:hover {
+        border-color: var(--primary);
+        box-shadow: 0 4px 12px rgba(224, 68, 32, 0.1);
+    }
+
+    .attribute-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .attribute-header h3 {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-main);
+        margin: 0 0 4px 0;
+    }
+
+    .attribute-code {
+        margin: 0;
+        font-size: 12px;
+        color: var(--muted);
+    }
+
+    .attribute-code code {
+        background: var(--surface-soft);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: 'Courier New', monospace;
+        color: var(--primary);
+    }
+
+    .attribute-badge {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    .badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .badge-color {
+        background: rgba(236, 72, 153, 0.1);
+        color: #ec4899;
+    }
+
+    .badge-text {
+        background: rgba(224, 68, 32, 0.1);
+        color: #e04420;
+    }
+
+    .badge-number {
+        background: rgba(34, 197, 94, 0.1);
+        color: #22c55e;
+    }
+
+    .badge-select {
+        background: rgba(168, 85, 247, 0.1);
+        color: #a855f7;
+    }
+
+    .badge-boolean {
+        background: rgba(249, 115, 22, 0.1);
+        color: #f97316;
+    }
+
+    .attribute-details {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .detail-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 8px;
+        background: var(--surface-soft);
+        border-radius: 6px;
+    }
+
+    .detail-row .label {
+        font-weight: 600;
+        color: var(--muted);
+        font-size: 13px;
+        min-width: 100px;
+    }
+
+    .detail-row .value {
+        color: var(--text-main);
+        font-size: 13px;
+    }
+
+    .status-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .status-yes {
+        background: rgba(34, 197, 94, 0.1);
+        color: #22c55e;
+    }
+
+    .status-no {
+        background: rgba(107, 114, 128, 0.1);
+        color: var(--muted);
+    }
+
+    .attribute-values {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .value-chip {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        padding: 6px 10px;
+        border-radius: 20px;
+        font-size: 12px;
+        color: var(--text-main);
+    }
+
+    .color-swatch {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 1px solid var(--border);
+    }
+
+    .attribute-footer {
+        padding-top: 12px;
+        border-top: 1px solid var(--border);
+        text-align: center;
+    }
+
+    .text-muted {
+        color: var(--muted);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 24px;
+        background: var(--surface);
+        border: 1px dashed var(--border);
+        border-radius: 12px;
+    }
+
+    .empty-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+    }
+
+    .empty-state h3 {
+        font-size: 20px;
+        font-weight: 600;
+        color: var(--text-main);
+        margin-bottom: 8px;
+    }
+
+    .empty-state p {
+        color: var(--muted);
+        font-size: 14px;
+    }
+
+    @media (max-width: 768px) {
+        .attributes-list {
+            grid-template-columns: 1fr;
+        }
+
+        .attribute-header {
+            flex-direction: column;
+        }
+
+        .attribute-badge {
+            justify-content: flex-start;
+        }
+    }
+</style>
+
+<script>
+// Live Search Filter for Retailer Attributes
+(() => {
+    const searchInput = document.getElementById('attribute-search');
+    const attributeCards = document.querySelectorAll('.attribute-card');
+    const attributesList = document.querySelector('.attributes-list');
+    const emptyState = document.querySelector('.empty-state');
+
+    if (!searchInput || !attributesList) return;
+
+    searchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase().trim();
+        let visibleCount = 0;
+
+        attributeCards.forEach(card => {
+            const cardText = card.textContent.toLowerCase();
+            const matches = cardText.includes(searchTerm) || searchTerm === '';
+
+            if (matches) {
+                card.style.display = '';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        // Show/hide empty state
+        if (visibleCount === 0 && searchTerm !== '') {
+            const noResults = attributesList.querySelector('.no-results');
+            if (!noResults) {
+                const div = document.createElement('div');
+                div.className = 'no-results';
+                div.style.cssText = 'grid-column: 1 / -1; text-align: center; padding: 40px;';
+                div.innerHTML = `
+                    <div style="font-size: 16px; font-weight: 500; color: var(--text-main); margin-bottom: 8px;">
+                        No attributes found
+                    </div>
+                    <p style="color: var(--muted); font-size: 14px;">
+                        No results found for "<strong>${searchTerm}</strong>"
+                    </p>
+                `;
+                attributesList.appendChild(div);
+            }
+        } else if (visibleCount > 0) {
+            const noResults = attributesList.querySelector('.no-results');
+            if (noResults) {
+                noResults.remove();
+            }
+        }
+    });
+
+    // Clear search on Escape key
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            searchInput.value = '';
+            searchInput.dispatchEvent(new Event('input'));
+        }
+    });
+})();
+</script>
+{% endblock %}

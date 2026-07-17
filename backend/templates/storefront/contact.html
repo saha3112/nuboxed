@@ -1,0 +1,41 @@
+{% extends "storefront/base.html" %}
+
+{% block content %}
+<section class="page-head">
+  <div class="container">
+    <h1>Contact Support</h1>
+    <div class="breadcrumb">
+        <a href="{% url 'storefront:home' %}">Home</a>
+        <span>/</span>
+        <span>Contact</span>
+    </div>
+  </div>
+</section>
+<section class="page-shell contact-grid">
+    <div class="contact-card">
+        <p class="eyebrow">Contact</p>
+        <h1>Talk to CommerceOS marketplace support</h1>
+        <p>Use the form for partnership, product, or support inquiries.</p>
+        <div class="contact-meta">
+            <span>{{ primary_store.contact_email|default:"support@commerceos.local" }}</span>
+            <span>{{ primary_store.contact_phone|default:"+49 000 000 000" }}</span>
+            <span>{{ primary_store.contact_whatsapp|default:"+49 000 000 000" }}</span>
+        </div>
+    </div>
+    <form class="contact-form">
+        <div class="field-group">
+            <label>Name</label>
+            <input type="text" placeholder="Your name">
+        </div>
+        <div class="field-group">
+            <label>Email</label>
+            <input type="email" placeholder="Your email">
+        </div>
+        <div class="field-group">
+            <label>Message</label>
+            <textarea placeholder="How can we help?"></textarea>
+        </div>
+        <button type="button" class="primary-link button-reset">Send message</button>
+    </form>
+</section>
+{% endblock %}

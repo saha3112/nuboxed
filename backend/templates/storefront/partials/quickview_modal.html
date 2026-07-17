@@ -1,0 +1,95 @@
+<div class="quick-modal" id="quickModal" aria-hidden="true">
+  <div class="quick-dialog" role="dialog" aria-modal="true" aria-labelledby="quickTitle">
+    <button class="quick-close" id="quickClose" type="button" aria-label="Close">&times;</button>
+
+    <div class="quick-grid">
+      <section class="quick-gallery">
+        <div class="quick-main">
+          <button class="quick-arrow prev" id="quickPrev" type="button" aria-label="Previous image">‹</button>
+          <img id="quickPhoneImage" alt="" class="quick-main-image" style="display:none;">
+          <div id="quickPhoneFallback" class="quick-phone-fallback phone p2" aria-hidden="true"></div>
+          <button class="quick-arrow next" id="quickNext" type="button" aria-label="Next image">›</button>
+        </div>
+
+        <div class="quick-thumbs-wrap">
+          <button class="quick-thumb-arrow" id="quickThumbPrev" type="button" aria-label="Scroll thumbnails">‹</button>
+          <div class="quick-thumbs-viewport">
+            <div class="quick-thumbs" id="quickThumbs"></div>
+          </div>
+          <button class="quick-thumb-arrow" id="quickThumbNext" type="button" aria-label="Scroll thumbnails">›</button>
+        </div>
+      </section>
+
+      <section class="quick-info">
+        <p class="quick-brand" id="quickBrand">Store</p>
+        <h2 id="quickTitle">Product name</h2>
+
+        <div class="quick-price-row">
+          <span class="old" id="quickOldPrice"></span>
+          <span class="quick-price" id="quickPrice"></span>
+          <span class="quick-save" id="quickSave" style="display:none;">Save 15%</span>
+        </div>
+        <div class="quick-delivery">Est. Delivery Time 2-3 Days</div>
+
+        <div class="quick-rating rating">★★★★★ <span class="review-num">(5 Reviews)</span></div>
+
+        <ul class="quick-points" id="quickPoints">
+          <li>Verified product data from admin</li>
+          <li>Store-aware delivery estimate and seller comparison</li>
+        </ul>
+
+        <div class="quick-ram-title" id="quickRamTitleContainer" style="display:none;"><strong>RAM:</strong> <span class="quick-ram-current" id="quickRamLabel">Default</span></div>
+        <div class="quick-storage" id="quickRamButtons" style="display:none; margin-bottom: 12px;"></div>
+
+        <div class="quick-storage-title"><strong>Internal Storage:</strong> <span class="quick-storage-current" id="quickStorageLabel">Default</span></div>
+        <div class="quick-storage" id="quickStorageButtons"></div>
+
+        <div class="quick-color-title" id="quickColorTitleContainer"><strong>Color:</strong> <span class="quick-color-current" id="quickColorLabel">Default</span></div>
+        <div class="quick-color" id="quickColorButtons"></div>
+
+        <div class="quick-buy-row">
+          <div class="quick-qty">
+            <input id="quickQty" type="number" value="1" min="1" name="quantity" data-qty-input>
+            <div class="quick-qty-controls">
+              <button type="button" data-qty-plus aria-label="Increase quantity"><i class="fa-solid fa-chevron-up"></i></button>
+              <button type="button" data-qty-minus aria-label="Decrease quantity"><i class="fa-solid fa-chevron-down"></i></button>
+            </div>
+          </div>
+          <form method="post" id="quickAddForm" class="quick-buy-form">
+            {% csrf_token %}
+            <input type="hidden" name="quantity" value="1" data-buy-qty>
+            <input type="hidden" name="variant_id" id="quickCartVariantId" value="">
+            <button type="submit" class="quick-add" id="quickAdd">ADD TO CART</button>
+          </form>
+          <form method="post" id="quickBuyForm" class="quick-buy-form">
+            {% csrf_token %}
+            <input type="hidden" name="quantity" value="1" data-buy-qty>
+            <input type="hidden" name="variant_id" id="quickBuyNowVariantId" value="">
+            <button type="submit" class="quick-buy">BUY NOW</button>
+          </form>
+        </div>
+
+        <div class="quick-links">
+          <form method="post" id="quickWishlistForm" class="quick-buy-form">
+            {% csrf_token %}
+            <button type="submit" class="quick-link-action" id="quickWishlist">♡ Add to Wishlist</button>
+          </form>
+          <button type="button" class="quick-link-action">⇄ Add to Compare</button>
+        </div>
+
+        <div class="quick-stock success" id="quickStock">
+          <i class="fa-solid fa-circle-check"></i> Available Stock
+        </div>
+
+        <div class="quick-share">
+          <b>Share</b>
+          <a href="#" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+          <a href="#" aria-label="X"><i class="fa-brands fa-x-twitter"></i></a>
+          <a href="#" aria-label="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
+          <a href="#" aria-label="Pinterest"><i class="fa-brands fa-pinterest-p"></i></a>
+          <a href="#" aria-label="Email"><i class="fa-regular fa-envelope"></i></a>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>

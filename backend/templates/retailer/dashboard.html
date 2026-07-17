@@ -1,0 +1,245 @@
+{% extends "retailer/base.html" %}
+
+{% block content %}
+{{ sales_chart_labels|json_script:"retailer-sales-labels" }}
+{{ sales_chart_series|json_script:"retailer-sales-series" }}
+{{ revenue_chart_series|json_script:"retailer-revenue-series" }}
+
+<div class="ra-card ra-hero" style="margin-bottom:24px;">
+    <div class="ra-card-body ra-hero-body">
+        <div>
+            <div class="ra-hero-title">Retail Commerce Overview</div>
+            <div class="ra-hero-copy">Track growth, store readiness, staff activity, and product momentum from one TailAdmin-style dashboard.</div>
+        </div>
+        <div class="ra-hero-actions">
+            <span class="ra-kpi-inline"><i class="ph ph-trend-up"></i> +12.4% This Week</span>
+            {% if primary_store %}
+            <a href="{% url 'retailers:store-edit' pk=primary_store.pk %}" class="ra-btn ra-btn-primary"><i class="ph ph-pencil-simple"></i> Manage Store</a>
+            {% else %}
+            <a href="{% url 'retailers:store-create' %}" class="ra-btn ra-btn-primary"><i class="ph ph-plus"></i> Add Store</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="ra-card" style="margin-bottom:24px; border:1px solid rgba(224,68,32,.22);">
+    <div class="ra-card-body">
+        <div class="ra-card-title" style="margin-bottom:5px;">Store Operations</div>
+        <div class="ra-section-copy" style="margin-bottom:16px;">Quick access to warehouse, stock, delivery, and store rules.</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;">
+            <a href="{% url 'inventory:offline-sale-create' %}" class="ra-btn ra-btn-primary ra-btn-sm"><i class="ph ph-shopping-bag"></i> Offline Sale</a>
+            <a href="{% url 'inventory:delivery-location-create' %}" class="ra-btn ra-btn-outline ra-btn-sm"><i class="ph ph-map-pin"></i> Delivery Location</a>
+            <a href="{% url 'inventory:category-delivery-create' %}" class="ra-btn ra-btn-outline ra-btn-sm"><i class="ph ph-clock"></i> Category ETA</a>
+            <a href="{% url 'inventory:product-delivery-create' %}" class="ra-btn ra-btn-outline ra-btn-sm"><i class="ph ph-clock-countdown"></i> Product ETA</a>
+            <a href="{% url 'inventory:delivery-holiday-create' %}" class="ra-btn ra-btn-ghost ra-btn-sm"><i class="ph ph-calendar-x"></i> Holiday</a>
+        </div>
+    </div>
+</div>
+
+{% if not retailer.vat_number or not retailer.business_address or not retailer.business_document %}
+<div class="ra-card" style="margin-bottom: 24px; border: 1px dashed #f59e0b; background: rgba(245, 158, 11, 0.02); border-radius: 16px;">
+    <div class="ra-card-body" style="display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 20px;">
+        <div style="display: flex; align-items: flex-start; gap: 12px;">
+            <i class="ph ph-warning-octagon" style="font-size: 24px; color: #d97706; margin-top: 2px;"></i>
+            <div>
+                <h4 style="margin: 0 0 4px 0; font-size: 15px; font-weight: 600; color: var(--text-main);">Complete Business Profile Onboarding</h4>
+                <p style="margin: 0; font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+                    Your business registration profile is incomplete. Please add your tax ID, address, and upload your business document.
+                </p>
+            </div>
+        </div>
+        <a href="{% url 'retailers:profile' %}" class="ra-btn ra-btn-outline ra-btn-sm" style="border-color: #d97706; color: #d97706; background: rgba(217, 119, 6, 0.05); display: flex; align-items: center; gap: 6px;">
+            <i class="ph ph-note-pencil"></i> Complete Onboarding
+        </a>
+    </div>
+</div>
+{% endif %}
+
+<div class="ra-stats-grid">
+    <div class="ra-stat">
+        <div class="ra-stat-icon blue"><i class="ph ph-check-circle"></i></div>
+        <div class="ra-stat-value">{{ retailer.status|title }}</div>
+        <div class="ra-stat-label">Retailer Status</div>
+    </div>
+    <div class="ra-stat">
+        <div class="ra-stat-icon green"><i class="ph ph-storefront"></i></div>
+        <div class="ra-stat-value">{{ stores|length }}</div>
+        <div class="ra-stat-label">Active Stores</div>
+    </div>
+    <div class="ra-stat">
+        <div class="ra-stat-icon amber"><i class="ph ph-users"></i></div>
+        <div class="ra-stat-value">{{ staff_count|default:0 }}</div>
+        <div class="ra-stat-label">Total Staff</div>
+    </div>
+    <div class="ra-stat">
+        <div class="ra-stat-icon blue"><i class="ph ph-package"></i></div>
+        <div class="ra-stat-value">{{ product_count }}</div>
+        <div class="ra-stat-label">Catalog Products</div>
+    </div>
+</div>
+
+{% if connector_notice %}
+<div class="ra-card" style="margin-bottom: 24px;">
+    <div class="ra-card-header"><span class="ra-card-title">Notice</span></div>
+    <div class="ra-card-body"><p style="color: var(--text-muted); font-size: 13.5px;">{{ connector_notice }}</p></div>
+</div>
+{% endif %}
+
+<div class="ra-panel-grid">
+    <div class="ra-card ra-chart-shell">
+        <div class="ra-card-body">
+            <div class="ra-chart-header">
+                <div>
+                    <div class="ra-card-title">Monthly Sales</div>
+                    <div class="ra-section-copy" style="margin-bottom:0;">Animated weekly sales pulse across your active stores.</div>
+                </div>
+                <span class="ra-badge info">Live Trend</span>
+            </div>
+            <div id="retailer-sales-chart" style="height:260px;"></div>
+        </div>
+    </div>
+    <div class="ra-card">
+        <div class="ra-card-body">
+            <div class="ra-chart-header">
+                <div>
+                    <div class="ra-card-title">Country Mix</div>
+                    <div class="ra-section-copy" style="margin-bottom:0;">Store distribution by market.</div>
+                </div>
+            </div>
+            <div class="ra-list-stack">
+                {% for item in country_mix %}
+                <div class="ra-list-item" style="display:block;">
+                    <div style="display:flex; justify-content:space-between; gap:12px;">
+                        <strong>{{ item.country_code }}</strong>
+                        <span style="color:var(--text-muted);">{{ item.total }} stores</span>
+                    </div>
+                    <div class="ra-country-bar"><span style="width:{% widthratio item.total stores|length 100 %}%"></span></div>
+                </div>
+                {% empty %}
+                <div class="ra-table-empty">No country data yet.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ra-dual-grid" style="margin-bottom:24px;">
+    <div class="ra-card">
+        <div class="ra-card-body">
+            <div class="ra-chart-header">
+                <div>
+                    <div class="ra-card-title">Revenue Target</div>
+                    <div class="ra-section-copy" style="margin-bottom:0;">Weekly revenue progression with soft animation.</div>
+                </div>
+                <span class="ra-badge success">+18%</span>
+            </div>
+            <div id="retailer-revenue-chart" style="height:240px;"></div>
+        </div>
+    </div>
+    <div class="ra-card">
+        <div class="ra-card-body">
+            <div class="ra-chart-header">
+                <div>
+                    <div class="ra-card-title">Quick Status</div>
+                    <div class="ra-section-copy" style="margin-bottom:0;">Retail operations snapshot.</div>
+                </div>
+            </div>
+            <div class="ra-list-stack">
+                <div class="ra-list-item"><span>Store readiness</span><span class="ra-badge success">Healthy</span></div>
+                <div class="ra-list-item"><span>Catalog sync</span><span class="ra-badge info">{{ product_count }} items</span></div>
+                <div class="ra-list-item"><span>Staff access</span><span class="ra-badge neutral">{{ staff_count }} members</span></div>
+                <div class="ra-list-item"><span>Approval state</span><span class="ra-badge {% if approved %}success{% else %}warning{% endif %}">{{ retailer.status|title }}</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="ra-card ra-hero" style="margin-bottom:20px;">
+    <div class="ra-card-body ra-hero-body">
+        <div>
+            <div class="ra-hero-title">Your Stores</div>
+            <div class="ra-hero-copy">Manage store identity, visuals, contact info, and readiness from a single workspace.</div>
+        </div>
+        {% if primary_store %}
+        <a href="{% url 'retailers:store-edit' pk=primary_store.pk %}" class="ra-btn ra-btn-primary"><i class="ph ph-pencil-simple"></i> Manage Store</a>
+        {% else %}
+        <a href="{% url 'retailers:store-create' %}" class="ra-btn ra-btn-primary"><i class="ph ph-plus"></i> Add Store</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="ra-store-grid">
+    {% for store in stores %}
+    <div class="ra-card ra-store-card">
+        <div class="ra-store-banner">
+            {% if store.banner %}
+            <img src="{{ store.banner.url }}" alt="Banner">
+            {% else %}
+            <i class="ph ph-storefront" style="font-size: 40px; color: rgba(255,255,255,.5);"></i>
+            {% endif %}
+        </div>
+        <div class="ra-card-body">
+            <div class="ra-store-head">
+                {% if store.logo %}
+                <img src="{{ store.logo.url }}" alt="Logo" class="ra-store-logo">
+                {% else %}
+                <div class="ra-store-logo">{{ store.name|first|upper }}</div>
+                {% endif %}
+                <div style="flex:1; min-width:0;">
+                    <div style="font-size: 15px; font-weight: 700; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ store.name }}</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">{{ store.contact_email|default:store.contact_phone|default:"–" }}</div>
+                </div>
+                <span class="ra-badge {% if store.status == 'active' %}success{% else %}warning{% endif %}">{{ store.status|title }}</span>
+            </div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;">{{ store.description|default:"No description added yet." }}</p>
+            <a href="{% url 'retailers:store-edit' pk=store.pk %}" class="ra-btn ra-btn-outline ra-btn-sm ra-btn-block"><i class="ph ph-pencil-simple"></i> Manage Store</a>
+        </div>
+    </div>
+    {% empty %}
+    <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; background: var(--card-bg); border: 2px dashed var(--border); border-radius: 16px;">
+        <i class="ph ph-buildings" style="font-size: 52px; color: var(--text-muted); display: block; margin-bottom: 12px;"></i>
+        <h4 style="font-size: 17px; font-weight: 600; margin-bottom: 6px; color: var(--text-main);">No stores yet</h4>
+        <p style="color: var(--text-muted); font-size: 13.5px; margin-bottom: 20px;">Create your first store to start managing products, staff, and orders.</p>
+        <a href="{% url 'retailers:store-create' %}" class="ra-btn ra-btn-primary"><i class="ph ph-plus"></i> Create Store</a>
+    </div>
+    {% endfor %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+(() => {
+    const labels = JSON.parse(document.getElementById("retailer-sales-labels").textContent);
+    const salesSeries = JSON.parse(document.getElementById("retailer-sales-series").textContent);
+    const revenueSeries = JSON.parse(document.getElementById("retailer-revenue-series").textContent);
+
+    const salesChart = document.getElementById("retailer-sales-chart");
+    if (salesChart && window.ApexCharts) {
+        new ApexCharts(salesChart, {
+            chart: { type: "area", height: 260, toolbar: { show: false }, zoom: { enabled: false } },
+            series: [{ name: "Sales", data: salesSeries }],
+            xaxis: { categories: labels, axisBorder: { show: false }, axisTicks: { show: false } },
+            stroke: { curve: "smooth", width: 3 },
+            fill: { type: "gradient", gradient: { opacityFrom: 0.32, opacityTo: 0.02 } },
+            colors: ["#e04420"],
+            grid: { borderColor: "#E2E8F0", strokeDashArray: 5 },
+            dataLabels: { enabled: false },
+            legend: { show: false },
+        }).render();
+    }
+
+    const revenueChart = document.getElementById("retailer-revenue-chart");
+    if (revenueChart && window.ApexCharts) {
+        new ApexCharts(revenueChart, {
+            chart: { type: "bar", height: 240, toolbar: { show: false } },
+            series: [{ name: "Revenue", data: revenueSeries }],
+            xaxis: { categories: labels, axisBorder: { show: false }, axisTicks: { show: false } },
+            plotOptions: { bar: { borderRadius: 8, columnWidth: "46%" } },
+            colors: ["#22C55E"],
+            grid: { borderColor: "#E2E8F0", strokeDashArray: 5 },
+            dataLabels: { enabled: false },
+            legend: { show: false },
+        }).render();
+    }
+})();
+</script>
+{% endblock %}

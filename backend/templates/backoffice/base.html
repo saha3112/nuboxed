@@ -1,0 +1,383 @@
+{% load static backoffice_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ page_title|default:"CommerceOS Super Admin" }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+    <script>
+        // Detect if Phosphor icons fail to load, and only then enable fallbacks
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                const isLoaded = document.styleSheets && Array.from(document.styleSheets).some(s => s.href && s.href.includes('phosphor'));
+                if (!isLoaded && !window.Phosphor) {
+                    document.body.classList.add('fallback-active');
+                }
+            }, 1200);
+        });
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <link rel="stylesheet" href="{% static 'backoffice/admin.css' %}">
+    <link rel="stylesheet" href="{% static 'shared/icon-fallback.css' %}">
+</head>
+<body class="admin-body" data-portal-context="backoffice" x-data="backofficeShell('{{ active_group|default:''|escapejs }}')" x-init="init()" :class="darkMode ? 'dark-mode' : ''">
+    <div class="bo-overlay" data-sidebar-overlay></div>
+    <div class="bo-shell">
+        <aside class="bo-sidebar" data-sidebar>
+            <div class="bo-brand">
+                <div class="bo-brand-shell">
+                    <div class="bo-brand-compact">
+                        {% if global_brand_settings.logo_small %}
+                            <img src="{{ global_brand_settings.logo_small.url }}" alt="Logo" class="bo-brand-logo-small">
+                        {% else %}
+                            <div class="bo-brand-icon">
+                                {{ global_brand_settings.brand_name|default:"CommerceOS"|slice:":2"|upper }}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="bo-brand-expanded">
+                        {% if global_brand_settings.logo_big %}
+                            <img src="{{ global_brand_settings.logo_big.url }}" alt="{{ global_brand_settings.brand_name }}" class="bo-brand-logo-big">
+                        {% else %}
+                            {% if global_brand_settings.logo_small %}
+                                <img src="{{ global_brand_settings.logo_small.url }}" alt="Logo" class="bo-brand-logo-small">
+                            {% else %}
+                                <div class="bo-brand-icon">
+                                    {{ global_brand_settings.brand_name|default:"CommerceOS"|slice:":2"|upper }}
+                                </div>
+                            {% endif %}
+                            <div>
+                                <div class="bo-brand-name">{{ global_brand_settings.brand_name|default:"CommerceOS" }}</div>
+                                <div class="bo-brand-copy">{{ global_brand_settings.brand_tagline|default:"Super Admin" }}</div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <nav class="bo-nav">
+                <div class="bo-nav-label">Main</div>
+                <a class="bo-nav-link bo-nav-link-main {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" href="{% url 'backoffice:dashboard' %}">
+                    <span class="bo-nav-link-left">
+                        <i class="ph ph-squares-four"></i>
+                        <span>Dashboard</span>
+                    </span>
+                </a>
+                {% for group_name, modules in sidebar_groups.items %}
+                    {% if group_name == "Catalog" %}
+                        <!-- Catalog Group -->
+                        <section class="bo-nav-group">
+                            <button class="bo-nav-toggle" type="button" @click="toggleGroup('{{ group_name|escapejs }}')" :class="activeGroup === '{{ group_name|escapejs }}' ? 'active' : ''">
+                                <span class="bo-nav-link-left">
+                                    <i class="ph ph-package"></i>
+                                    <span>{{ group_name }}</span>
+                                </span>
+                                <i class="ph ph-caret-down bo-nav-arrow" :class="activeGroup === '{{ group_name|escapejs }}' ? 'is-open' : ''"></i>
+                            </button>
+                            <div class="bo-subnav" x-show="activeGroup === '{{ group_name|escapejs }}'" x-transition>
+                                <a class="bo-nav-link bo-subnav-link {% if request.resolver_match.url_name == 'phone-models' %}active{% endif %}" href="{% url 'backoffice:phone-models' %}">
+                                    <span class="bo-nav-link-left">
+                                        <i class="ph ph-device-mobile-camera"></i>
+                                        <span>Device Models</span>
+                                    </span>
+                                </a>
+                                <!-- Regular Catalog Modules -->
+                                {% for module_key, module in modules %}
+                                    <a class="bo-nav-link bo-subnav-link {% if module_key == module_key_active %}active{% endif %}" href="{% if module.custom_url %}{% url module.custom_url %}{% else %}{% url 'backoffice:module-list' module=module_key %}{% endif %}">
+                                        <span class="bo-nav-link-left">
+                                            {% if module_key == "categories" %}
+                                            <i class="ph ph-squares-four"></i>
+                                            {% elif module_key == "brands" %}
+                                            <i class="ph ph-tag"></i>
+                                            {% elif module_key == "attributes" %}
+                                            <i class="ph ph-sliders-horizontal"></i>
+                                            {% elif module_key == "products" %}
+                                            <i class="ph ph-package"></i>
+                                            {% else %}
+                                            <i class="ph ph-dot-outline"></i>
+                                            {% endif %}
+                                            <span>{{ module.title }}</span>
+                                        </span>
+                                    </a>
+                                {% endfor %}
+                            </div>
+                        </section>
+                    {% else %}
+                    <section class="bo-nav-group">
+                        <button class="bo-nav-toggle" type="button" @click="toggleGroup('{{ group_name|escapejs }}')" :class="activeGroup === '{{ group_name|escapejs }}' ? 'active' : ''">
+                            <span class="bo-nav-link-left">
+                        {% if group_name == "Commerce" %}
+                                <i class="ph ph-shopping-cart"></i>
+                                {% elif group_name == "Catalog" %}
+                                <i class="ph ph-package"></i>
+                        {% elif group_name == "Operations" %}
+                                <i class="ph ph-gear-six"></i>
+                                {% elif group_name == "Merchandising" %}
+                                <i class="ph ph-image-square"></i>
+                                {% elif group_name == "Access" %}
+                                <i class="ph ph-lock-key"></i>
+                                {% elif group_name == "Storefront Content" %}
+                                <i class="ph ph-browser"></i>
+                                {% else %}
+                                <i class="ph ph-stack"></i>
+                                {% endif %}
+                                <span>{{ group_name }}</span>
+                            </span>
+                            <i class="ph ph-caret-down bo-nav-arrow" :class="activeGroup === '{{ group_name|escapejs }}' ? 'is-open' : ''"></i>
+                        </button>
+                        <div class="bo-subnav" x-show="activeGroup === '{{ group_name|escapejs }}'" x-transition>
+                            {% if group_name == "Commerce" %}
+                            <a class="bo-nav-link bo-subnav-link" href="{% url 'backoffice:orders' %}"><span class="bo-nav-link-left"><i class="ph ph-receipt"></i><span>Orders</span></span></a>
+                            <a class="bo-nav-link bo-subnav-link" href="{% url 'backoffice:order-workflow-settings' %}"><span class="bo-nav-link-left"><i class="ph ph-gear"></i><span>Order Workflow Settings</span></span></a>
+                            {% elif group_name == "Platform" %}
+                            <a class="bo-nav-link bo-subnav-link" href="{% url 'backoffice:invoice-design' %}"><span class="bo-nav-link-left"><i class="ph ph-file-text"></i><span>Invoice Design (Admin only)</span></span></a>
+                            <a class="bo-nav-link bo-subnav-link" href="{% url 'backoffice:email-templates' %}"><span class="bo-nav-link-left"><i class="ph ph-envelope"></i><span>Email Templates</span></span></a>
+                            {% endif %}
+                            {% for module_key, module in modules %}
+                                <a class="bo-nav-link bo-subnav-link {% if module_key == module_key_active %}active{% endif %}" href="{% if module.custom_url %}{% url module.custom_url %}{% else %}{% url 'backoffice:module-list' module=module_key %}{% endif %}">
+                                    <span class="bo-nav-link-left">
+                                        {% if module_key == "retailers" %}
+                                        <i class="ph ph-storefront"></i>
+                                        {% elif module_key == "stores" %}
+                                        <i class="ph ph-buildings"></i>
+                                        {% elif module_key == "users" %}
+                                        <i class="ph ph-users"></i>
+                                        {% elif module_key == "roles" %}
+                                        <i class="ph ph-shield-check"></i>
+                                        {% elif module_key == "permissions" %}
+                                        <i class="ph ph-key"></i>
+                                        {% elif module_key == "role-permissions" %}
+                                        <i class="ph ph-lockers"></i>
+                                        {% elif module_key == "user-roles" %}
+                                        <i class="ph ph-user-switch"></i>
+                                        {% elif module_key == "categories" %}
+                                        <i class="ph ph-squares-four"></i>
+                                        {% elif module_key == "brands" %}
+                                        <i class="ph ph-tag"></i>
+                                        {% elif module_key == "attributes" %}
+                                        <i class="ph ph-sliders-horizontal"></i>
+                                        {% elif module_key == "products" %}
+                                        <i class="ph ph-package"></i>
+                                        {% elif module_key == "warehouses" %}
+                                        <i class="ph ph-warehouse"></i>
+                                        {% elif module_key == "stock-items" %}
+                                        <i class="ph ph-box-arrow-down"></i>
+                                        {% elif module_key == "low-stock-alerts" %}
+                                        <i class="ph ph-warning-circle"></i>
+                                        {% elif module_key == "sliders" %}
+                                        <i class="ph ph-images"></i>
+                                        {% elif module_key == "featured-banners" %}
+                                        <i class="ph ph-monitor-play"></i>
+                                        {% elif module_key == "featured-categories" %}
+                                        <i class="ph ph-grid-four"></i>
+                                        {% elif module_key == "featured-products" %}
+                                        <i class="ph ph-star"></i>
+                                        {% elif module_key == "payment-gateways" %}
+                                        <i class="ph ph-credit-card"></i>
+                                        {% elif module_key == "courier-partners" %}
+                                        <i class="ph ph-truck"></i>
+                                        {% elif module_key == "settings" %}
+                                        <i class="ph ph-gear"></i>
+                                        {% elif module_key == "brand-settings" %}
+                                        <i class="ph ph-palette"></i>
+                                        {% elif module_key == "sitelogo" %}
+                                        <i class="ph ph-image-square"></i>
+                                        {% elif module_key == "menuitem" %}
+                                        <i class="ph ph-list-bullets"></i>
+                                        {% elif module_key == "pagetext" %}
+                                        <i class="ph ph-text-aa"></i>
+                                        {% elif module_key == "stores-location-messages" %}
+                                        <i class="ph ph-map-pin-line"></i>
+                                        {% elif module_key == "sociallink" %}
+                                        <i class="ph ph-share-network"></i>
+                                        {% else %}
+                                        <i class="ph ph-dot-outline"></i>
+                                        {% endif %}
+                                        <span>{{ module.title }}</span>
+                                    </span>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </section>
+                    {% endif %}
+                {% endfor %}
+            </nav>
+
+            <div class="bo-sidebar-card">
+                <strong>Control Layer</strong>
+                <p>Access catalog, commerce, storefront, and platform controls from one place.</p>
+            </div>
+        </aside>
+
+        <main class="bo-main">
+            <header class="bo-topbar">
+                <div class="bo-topbar-left">
+                    <button class="bo-menu-toggle" data-sidebar-toggle type="button">
+                        <i class="ph ph-list"></i>
+                    </button>
+                    <div class="bo-search">
+                        <i class="ph ph-magnifying-glass"></i>
+                        <input type="text" placeholder="Search modules, records, settings...">
+                    </div>
+                </div>
+
+                <div class="bo-topbar-right">
+                    <button class="bo-mode-toggle" type="button" @click="toggleTheme()">
+                        <span class="bo-mode-track" :class="darkMode ? 'on' : ''">
+                            <span class="bo-mode-thumb"></span>
+                        </span>
+                        <i class="ph" :class="darkMode ? 'ph-moon' : 'ph-sun'"></i>
+                    </button>
+
+                    <div class="bo-notify" x-data="{ open: false }">
+                    <button class="bo-icon-btn" data-notify-toggle type="button" title="Notifications" @click="open = !open">
+                        <i class="ph ph-bell"></i>
+                        {% if backoffice_unread_notification_count %}<span class="bo-notify-count">{{ backoffice_unread_notification_count }}</span>{% endif %}
+                    </button>
+                    <div class="bo-dropdown bo-notify-dropdown" data-notify-dropdown x-show="open" x-transition @click.outside="open = false" style="display:none;">
+                        <div class="bo-dropdown-head">
+                            <strong>Notification</strong>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <button type="button" class="bo-notify-close" data-notify-close @click="open = false">
+                                    <i class="ph ph-x"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="bo-notify-list">
+                            {% for notification in backoffice_notifications %}
+                                <div class="bo-notify-item {% if not notification.read_at %}is-unread{% endif %}">
+                                    <span class="bo-notify-avatar">
+                                        {{ notification.subject|first|upper }}
+                                        <span class="bo-notify-status-dot {% if notification.status == 'failed' %}is-busy{% else %}is-online{% endif %}"></span>
+                                    </span>
+                                    <span class="bo-notify-item-body">
+                                        <span class="bo-notify-item-copy">
+                                            <strong>{{ notification.subject }}</strong>
+                                            <small>{{ notification.get_status_display }} &bull; {{ notification.created_at|date:"d M, H:i" }}</small>
+                                        </span>
+                                    </span>
+                                </div>
+                            {% empty %}
+                            <div style="padding: 32px 24px; text-align: center; color: var(--text-muted);">
+                                {% if global_brand_settings.notification_empty_image %}
+                                    <img src="{{ global_brand_settings.notification_empty_image.url }}" alt="No notifications" style="width: 120px; height: 120px; object-fit: contain; margin: 0 auto 16px; display: block; border-radius: 12px;">
+                                {% else %}
+                                    <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin: 0 auto 16px; display: block;">
+                                        <circle cx="60" cy="60" r="50" fill="var(--surface-soft)" opacity="0.3"/>
+                                        <circle cx="60" cy="60" r="38" fill="var(--surface-soft)" opacity="0.5"/>
+                                        <circle cx="60" cy="60" r="26" fill="var(--surface-soft)" opacity="0.8"/>
+                                        <g transform="translate(42, 38)" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                                            <path d="M18 4v2M18 6a10 10 0 00-10 10v9H4c-1 0-1.5.5-1.5 1.5S3 28 4 28h28c1 0 1.5-.5 1.5-1.5S33 25 32 25h-4v-9a10 10 0 00-10-10z" fill="var(--surface)"/>
+                                            <path d="M14 31a4 4 0 008 0" stroke-width="2.5"/>
+                                        </g>
+                                        <circle cx="34" cy="36" r="2.5" fill="var(--primary)"/>
+                                        <circle cx="86" cy="42" r="3" fill="#22c55e"/>
+                                        <circle cx="78" cy="86" r="2" fill="var(--primary)"/>
+                                    </svg>
+                                {% endif %}
+                                <div style="font-weight: 600; font-size: 15px; color: var(--ink); margin-bottom: 4px;">All Caught Up!</div>
+                                <div style="font-size: 13px; color: var(--muted);">No new notifications at the moment.</div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div class="bo-dropdown-divider"></div>
+                        <div class="bo-notify-actions">
+                            <a href="{% url 'backoffice:notifications' %}" class="ghost-button bo-notify-full">View All Notifications</a>
+                        </div>
+                    </div>
+                    </div>
+
+                    <div class="bo-profile" x-data="{ open: false }">
+                        <button class="bo-profile-btn" type="button" @click="open = !open">
+                            <span class="bo-profile-avatar">{{ request.user.email|first|upper }}</span>
+                            <span class="bo-profile-meta">
+                                <strong>{{ request.user.get_full_name|default:request.user.email }}</strong>
+                                <small>Super Admin</small>
+                            </span>
+                            <i class="ph ph-caret-down"></i>
+                        </button>
+                        <div class="bo-dropdown" x-show="open" x-transition @click.outside="open = false" style="display:none;">
+                            <a href="{% url 'backoffice:dashboard' %}"><i class="ph ph-gauge"></i> Dashboard</a>
+                            <a href="{% url 'backoffice:module-list' module='users' %}"><i class="ph ph-users"></i> Users</a>
+                            <div class="bo-dropdown-divider"></div>
+                            <a href="{% url 'backoffice:logout' %}" class="bo-dropdown-danger"><i class="ph ph-sign-out"></i> Sign Out</a>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <section class="bo-page-head">
+                <div>
+                    <p class="eyebrow">Control Center</p>
+                    <h2>{{ page_title }}</h2>
+                </div>
+            </section>
+
+            <main class="content">
+                {% include "shared/app_confirm.html" %}
+                {% block content %}{% endblock %}
+            </main>
+        </main>
+    </div>
+    <div class="modal-shell" id="global-modal" hidden>
+        <div class="modal-backdrop" data-close-modal onclick="document.getElementById('global-modal').hidden = true; document.body.style.overflow='';"></div>
+        <div class="modal-card">
+            <div class="modal-header">
+                <div>
+                    <p class="eyebrow">Quick Action</p>
+                    <h3>Foundation Modal</h3>
+                </div>
+                <button class="icon-button" type="button" data-close-modal onclick="document.getElementById('global-modal').hidden = true; document.body.style.overflow='';">Close</button>
+            </div>
+            <p class="modal-copy">
+                This modal shell is included for inline create, approval, assignment, and moderation actions in the next phase.
+            </p>
+            <div class="modal-actions">
+                <button class="ghost-button" type="button" data-close-modal onclick="document.getElementById('global-modal').hidden = true; document.body.style.overflow='';">Cancel</button>
+                <button class="primary-button" type="button" data-close-modal onclick="document.getElementById('global-modal').hidden = true; document.body.style.overflow='';">Continue</button>
+            </div>
+        </div>
+    </div>
+    <script src="{% static 'backoffice/admin.js' %}"></script>
+    <script src="{% static 'common/password-toggle.js' %}"></script>
+    <script>
+    function backofficeShell(initialGroup) {
+        return {
+            sidebarOpen: false,
+            sidebarCollapsed: false,
+            darkMode: false,
+            activeGroup: initialGroup || "",
+            init() {
+                this.darkMode = localStorage.getItem("bo-dark-mode") === "1";
+                this.sidebarCollapsed = localStorage.getItem("bo-sidebar-collapsed") === "1";
+                this.$nextTick(() => {
+                    const sidebar = document.querySelector("[data-sidebar]");
+                    if (sidebar) sidebar.scrollTop = 0;
+                    window.scrollTo(0, 0);
+                });
+            },
+            toggleTheme() {
+                this.darkMode = !this.darkMode;
+                localStorage.setItem("bo-dark-mode", this.darkMode ? "1" : "0");
+            },
+            toggleSidebar() {
+                if (window.innerWidth <= 1180) {
+                    this.sidebarOpen = !this.sidebarOpen;
+                    return;
+                }
+                this.sidebarCollapsed = !this.sidebarCollapsed;
+                localStorage.setItem("bo-sidebar-collapsed", this.sidebarCollapsed ? "1" : "0");
+            },
+            toggleGroup(groupName) {
+                this.activeGroup = this.activeGroup === groupName ? "" : groupName;
+            },
+        };
+    }
+    </script>
+    {% include "backoffice/media_library_modal.html" %}
+</body>
+</html>

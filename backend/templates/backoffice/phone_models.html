@@ -1,0 +1,1578 @@
+{% extends "backoffice/base.html" %}
+{% block content %}
+<div style="padding: 24px;">
+
+    <!-- Page Header -->
+    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px;">
+        <div>
+            <h1 style="font-size: 26px; font-weight: 700; color: var(--text-main); margin: 0 0 4px;">📱 Device Models</h1>
+            <p style="color: var(--text-muted); font-size: 14px; margin: 0;">Manage phone, tablet, and laptop families, optional brands, models, and their storage/colour variants.</p>
+        </div>
+        <div style="display: flex; gap: 10px;">
+            {% for name, label in platforms_choices %}
+            {% endfor %}
+            <button onclick="openCreatePlatform()" class="btn-primary-action">
+                <i class="ph ph-plus"></i> Add Device Type
+            </button>
+        </div>
+    </div>
+
+    <div class="preset-manager-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
+        <div class="platform-card preset-card">
+            <div class="preset-head">
+                <div>
+                    <h2>RAM Types</h2>
+                    <p>Add once and reuse across devices.</p>
+                </div>
+            </div>
+            <div class="preset-form">
+                <input type="text" id="ram-option-input" class="modal-input" placeholder="e.g. 4GB, 8GB, 16GB">
+                <button type="button" class="btn-outline-sm" onclick="submitRamOption()"><i class="ph ph-plus"></i> Add RAM</button>
+            </div>
+            <div class="preset-chip-list">
+                {% for ram in ram_options %}
+                    <span class="variant-chip{% if not ram.is_active %} inactive{% endif %}">
+                        {% if not ram.is_active %}
+                            <input type="checkbox" data-bulk-trash data-trash-type="ram" data-trash-id="{{ ram.id }}" aria-label="Select {{ ram.label }}">
+                        {% endif %}
+                        <span class="variant-chip-label">{{ ram.label }}</span>
+                        {% if ram.is_active %}
+                            <button onclick="deleteRamOption('{{ ram.id }}')" class="variant-chip-btn del"><i class="ph ph-x"></i></button>
+                        {% else %}
+                            <button onclick="restoreRamOption('{{ ram.id }}')" class="variant-chip-btn edit"><i class="ph ph-arrow-counter-clockwise"></i></button>
+                            <button onclick="permanentDeleteRamOption('{{ ram.id }}')" class="variant-chip-btn del"><i class="ph ph-trash"></i></button>
+                        {% endif %}
+                    </span>
+                {% empty %}
+                    <p class="preset-empty">No RAM types yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="platform-card preset-card">
+            <div class="preset-head">
+                <div>
+                    <h2>Storage Types</h2>
+                    <p>Add once and reuse across phones, tablets, and laptops.</p>
+                </div>
+            </div>
+            <div class="preset-form">
+                <input type="text" id="storage-option-input" class="modal-input" placeholder="e.g. 128GB, 256GB, 1TB">
+                <button type="button" class="btn-outline-sm" onclick="submitStorageOption()"><i class="ph ph-plus"></i> Add Storage</button>
+            </div>
+            <div class="preset-chip-list">
+                {% for storage in storage_options %}
+                    <span class="variant-chip{% if not storage.is_active %} inactive{% endif %}">
+                        {% if not storage.is_active %}
+                            <input type="checkbox" data-bulk-trash data-trash-type="storage" data-trash-id="{{ storage.id }}" aria-label="Select {{ storage.label }}">
+                        {% endif %}
+                        <span class="variant-chip-label">{{ storage.label }}</span>
+                        {% if storage.is_active %}
+                            <button onclick="deleteStorageOption('{{ storage.id }}')" class="variant-chip-btn del"><i class="ph ph-x"></i></button>
+                        {% else %}
+                            <button onclick="restoreStorageOption('{{ storage.id }}')" class="variant-chip-btn edit"><i class="ph ph-arrow-counter-clockwise"></i></button>
+                            <button onclick="permanentDeleteStorageOption('{{ storage.id }}')" class="variant-chip-btn del"><i class="ph ph-trash"></i></button>
+                        {% endif %}
+                    </span>
+                {% empty %}
+                    <p class="preset-empty">No storage types yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="platform-card preset-card">
+            <div class="preset-head">
+                <div>
+                    <h2>Colours</h2>
+                    <p>Choose colours once; product and variant forms will reuse them.</p>
+                </div>
+            </div>
+            <div class="preset-form color-form">
+                <input type="text" id="color-option-name-input" class="modal-input" placeholder="e.g. Black, Titanium Blue">
+                <input type="color" id="color-option-hex-picker" value="#000000" class="preset-color-picker">
+                <input type="text" id="color-option-hex-input" class="modal-input" placeholder="#000000">
+                <button type="button" class="btn-outline-sm" onclick="submitColorOption()"><i class="ph ph-plus"></i> Add Colour</button>
+            </div>
+            <div class="preset-chip-list">
+                {% for colour in colour_options %}
+                    <span class="variant-chip{% if not colour.is_active %} inactive{% endif %}">
+                        {% if not colour.is_active %}
+                            <input type="checkbox" data-bulk-trash data-trash-type="color" data-trash-id="{{ colour.id }}" aria-label="Select {{ colour.name }}">
+                        {% endif %}
+                        <span class="color-dot" style="background: {{ colour.color_hex|default:'#d1d5db' }};"></span>
+                        <span class="variant-chip-label">{{ colour.name }}</span>
+                        {% if colour.is_active %}
+                            <button onclick="deleteColorOption('{{ colour.id }}')" class="variant-chip-btn del"><i class="ph ph-x"></i></button>
+                        {% else %}
+                            <button onclick="restoreColorOption('{{ colour.id }}')" class="variant-chip-btn edit"><i class="ph ph-arrow-counter-clockwise"></i></button>
+                            <button onclick="permanentDeleteColorOption('{{ colour.id }}')" class="variant-chip-btn del"><i class="ph ph-trash"></i></button>
+                        {% endif %}
+                    </span>
+                {% empty %}
+                    <p class="preset-empty">No colours yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="bulk-trash-bar">
+        <label>
+            <input type="checkbox" data-bulk-trash-select-all>
+            Select all trash/options
+        </label>
+        <div>
+            <button type="button" onclick="bulkTrashAction('restore')" class="btn-outline-sm"><i class="ph ph-arrow-counter-clockwise"></i> Restore Selected</button>
+            <button type="button" onclick="bulkTrashAction('permanent')" class="btn-outline-sm danger"><i class="ph ph-trash"></i> Delete Selected</button>
+        </div>
+    </div>
+
+    <!-- Platforms Grid -->
+    <div id="platforms-grid" style="display: flex; flex-direction: column; gap: 24px;">
+        {% for platform in platforms %}
+        <div class="platform-card" data-platform-id="{{ platform.id }}">
+            <!-- Platform Header -->
+            <div class="platform-header">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div class="platform-icon {% if platform.name == 'laptop' %}laptop{% elif platform.name == 'android' %}tablet{% else %}phone{% endif %}">
+                        {% if platform.name == "laptop" %}
+                            <i class="ph-fill ph-laptop"></i>
+                        {% elif platform.name == "android" %}
+                            <i class="ph-fill ph-tablet"></i>
+                        {% else %}
+                            <i class="ph-fill ph-device-mobile-camera"></i>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h2 style="font-size: 18px; font-weight: 700; color: var(--text-main); margin: 0;">{{ platform }}</h2>
+                        <span style="font-size: 12px; color: var(--text-muted);">{{ platform.active_models|length }} model{{ platform.active_models|length|pluralize }}&nbsp;·&nbsp;{{ platform.variants_count|default:0 }} variant{{ platform.variants_count|default:0|pluralize }}</span>
+                    </div>
+                </div>
+                <div style="display:flex; gap:6px; align-items:center;">
+                    <button onclick="deletePlatform('{{ platform.id }}')" class="icon-btn delete"><i class="ph ph-trash"></i></button>
+                    <button onclick="restorePlatform('{{ platform.id }}')" class="icon-btn edit"><i class="ph ph-arrow-counter-clockwise"></i></button>
+                    {% if not platform.is_active %}
+                        <button onclick="permanentDeletePlatform('{{ platform.id }}')" class="icon-btn delete" title="Delete permanently"><i class="ph ph-trash-simple"></i></button>
+                    {% endif %}
+                </div>
+                {% if platform.name != "" %}
+                <button onclick="openCreateBrand('{{ platform.id }}')" class="btn-outline-sm">
+                    <i class="ph ph-plus"></i> Add Brand
+                </button>
+                {% endif %}
+                <button onclick="openCreateModel('{{ platform.id }}')" class="btn-outline-sm" style="margin-left: 6px;">
+                    <i class="ph ph-phone"></i> Add Model
+                </button>
+            </div>
+
+            <!-- Active Brands -->
+            {% if platform.active_brands %}
+            <div class="brands-section">
+                {% for brand in platform.active_brands %}
+                <div class="brand-row" data-brand-id="{{ brand.id }}">
+                    <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                        <i class="ph ph-device-mobile-camera" style="font-size: 16px; color: var(--primary);"></i>
+                        <span class="brand-name-label" style="font-weight: 600; font-size: 14px;">{{ brand.name }}</span>
+                        <span style="font-size: 11px; color: var(--text-muted); background: var(--surface-soft); padding: 2px 8px; border-radius: 20px;">{{ brand.active_models|length }} model{{ brand.active_models|length|pluralize }}</span>
+                    </div>
+                    <div style="display: flex; gap: 6px;">
+                        <button onclick="editBrand('{{ brand.id }}', '{{ brand.name }}')" class="icon-btn edit"><i class="ph ph-pencil"></i></button>
+                        <button onclick="deleteBrand('{{ brand.id }}')" class="icon-btn delete"><i class="ph ph-trash"></i></button>
+                    </div>
+                </div>
+                {% empty %}
+                <p style="color: var(--text-muted); font-size: 13px; padding: 8px 0; margin: 0;">No brands yet. Brands are optional for device models.</p>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Models List -->
+            <div class="models-list" id="models-{{ platform.id }}">
+                {% for model in platform.active_models %}
+                <div class="model-card" data-model-id="{{ model.id }}">
+                    <div class="model-header">
+                        <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                            <div class="model-badge {% if platform.name == 'laptop' %}laptop{% elif platform.name == 'android' %}tablet{% else %}phone{% endif %}">
+                                {% if platform.name == "laptop" %}<i class="ph-fill ph-laptop"></i>
+                                {% elif platform.name == "android" %}<i class="ph-fill ph-tablet"></i>
+                                {% else %}<i class="ph ph-device-mobile-camera"></i>{% endif %}
+                            </div>
+                            <div>
+                                <div class="model-name-label" style="font-weight: 600; font-size: 14px; color: var(--text-main);">{{ model.display_name }}</div>
+                                {% if model.brand %}<div style="font-size: 11px; color: var(--text-muted);">{{ model.brand.name }}</div>{% endif %}
+                                {% if model.released_year %}<div style="font-size: 11px; color: var(--text-muted);">{{ model.released_year }}</div>{% endif %}
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <span class="variant-count-badge">{{ model.active_variants.count }} variant{{ model.active_variants.count|pluralize }}</span>
+                            <button onclick="editModel('{{ model.id }}', '{{ model.name|escapejs }}', '{{ model.released_year|default:'' }}', '{{ platform.id }}', '{{ model.brand_id|default:'' }}')" class="icon-btn edit"><i class="ph ph-pencil"></i></button>
+                            <button onclick="deleteModel('{{ model.id }}')" class="icon-btn delete"><i class="ph ph-trash"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Variants for this model -->
+                    <div class="variants-grid" id="variants-{{ model.id }}">
+                        {% for v in model.active_variants %}
+                        <div class="variant-chip" data-variant-id="{{ v.id }}">
+                            {% if v.color_hex %}
+                                <span class="color-dot" style="background: {{ v.color_hex }};"></span>
+                            {% endif %}
+                            <span class="variant-chip-label">{{ v.display_name }}</span>
+                            <button onclick="editVariant('{{ v.id }}', '{{ v.ram|escapejs }}', '{{ v.storage|escapejs }}', '{{ v.color|escapejs }}', '{{ v.color_hex|escapejs }}')" class="variant-chip-btn edit"><i class="ph ph-pencil"></i></button>
+                            <button onclick="deleteVariant('{{ v.id }}')" class="variant-chip-btn del"><i class="ph ph-x"></i></button>
+                        </div>
+                        {% empty %}
+                        <p class="no-variants-msg" style="color: var(--text-muted); font-size: 12px; margin: 0;">No variants yet.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% empty %}
+                <p style="color: var(--text-muted); font-size: 13px; padding: 12px 0; margin: 0; text-align: center;">No models yet — click "Add Model" to create one.</p>
+                {% endfor %}
+            </div>
+
+            {% if platform.deleted_brands or platform.deleted_models %}
+            <div class="brands-section" style="margin-top: 16px; border-top: 1px dashed var(--border); padding-top: 16px;">
+                <div style="width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom: 10px;">
+                    <label style="font-size: 12px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: .04em; display:flex; align-items:center; gap:8px;">
+                        <input type="checkbox" data-bulk-trash-select-all>
+                        Trash
+                    </label>
+                    <div style="display:flex; gap:6px;">
+                        <button type="button" onclick="bulkTrashAction('restore')" class="btn-outline-sm"><i class="ph ph-arrow-counter-clockwise"></i> Restore Selected</button>
+                        <button type="button" onclick="bulkTrashAction('permanent')" class="btn-outline-sm danger"><i class="ph ph-trash"></i> Delete Selected</button>
+                    </div>
+                </div>
+                {% for brand in platform.deleted_brands %}
+                <div class="brand-row" data-brand-id="{{ brand.id }}" style="opacity:.65;">
+                    <div style="display:flex; align-items:center; gap:10px; flex:1;">
+                        <input type="checkbox" data-bulk-trash data-trash-type="brand" data-trash-id="{{ brand.id }}" aria-label="Select {{ brand.name }}">
+                        <i class="ph ph-trash" style="font-size: 16px; color: var(--text-muted);"></i>
+                        <span class="brand-name-label" style="font-weight:600; font-size:14px;">{{ brand.name }}</span>
+                    </div>
+                    <div style="display:flex; gap:6px;">
+                        <button onclick="restoreBrand('{{ brand.id }}')" class="btn-outline-sm"><i class="ph ph-arrow-counter-clockwise"></i> Restore</button>
+                        <button onclick="permanentDeleteBrand('{{ brand.id }}')" class="btn-outline-sm danger"><i class="ph ph-trash"></i> Delete Permanently</button>
+                    </div>
+                </div>
+                {% endfor %}
+                {% for model in platform.deleted_models %}
+                <div class="model-card" data-model-id="{{ model.id }}" style="opacity:.7;">
+                    <div class="model-header">
+                        <div style="display:flex; align-items:center; gap:10px; flex:1;">
+                            <input type="checkbox" data-bulk-trash data-trash-type="model" data-trash-id="{{ model.id }}" aria-label="Select {{ model.display_name }}">
+                            <div class="model-badge phone"><i class="ph ph-trash"></i></div>
+                            <div>
+                                <div class="model-name-label" style="font-weight:600; font-size:14px; color:var(--text-main);">{{ model.display_name }}</div>
+                                <div style="font-size:11px; color:var(--text-muted);">Deleted</div>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:6px;">
+                            <button onclick="restoreModel('{{ model.id }}')" class="btn-outline-sm"><i class="ph ph-arrow-counter-clockwise"></i> Restore</button>
+                            <button onclick="permanentDeleteModel('{{ model.id }}')" class="btn-outline-sm danger"><i class="ph ph-trash"></i> Delete Permanently</button>
+                        </div>
+                    </div>
+                    <div class="variants-grid" style="margin-top: 10px;">
+                        {% for v in model.deleted_variants %}
+                        <div class="variant-chip" data-variant-id="{{ v.id }}" style="opacity:.7;">
+                            <input type="checkbox" data-bulk-trash data-trash-type="variant" data-trash-id="{{ v.id }}" aria-label="Select {{ v.display_name }}">
+                            <span class="variant-chip-label">{{ v.display_name }}</span>
+                            <button onclick="restoreVariant('{{ v.id }}')" class="variant-chip-btn edit" title="Restore"><i class="ph ph-arrow-counter-clockwise"></i></button>
+                            <button onclick="permanentDeleteVariant('{{ v.id }}')" class="variant-chip-btn del" title="Delete permanently"><i class="ph ph-trash"></i></button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% empty %}
+        <div style="text-align: center; padding: 60px 24px; background: var(--surface); border: 1px dashed var(--border); border-radius: 16px;">
+            <i class="ph ph-device-mobile" style="font-size: 48px; color: var(--text-muted);"></i>
+            <p style="color: var(--text-muted); margin-top: 12px; font-size: 15px;">No device types yet. Click <strong>Add Device Type</strong> to start.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- ── Modals ─────────────────────────────────────────────────────────── -->
+
+<!-- Create Platform Modal -->
+<div id="modal-platform" class="modal-backdrop" style="display:none;">
+    <div class="modal-box" style="max-width:420px;">
+        <div class="modal-head"><h3>Add Device Type</h3><button onclick="closeModal('modal-platform')" class="modal-close-btn"><i class="ph ph-x"></i></button></div>
+        <div class="modal-body">
+            <label class="modal-label">Device Type</label>
+            <select id="platform-name-select" class="modal-input">
+                <option value="apple">📱 Phone</option>
+                <option value="android">📟 Tablet</option>
+                <option value="laptop">💻 Laptop</option>
+            </select>
+        </div>
+        <div class="modal-footer">
+            <button onclick="closeModal('modal-platform')" class="btn-cancel">Cancel</button>
+            <button onclick="submitCreatePlatform()" class="btn-confirm">Create Device Type</button>
+        </div>
+    </div>
+</div>
+
+<!-- Create/Edit Brand Modal -->
+<div id="modal-brand" class="modal-backdrop" style="display:none;">
+    <div class="modal-box" style="max-width:420px;">
+        <div class="modal-head"><h3 id="modal-brand-title">Add Brand</h3><button onclick="closeModal('modal-brand')" class="modal-close-btn"><i class="ph ph-x"></i></button></div>
+        <div class="modal-body">
+            <input type="hidden" id="brand-platform-id">
+            <input type="hidden" id="brand-edit-id">
+            <label class="modal-label">Brand Name</label>
+            <input type="text" id="brand-name-input" class="modal-input" placeholder="e.g. Samsung, OnePlus, Xiaomi">
+        </div>
+        <div class="modal-footer">
+            <button onclick="closeModal('modal-brand')" class="btn-cancel">Cancel</button>
+            <button onclick="submitBrand()" class="btn-confirm" id="brand-confirm-btn">Add Brand</button>
+        </div>
+    </div>
+</div>
+
+<!-- Create/Edit Model Modal -->
+<div id="modal-model" class="modal-backdrop" style="display:none;">
+    <div class="modal-box" style="max-width:480px;">
+        <div class="modal-head"><h3 id="modal-model-title">Add Device Model</h3><button onclick="closeModal('modal-model')" class="modal-close-btn"><i class="ph ph-x"></i></button></div>
+        <div class="modal-body">
+            <input type="hidden" id="model-platform-id">
+            <input type="hidden" id="model-edit-id">
+            <div style="margin-bottom: 14px;">
+                <label class="modal-label">Device Type <span style="color:#ef4444;">*</span></label>
+                <select id="model-platform-select" class="modal-input">
+                    {% for platform in platforms %}
+                        <option value="{{ platform.id }}">{{ platform }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div id="model-brand-row" style="margin-bottom: 14px;">
+                <label class="modal-label">Brand (optional)</label>
+                <select id="model-brand-select" class="modal-input">
+                    <option value="">Select brand...</option>
+                </select>
+            </div>
+            <div style="margin-bottom: 14px;">
+                <label class="modal-label">Model Name <span style="color:#ef4444;">*</span></label>
+                <input type="text" id="model-name-input" class="modal-input" placeholder="e.g. iPhone 15, iPhone 15 Pro, iPhone 15 Pro Max">
+                <small style="color:var(--text-muted); font-size: 12px; margin-top: 4px; display:block;" id="model-name-hint">Use commas to add multiple models at once. Brand can be selected separately, or left blank for brand-free devices.</small>
+            </div>
+            <div>
+                <label class="modal-label">Release Year (optional)</label>
+                <input type="number" id="model-year-input" class="modal-input" placeholder="e.g. 2024" min="2000" max="2099">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button onclick="closeModal('modal-model')" class="btn-cancel">Cancel</button>
+            <button onclick="submitModel()" class="btn-confirm" id="model-confirm-btn">Add Model</button>
+        </div>
+    </div>
+</div>
+
+<!-- Create/Edit Variant Modal -->
+<div id="modal-variant" class="modal-backdrop" style="display:none;">
+    <div class="modal-box" style="max-width:460px;">
+        <div class="modal-head"><h3 id="modal-variant-title">Add Variant</h3><button onclick="closeModal('modal-variant')" class="modal-close-btn"><i class="ph ph-x"></i></button></div>
+        <div class="modal-body">
+            <input type="hidden" id="variant-model-id">
+            <input type="hidden" id="variant-edit-id">
+            <div style="margin-bottom: 14px;">
+                <label class="modal-label">RAM</label>
+                <input type="text" id="variant-ram-input" class="modal-input" list="ram-capacity-presets" placeholder="e.g. 4GB, 8GB, 16GB">
+                <datalist id="ram-capacity-presets">
+                    {% for ram_value in ram_capacity_presets %}
+                        <option value="{{ ram_value }}">
+                    {% endfor %}
+                </datalist>
+                <select id="variant-ram-preset-select" class="modal-input preset-select" aria-label="Choose saved RAM">
+                    <option value="">Choose saved RAM...</option>
+                    {% for ram_value in ram_capacity_presets %}
+                        <option value="{{ ram_value }}">{{ ram_value }}</option>
+                    {% endfor %}
+                </select>
+                <small style="color:var(--text-muted); font-size: 12px; margin-top: 4px; display:block;">Use commas to create multiple RAM variants at once.</small>
+            </div>
+            <div style="margin-bottom: 14px;">
+                <label class="modal-label">Storage Capacity</label>
+                <input type="text" id="variant-storage-input" class="modal-input" list="storage-capacity-presets" placeholder="e.g. 128GB, 256GB, 512GB">
+                <datalist id="storage-capacity-presets">
+                    {% for storage_value in storage_capacity_presets %}
+                        <option value="{{ storage_value }}">
+                    {% endfor %}
+                </datalist>
+                <select id="variant-storage-preset-select" class="modal-input preset-select" aria-label="Choose saved storage capacity">
+                    <option value="">Choose saved storage...</option>
+                    {% for storage_value in storage_capacity_presets %}
+                        <option value="{{ storage_value }}">{{ storage_value }}</option>
+                    {% endfor %}
+                </select>
+                <small style="color:var(--text-muted); font-size: 12px; margin-top: 4px; display:block;">Use commas to create multiple storage variants at once.</small>
+            </div>
+            <div style="margin-bottom: 14px;">
+                <label class="modal-label">Colour Name</label>
+                <input type="text" id="variant-color-input" class="modal-input" list="colour-name-presets" placeholder="e.g. Midnight, Starlight, Titanium Black">
+                <datalist id="colour-name-presets">
+                    {% for colour_name in colour_name_presets %}
+                        <option value="{{ colour_name }}">
+                    {% endfor %}
+                </datalist>
+                <div class="colour-preset-combobox" id="variant-color-preset-combobox">
+                    <input type="hidden" id="variant-color-preset-select" value="">
+                    <button type="button" class="modal-input preset-select colour-preset-toggle" id="variant-color-preset-toggle" aria-haspopup="listbox" aria-expanded="false">
+                        <span class="colour-preset-toggle-copy">
+                            <span class="colour-preview-dot empty"></span>
+                            <span id="variant-color-preset-label">Choose saved colour...</span>
+                        </span>
+                        <i class="ph ph-caret-down"></i>
+                    </button>
+                    <div class="colour-preset-menu" id="variant-color-preset-menu" role="listbox">
+                        {% for colour in colour_presets %}
+                            <button type="button" class="colour-preset-option" data-colour-name="{{ colour.name|escape }}" data-colour-hex="{{ colour.hex|default:''|escape }}" role="option">
+                                <span class="colour-preview-dot" style="background: {{ colour.hex|default:'#d1d5db' }};"></span>
+                                <span>{{ colour.name }}</span>
+                            </button>
+                        {% empty %}
+                            <span class="colour-preset-empty">No saved colours yet</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <small style="color:var(--text-muted); font-size: 12px; margin-top: 4px; display:block;">Use commas to create multiple colour variants at once.</small>
+            </div>
+            <div>
+                <label class="modal-label">Colour Hex (optional)</label>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="color" id="variant-color-hex-picker" value="#000000" style="width:40px; height:36px; border:1px solid var(--border); border-radius:8px; padding:2px; cursor:pointer; background:transparent;">
+                    <input type="text" id="variant-color-hex-input" class="modal-input" placeholder="#000000" style="flex:1;">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button onclick="closeModal('modal-variant')" class="btn-cancel">Cancel</button>
+            <button onclick="submitVariant()" class="btn-confirm" id="variant-confirm-btn">Add Variant</button>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Action Modal -->
+<div id="modal-confirm" class="modal-backdrop" style="display:none;">
+    <div class="modal-box confirm-box" style="max-width:420px;">
+        <div class="modal-head">
+            <h3 id="confirm-title">Confirm action</h3>
+            <button type="button" onclick="resolveConfirm(false)" class="modal-close-btn"><i class="ph ph-x"></i></button>
+        </div>
+        <div class="modal-body confirm-body">
+            <div class="confirm-icon" id="confirm-icon"><i class="ph ph-warning"></i></div>
+            <p id="confirm-message">Are you sure?</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" onclick="resolveConfirm(false)" class="btn-cancel" id="confirm-cancel-btn">Cancel</button>
+            <button type="button" onclick="resolveConfirm(true)" class="btn-confirm danger" id="confirm-ok-btn">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" style="display:none; position:fixed; bottom:24px; right:24px; background:#111827; color:#fff; padding:12px 20px; border-radius:10px; font-size:14px; z-index:9999; box-shadow:0 8px 24px rgba(0,0,0,0.2); transition: all 0.3s ease;"></div>
+
+<style>
+.platform-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+}
+.preset-manager-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+}
+.preset-card {
+    padding: 18px 20px;
+}
+.preset-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+.preset-head h2 {
+    margin: 0;
+    font-size: 17px;
+    color: var(--text-main);
+}
+.preset-head p {
+    margin: 4px 0 0;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+.preset-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    align-items: center;
+}
+.preset-form.color-form {
+    grid-template-columns: minmax(0, 1.2fr) 42px minmax(0, .8fr) auto;
+}
+.preset-color-picker {
+    width: 42px;
+    height: 38px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 2px;
+    background: transparent;
+    cursor: pointer;
+}
+.preset-chip-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+}
+.variant-chip.inactive {
+    opacity: .55;
+}
+.preset-empty {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+.bulk-trash-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    margin: 0 0 24px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface);
+}
+.bulk-trash-bar label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text-main);
+    font-size: 13px;
+    font-weight: 600;
+}
+.bulk-trash-bar > div {
+    display: flex;
+    gap: 8px;
+}
+[data-bulk-trash] {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--primary);
+}
+.platform-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 20px;
+    background: var(--surface-soft);
+    border-bottom: 1px solid var(--border);
+}
+.platform-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    font-size: 22px;
+    flex-shrink: 0;
+}
+.platform-icon.apple { background: #1d1d1f; color: #fff; }
+.platform-icon.android { background: #e8f5e9; color: #2e7d32; }
+.brands-section {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(0,0,0,0.015);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.brand-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 10px;
+}
+.models-list { padding: 16px 20px; display: flex; flex-direction: column; gap: 12px; }
+.model-card {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--surface-soft);
+}
+.model-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+}
+.model-badge {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+.model-badge.apple { background: #1d1d1f; color: #fff; }
+.model-badge.android { background: #e8f5e9; color: #2e7d32; }
+.variant-count-badge {
+    font-size: 11px;
+    background: var(--surface-soft);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2px 9px;
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+.variants-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px 14px;
+}
+.variant-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 500;
+}
+.color-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,0,0,0.12);
+    flex-shrink: 0;
+}
+.variant-chip-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 11px;
+    padding: 2px 3px;
+    border-radius: 4px;
+    line-height: 1;
+}
+.variant-chip-btn.edit { color: var(--primary); }
+.variant-chip-btn.del { color: #ef4444; }
+.variant-chip-btn:hover { background: var(--surface-soft); }
+.icon-btn {
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 7px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s;
+}
+.icon-btn.edit { color: var(--primary); }
+.icon-btn.edit:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+.icon-btn.delete { color: #ef4444; }
+.icon-btn.delete:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
+.btn-outline-sm {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border: 1px solid var(--primary);
+    background: transparent;
+    color: var(--primary);
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+}
+.btn-outline-sm:hover { background: var(--primary); color: #fff; }
+.btn-outline-sm.danger {
+    border-color: #ef4444;
+    color: #ef4444;
+}
+.btn-outline-sm.danger:hover {
+    background: #ef4444;
+    color: #fff;
+}
+.btn-primary-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 9px 18px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+.btn-primary-action:hover { opacity: 0.88; }
+/* Modal styles */
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(2px);
+    pointer-events: auto;
+}
+.modal-box {
+    background: var(--surface);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    width: 90%;
+    overflow: hidden;
+    animation: modalIn 0.2s ease;
+}
+@keyframes modalIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.modal-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+}
+.modal-head h3 { font-size: 16px; font-weight: 700; margin: 0; color: var(--text-main); }
+.modal-close-btn {
+    background: var(--surface-soft);
+    border: none;
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 14px;
+    display: grid;
+    place-items: center;
+    color: var(--text-muted);
+}
+.modal-body { padding: 20px; }
+.modal-footer { display: flex; gap: 10px; justify-content: flex-end; padding: 14px 20px; border-top: 1px solid var(--border); background: var(--surface-soft); }
+.modal-label { display: block; font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 6px; }
+.modal-input {
+    display: block;
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--text-main);
+    font-size: 14px;
+    box-sizing: border-box;
+}
+.modal-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(224, 68, 32,0.1); }
+.preset-select {
+    margin-top: 8px;
+    cursor: pointer;
+}
+.colour-preset-combobox {
+    position: relative;
+}
+.colour-preset-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    text-align: left;
+}
+.colour-preset-toggle-copy {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+.colour-preview-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(15, 23, 42, 0.18);
+    flex: 0 0 auto;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.12);
+}
+.colour-preview-dot.empty {
+    background: linear-gradient(135deg, #f8fafc 0%, #f8fafc 45%, #cbd5e1 46%, #cbd5e1 55%, #f8fafc 56%);
+}
+.colour-preset-menu {
+    position: absolute;
+    z-index: 1002;
+    left: 0;
+    right: 0;
+    top: calc(100% + 6px);
+    display: none;
+    padding: 6px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+    max-height: 220px;
+    overflow-y: auto;
+}
+.colour-preset-combobox.open .colour-preset-menu {
+    display: grid;
+    gap: 2px;
+}
+.colour-preset-option {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: var(--text-main);
+    border-radius: 8px;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    text-align: left;
+}
+.colour-preset-option:hover {
+    background: var(--surface-soft);
+}
+.colour-preset-empty {
+    color: var(--text-muted);
+    font-size: 13px;
+    padding: 8px 10px;
+}
+.btn-cancel {
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+}
+.btn-confirm {
+    padding: 8px 20px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+}
+.btn-confirm:hover { opacity: 0.9; }
+.btn-confirm.danger {
+    background: #ef4444;
+}
+.btn-confirm.warning {
+    background: #f59e0b;
+}
+.confirm-box {
+    border: 1px solid var(--border);
+}
+.confirm-body {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+.confirm-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+    font-size: 20px;
+}
+.confirm-icon.warning {
+    background: rgba(245, 158, 11, 0.14);
+    color: #d97706;
+}
+.confirm-body p {
+    margin: 6px 0 0;
+    color: var(--text-main);
+    font-size: 14px;
+    line-height: 1.5;
+}
+</style>
+
+<script>
+const CSRF = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
+
+function csrfPost(url, data) {
+    const fd = new FormData();
+    for (const [k, v] of Object.entries(data)) fd.append(k, v);
+    return fetch(url, { method: 'POST', headers: { 'X-CSRFToken': CSRF }, body: fd });
+}
+
+function showToast(msg, success=true) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    t.style.background = success ? '#111827' : '#ef4444';
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.style.display = 'none', 3000);
+}
+
+function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+function closeModal(id) {
+    if (id === 'modal-confirm') {
+        resolveConfirm(false);
+        return;
+    }
+    document.getElementById(id).style.display = 'none';
+}
+
+let activeConfirmResolve = null;
+
+function askConfirm({ title = 'Confirm action', message = 'Are you sure?', confirmText = 'Confirm', cancelText = 'Cancel', tone = 'danger' } = {}) {
+    if (window.appConfirm) {
+        return window.appConfirm({ title, message, confirmText, cancelText, tone });
+    }
+    document.getElementById('confirm-title').textContent = title;
+    document.getElementById('confirm-message').textContent = message;
+    document.getElementById('confirm-ok-btn').textContent = confirmText;
+    document.getElementById('confirm-cancel-btn').textContent = cancelText;
+    const confirmBtn = document.getElementById('confirm-ok-btn');
+    const icon = document.getElementById('confirm-icon');
+    confirmBtn.classList.toggle('warning', tone === 'warning');
+    confirmBtn.classList.toggle('danger', tone !== 'warning');
+    icon.classList.toggle('warning', tone === 'warning');
+    openModal('modal-confirm');
+    confirmBtn.focus();
+    return new Promise((resolve) => {
+        activeConfirmResolve = resolve;
+    });
+}
+
+function resolveConfirm(result) {
+    const modal = document.getElementById('modal-confirm');
+    modal.style.display = 'none';
+    if (activeConfirmResolve) {
+        activeConfirmResolve(result);
+        activeConfirmResolve = null;
+    }
+}
+
+const trashEndpointMap = {
+    platform: '/admin/catalog/phone-models/platform/',
+    brand: '/admin/catalog/phone-models/brand/',
+    model: '/admin/catalog/phone-models/model/',
+    variant: '/admin/catalog/phone-models/variant/',
+    storage: '/admin/catalog/phone-models/storage/',
+    color: '/admin/catalog/phone-models/color/',
+    ram: '/admin/catalog/phone-models/ram/',
+};
+
+function selectedTrashItems() {
+    return Array.from(document.querySelectorAll('[data-bulk-trash]:checked')).map((input) => ({
+        type: input.dataset.trashType,
+        id: input.dataset.trashId,
+    })).filter((item) => item.type && item.id && trashEndpointMap[item.type]);
+}
+
+async function bulkTrashAction(action) {
+    const items = selectedTrashItems();
+    if (!items.length) return showToast('Select at least one item first', false);
+    const isPermanent = action === 'permanent';
+    const confirmText = isPermanent
+        ? `Permanently delete ${items.length} selected item(s)? This cannot be undone.`
+        : `Restore ${items.length} selected item(s)?`;
+    const confirmed = await askConfirm({
+        title: isPermanent ? 'Delete selected items' : 'Restore selected items',
+        message: confirmText,
+        confirmText: isPermanent ? 'Delete Permanently' : 'Restore',
+        tone: isPermanent ? 'danger' : 'warning',
+    });
+    if (!confirmed) return;
+    for (const item of items) {
+        const suffix = isPermanent ? 'delete-permanent' : 'restore';
+        const r = await csrfPost(`${trashEndpointMap[item.type]}${item.id}/${suffix}/`, {});
+        if (!r.ok) {
+            return showToast('Bulk action failed. Refresh and try again.', false);
+        }
+    }
+    showToast(isPermanent ? 'Selected items permanently deleted' : 'Selected items restored');
+    location.reload();
+}
+
+document.querySelectorAll('[data-bulk-trash-select-all]').forEach((box) => {
+    box.addEventListener('change', function() {
+        document.querySelectorAll('[data-bulk-trash]').forEach((item) => {
+            item.checked = this.checked;
+        });
+        document.querySelectorAll('[data-bulk-trash-select-all]').forEach((other) => {
+            if (other !== this) other.checked = this.checked;
+        });
+    });
+});
+
+// ── Global Storage / Colour / RAM Presets ──────────────────────────────────────────
+async function submitStorageOption() {
+    const storage = document.getElementById('storage-option-input').value.trim();
+    if (!storage) return showToast('Enter a storage capacity', false);
+    const r = await csrfPost('/admin/catalog/phone-models/storage/create/', { label: storage });
+    const j = await r.json();
+    if (!r.ok) return showToast(j.error || 'Error', false);
+    showToast(j.created ? 'Storage added!' : 'Storage updated!');
+    location.reload();
+}
+async function submitRamOption() {
+    const ram = document.getElementById('ram-option-input').value.trim();
+    if (!ram) return showToast('Enter a RAM capacity', false);
+    const r = await csrfPost('/admin/catalog/phone-models/ram/create/', { label: ram });
+    const j = await r.json();
+    if (!r.ok) return showToast(j.error || 'Error', false);
+    showToast(j.created ? 'RAM added!' : 'RAM updated!');
+    location.reload();
+}
+async function deleteRamOption(id) {
+    const confirmed = await askConfirm({ title: 'Hide RAM type', message: 'Hide this RAM type from new dropdowns?', confirmText: 'Hide', tone: 'warning' });
+    if (!confirmed) return;
+    const r = await csrfPost(`/admin/catalog/phone-models/ram/${id}/delete/`, {});
+    if (!r.ok) return showToast('Delete failed', false);
+    showToast('RAM hidden');
+    location.reload();
+}
+async function restoreRamOption(id) {
+    const confirmed = await askConfirm({ title: 'Restore RAM type', message: 'Restore this RAM type?', confirmText: 'Restore', tone: 'restore' });
+    if (!confirmed) return;
+    const r = await csrfPost(`/admin/catalog/phone-models/ram/${id}/restore/`, {});
+    if (!r.ok) return showToast('Restore failed', false);
+    showToast('RAM restored');
+    location.reload();
+}
+async function permanentDeleteRamOption(id) {
+    const confirmed = await askConfirm({ title: 'Delete RAM type', message: 'Permanently delete this RAM type?', confirmText: 'Delete Permanently' });
+    if (!confirmed) return;
+    const r = await csrfPost(`/admin/catalog/phone-models/ram/${id}/delete-permanent/`, {});
+    if (!r.ok) return showToast('Permanent delete failed', false);
+    showToast('RAM permanently deleted');
+    location.reload();
+}
+async function deleteStorageOption(id) {
+    const confirmed = await askConfirm({
+        title: 'Hide storage option',
+        message: 'Hide this storage option from new dropdowns?',
+        confirmText: 'Hide',
+        tone: 'warning',
+    });
+    if (!confirmed) return;
+    const r = await csrfPost(`/admin/catalog/phone-models/storage/${id}/delete/`, {});
+    if (!r.ok) return showToast('Delete failed', false);
+    showToast('Storage hidden from new dropdowns');
+    location.reload();
+}
+async function restoreStorageOption(id) {
+    const confirmed = await askConfirm({
+        title: 'Restore storage option',
+        message: 'Restore this storage option?',
+        confirmText: 'Restore',
+        tone: 'restore',
+    });
+    if (!confirmed) return;
+    const r = await csrfPost(`/admin/catalog/phone-models/storage/${id}/restore/`, {});
+    if (!r.ok) return showToast('Restore failed', false);
+    showToast('Storage restored');
+    location.reload();
+}
+async function permanentDeleteStorageOption(id) {
+    const confirmed = await askConfirm({
+        title: 'Delete storage option',
+        message: 'Permanently delete this storage option? This cannot be undone.',
+        confirmText: 'Delete Permanently',
+    });
+    if (!confirmed) return;
+    const r = await csrfPost(`/admin/catalog/phone-models/storage/${id}/delete-permanent/`, {});
+    if (!r.ok) return showToast('Permanent delete failed', false);
+    showToast('Storage permanently deleted');
+    location.reload();
+}
+async function submitColorOption() {
+    const name = document.getElementById('color-option-name-input').value.trim();
+    const color_hex = document.getElementById('color-option-hex-input').value.trim();
+    if (!name) return showToast('Colour name is required', false);
+    const r = await csrfPost("{% url 'backoffice:phone-color-create' %}", { name, color_hex });
+    const j = await r.json();
+    if (!r.ok) return showToast(j.error || 'Error', false);
+    showToast(j.created ? 'Colour added!' : 'Colour updated!');
+    location.reload();
+}
+async function deleteColorOption(id) {
+    const confirmed = await askConfirm({
+        title: 'Hide colour option',
+        message: 'Hide this colour option from new dropdowns?',
+        confirmText: 'Hide',
+        tone: 'warning',
+    });
+    if (!confirmed) return;
+    const r = await csrfPost(`/admin/catalog/phone-models/color/${id}/delete/`, {});
+    if (!r.ok) return showToast('Delete failed', false);
+    showToast('Colour hidden from new dropdowns');
+    location.reload();
+}
+async function restoreColorOption(id) {
+    const confirmed = await askConfirm({
+        title: 'Restore colour option',
+        message: 'Restore this colour option?',
+        confirmText: 'Restore',
+        tone: 'restore',
+    });
+    if (!confirmed) return;
+    const r = await csrfPost(`/admin/catalog/phone-models/color/${id}/restore/`, {});
+    if (!r.ok) return showToast('Restore failed', false);
+    showToast('Colour restored');
+    location.reload();
+}
+async function permanentDeleteColorOption(id) {
+    const confirmed = await askConfirm({
+        title: 'Delete colour option',
+        message: 'Permanently delete this colour option? This cannot be undone.',
+        confirmText: 'Delete Permanently',
+    });
+    if (!confirmed) return;
+    const r = await csrfPost(`/admin/catalog/phone-models/color/${id}/delete-permanent/`, {});
+    if (!r.ok) return showToast('Permanent delete failed', false);
+    showToast('Colour permanently deleted');
+    location.reload();
+}
+document.getElementById('color-option-hex-picker').addEventListener('input', function() {
+    document.getElementById('color-option-hex-input').value = this.value;
+});
+document.getElementById('color-option-hex-input').addEventListener('input', function() {
+    if (/^#[0-9a-fA-F]{6}$/.test(this.value)) {
+        document.getElementById('color-option-hex-picker').value = this.value;
+    }
+});
+
+// ── Platform ──────────────────────────────────────────────────────────────────
+function openCreatePlatform() { openModal('modal-platform'); }
+async function deletePlatform(id) {
+    const confirmed = await askConfirm({
+        title: 'Move device type to trash',
+        message: 'Move this device type to trash?',
+        confirmText: 'Move to Trash',
+        tone: 'warning',
+    });
+    if (!confirmed) return;
+    const r = await csrfPost(`/admin/catalog/phone-models/platform/${id}/delete/`, {});
+    if (!r.ok) return showToast('Delete failed', false);
+    showToast('Device type moved to trash');
+    location.reload();
+}
+async function restorePlatform(id) {
+    const confirmed = await askConfirm({
+        title: 'Restore device type',
+        message: 'Restore this device type?',
+        confirmText: 'Restore',
+        tone: 'restore',
+    });
+    if (!confirmed) return;
+    const r = await csrfPost(`/admin/catalog/phone-models/platform/${id}/restore/`, {});
+    if (!r.ok) return showToast('Restore failed', false);
+    showToast('Device type restored');
+    location.reload();
+}
+async function permanentDeletePlatform(id) {
+    const confirmed = await askConfirm({
+        title: 'Delete device type',
+        message: 'Permanently delete this device type, brands, models, and variants? This cannot be undone.',
+        confirmText: 'Delete Permanently',
+    });
+    if (!confirmed) return;
+    const r = await csrfPost(`/admin/catalog/phone-models/platform/${id}/delete-permanent/`, {});
+    if (!r.ok) return showToast('Permanent delete failed', false);
+    showToast('Device type permanently deleted');
+    location.reload();
+}
+async function submitCreatePlatform() {
+    const name = document.getElementById('platform-name-select').value;
+    const r = await csrfPost("{% url 'backoffice:phone-platform-create' %}", { name });
+    const j = await r.json();
+    if (!r.ok) return showToast(j.error || 'Error', false);
+    showToast(j.created ? `${j.name} device type created!` : `${j.name} already exists.`);
+    closeModal('modal-platform');
+    location.reload();
+}
+
+// ── Brand ─────────────────────────────────────────────────────────────────────
+function openCreateBrand(platformId) {
+    document.getElementById('brand-platform-id').value = platformId;
+    document.getElementById('brand-edit-id').value = '';
+    document.getElementById('brand-name-input').value = '';
+    document.getElementById('modal-brand-title').textContent = 'Add Brand';
+    document.getElementById('brand-confirm-btn').textContent = 'Add Brand';
+    openModal('modal-brand');
+}
+function editBrand(id, name) {
+    document.getElementById('brand-edit-id').value = id;
+    document.getElementById('brand-name-input').value = name;
+    document.getElementById('modal-brand-title').textContent = 'Edit Brand';
+    document.getElementById('brand-confirm-btn').textContent = 'Save Changes';
+    openModal('modal-brand');
+}
+async function submitBrand() {
+    const editId = document.getElementById('brand-edit-id').value;
+    const name = document.getElementById('brand-name-input').value.trim();
+    const platformId = document.getElementById('brand-platform-id').value;
+    if (!name) return showToast('Brand name is required', false);
+
+    let url = editId
+        ? `/admin/catalog/phone-models/brand/${editId}/update/`
+        : "{% url 'backoffice:phone-brand-create' %}";
+    const data = editId ? { name } : { name, platform_id: platformId };
+    const r = await csrfPost(url, data);
+    const j = await r.json();
+    if (!r.ok) return showToast(j.error || 'Error', false);
+    showToast(editId ? 'Brand updated!' : 'Brand created!');
+    closeModal('modal-brand');
+    location.reload();
+}
+async function deleteBrand(id) {
+    const confirmed = await askConfirm({
+        title: 'Move brand to trash',
+        message: 'Move this brand to trash?',
+        confirmText: 'Move to Trash',
+        tone: 'warning',
+    });
+    if (!confirmed) return;
+    const r = await csrfPost(`/admin/catalog/phone-models/brand/${id}/delete/`, {});
+    if (!r.ok) return showToast('Delete failed', false);
+    showToast('Brand moved to trash');
+    location.reload();
+}
+async function restoreBrand(id) {
+    const confirmed = await askConfirm({
+        title: 'Restore brand',
+        message: 'Restore this brand?',
+        confirmText: 'Restore',
+        tone: 'restore',
+    });
+    if (!confirmed) return;
+    const r = await csrfPost(`/admin/catalog/phone-models/brand/${id}/restore/`, {});
+    if (!r.ok) return showToast('Restore failed', false);
+    showToast('Brand restored');
+    location.reload();
+}
+async function permanentDeleteBrand(id) {
+    const confirmed = await askConfirm({
+        title: 'Delete brand',
+        message: 'Permanently delete this brand? This cannot be undone.',
+        confirmText: 'Delete Permanently',
+    });
+    if (!confirmed) return;
+    const r = await csrfPost(`/admin/catalog/phone-models/brand/${id}/delete-permanent/`, {});
+    if (!r.ok) return showToast('Permanent delete failed', false);
+    showToast('Brand permanently deleted');
+    location.reload();
+}
+
+// ── Model ─────────────────────────────────────────────────────────────────────
+async function refreshModelModalBrands(platformId) {
+    document.getElementById('model-platform-id').value = platformId;
+    const brandRow = document.getElementById('model-brand-row');
+    const brandSelect = document.getElementById('model-brand-select');
+    const r = await fetch(`/admin/api/phone-brands/?platform_id=${platformId}`);
+    const j = await r.json();
+    if (j.brands && j.brands.length > 0) {
+        brandSelect.innerHTML = '<option value="">Select brand...</option>' +
+            j.brands.map(b => `<option value="${b.id}">${b.label}</option>`).join('');
+        brandRow.style.display = 'block';
+        document.getElementById('model-name-hint').textContent = 'Use commas to add multiple models at once. Select a brand if needed, or leave it blank for brand-free devices.';
+    } else {
+        brandRow.style.display = 'block';
+        brandSelect.innerHTML = '<option value="">No brand</option>';
+        document.getElementById('model-name-hint').textContent = 'Use commas to add multiple models at once. Brand is optional.';
+    }
+}
+async function openCreateModel(platformId) {
+    document.getElementById('model-platform-id').value = platformId;
+    document.getElementById('model-platform-select').value = platformId;
+    document.getElementById('model-edit-id').value = '';
+    document.getElementById('model-name-input').value = '';
+    document.getElementById('model-year-input').value = '';
+    document.getElementById('modal-model-title').textContent = 'Add Device Model';
+    document.getElementById('model-confirm-btn').textContent = 'Add Model';
+    await refreshModelModalBrands(platformId);
+    openModal('modal-model');
+}
+async function editModel(id, name, year, platformId, brandId = '') {
+    document.getElementById('model-edit-id').value = id;
+    document.getElementById('model-platform-id').value = platformId;
+    document.getElementById('model-platform-select').value = platformId;
+    document.getElementById('model-name-input').value = name;
+    document.getElementById('model-year-input').value = year || '';
+    document.getElementById('modal-model-title').textContent = 'Edit Device Model';
+    document.getElementById('model-confirm-btn').textContent = 'Save Changes';
+    document.getElementById('model-brand-row').style.display = 'block';
+    await refreshModelModalBrands(platformId);
+    document.getElementById('model-brand-select').value = brandId || '';
+    document.getElementById('model-name-hint').textContent = 'Use commas to add or remove models in this group.';
+    openModal('modal-model');
+}
+document.getElementById('model-platform-select').addEventListener('change', function() {
+    refreshModelModalBrands(this.value);
+});
+async function submitModel() {
+    const editId = document.getElementById('model-edit-id').value;
+    const platformId = document.getElementById('model-platform-select').value || document.getElementById('model-platform-id').value;
+    const brandId = document.getElementById('model-brand-select').value;
+    const name = document.getElementById('model-name-input').value.trim();
+    const year = document.getElementById('model-year-input').value.trim();
+    if (!name) return showToast('Model name is required', false);
+
+    let url = editId
+        ? `/admin/catalog/phone-models/model/${editId}/update/`
+        : "{% url 'backoffice:phone-model-create' %}";
+    const data = editId
+        ? { name, released_year: year, platform_id: platformId, brand_id: brandId }
+        : { name, released_year: year, platform_id: platformId, brand_id: brandId };
+    const r = await csrfPost(url, data);
+    const j = await r.json();
+    if (!r.ok) return showToast(j.error || 'Error', false);
+    const count = Array.isArray(j.models) ? j.models.length : 1;
+    showToast(editId ? 'Model updated!' : `${count} model${count === 1 ? '' : 's'} saved!`);
+    closeModal('modal-model');
+    location.reload();
+}
+async function deleteModel(id) {
+    const confirmed = await askConfirm({
+        title: 'Move model to trash',
+        message: 'Move this model to trash?',
+        confirmText: 'Move to Trash',
+        tone: 'warning',
+    });
+    if (!confirmed) return;
+    const r = await csrfPost(`/admin/catalog/phone-models/model/${id}/delete/`, {});
+    if (!r.ok) return showToast('Delete failed', false);
+    showToast('Model moved to trash');
+    location.reload();
+}
+async function restoreModel(id) {
+    const confirmed = await askConfirm({
+        title: 'Restore model',
+        message: 'Restore this model?',
+        confirmText: 'Restore',
+        tone: 'restore',
+    });
+    if (!confirmed) return;
+    const r = await csrfPost(`/admin/catalog/phone-models/model/${id}/restore/`, {});
+    if (!r.ok) return showToast('Restore failed', false);
+    showToast('Model restored');
+    location.reload();
+}
+async function permanentDeleteModel(id) {
+    const confirmed = await askConfirm({
+        title: 'Delete model',
+        message: 'Permanently delete this model and its variants? This cannot be undone.',
+        confirmText: 'Delete Permanently',
+    });
+    if (!confirmed) return;
+    const r = await csrfPost(`/admin/catalog/phone-models/model/${id}/delete-permanent/`, {});
+    if (!r.ok) return showToast('Permanent delete failed', false);
+    showToast('Model permanently deleted');
+    location.reload();
+}
+
+// ── Variant ───────────────────────────────────────────────────────────────────
+function openAddVariant(modelId, modelName) {
+    document.getElementById('variant-model-id').value = modelId;
+    document.getElementById('variant-edit-id').value = '';
+    document.getElementById('variant-ram-input').value = '';
+    document.getElementById('variant-storage-input').value = '';
+    document.getElementById('variant-color-input').value = '';
+    document.getElementById('variant-color-hex-input').value = '';
+    document.getElementById('variant-color-hex-picker').value = '#000000';
+    document.getElementById('variant-ram-preset-select').value = '';
+    document.getElementById('variant-storage-preset-select').value = '';
+    document.getElementById('variant-color-preset-select').value = '';
+    resetColourPresetLabel();
+    document.getElementById('modal-variant-title').textContent = `Add Variant — ${modelName}`;
+    document.getElementById('variant-confirm-btn').textContent = 'Add Variant';
+    openModal('modal-variant');
+}
+function editVariant(id, ram, storage, color, hex) {
+    document.getElementById('variant-edit-id').value = id;
+    document.getElementById('variant-ram-input').value = ram;
+    document.getElementById('variant-storage-input').value = storage;
+    document.getElementById('variant-color-input').value = color;
+    document.getElementById('variant-color-hex-input').value = hex;
+    document.getElementById('variant-color-hex-picker').value = hex || '#000000';
+    document.getElementById('variant-ram-preset-select').value = '';
+    document.getElementById('variant-storage-preset-select').value = '';
+    document.getElementById('variant-color-preset-select').value = '';
+    resetColourPresetLabel();
+    document.getElementById('modal-variant-title').textContent = 'Edit Variant';
+    document.getElementById('variant-confirm-btn').textContent = 'Save Changes';
+    openModal('modal-variant');
+}
+document.getElementById('variant-ram-preset-select').addEventListener('change', function() {
+    if (this.value) {
+        document.getElementById('variant-ram-input').value = this.value;
+    }
+});
+document.getElementById('variant-storage-preset-select').addEventListener('change', function() {
+    if (this.value) {
+        document.getElementById('variant-storage-input').value = this.value;
+    }
+});
+document.getElementById('variant-color-preset-select').addEventListener('change', function() {
+    if (this.value) {
+        document.getElementById('variant-color-input').value = this.value;
+    }
+});
+function resetColourPresetLabel() {
+    const label = document.getElementById('variant-color-preset-label');
+    const toggleDot = document.querySelector('#variant-color-preset-toggle .colour-preview-dot');
+    const combobox = document.getElementById('variant-color-preset-combobox');
+    if (label) label.textContent = 'Choose saved colour...';
+    if (toggleDot) {
+        toggleDot.classList.add('empty');
+        toggleDot.style.background = '';
+    }
+    if (combobox) combobox.classList.remove('open');
+    const toggle = document.getElementById('variant-color-preset-toggle');
+    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+}
+document.getElementById('variant-color-preset-toggle').addEventListener('click', function() {
+    const combobox = document.getElementById('variant-color-preset-combobox');
+    combobox.classList.toggle('open');
+    this.setAttribute('aria-expanded', combobox.classList.contains('open') ? 'true' : 'false');
+});
+document.querySelectorAll('.colour-preset-option').forEach((button) => {
+    button.addEventListener('click', function() {
+        const colourName = this.dataset.colourName || '';
+        const colourHex = this.dataset.colourHex || '';
+        const label = document.getElementById('variant-color-preset-label');
+        const toggleDot = document.querySelector('#variant-color-preset-toggle .colour-preview-dot');
+        document.getElementById('variant-color-preset-select').value = colourName;
+        document.getElementById('variant-color-input').value = colourName;
+        if (label) label.textContent = colourName;
+        if (toggleDot) {
+            toggleDot.classList.remove('empty');
+            toggleDot.style.background = colourHex || '#d1d5db';
+        }
+        if (colourHex) {
+            document.getElementById('variant-color-hex-input').value = colourHex;
+            if (/^#[0-9a-fA-F]{6}$/.test(colourHex)) {
+                document.getElementById('variant-color-hex-picker').value = colourHex;
+            }
+        }
+        document.getElementById('variant-color-preset-combobox').classList.remove('open');
+        document.getElementById('variant-color-preset-toggle').setAttribute('aria-expanded', 'false');
+    });
+});
+document.getElementById('variant-color-input').addEventListener('input', function() {
+    document.getElementById('variant-color-preset-select').value = '';
+    resetColourPresetLabel();
+});
+// Sync color picker ↔ text input
+document.getElementById('variant-color-hex-picker').addEventListener('input', function() {
+    document.getElementById('variant-color-hex-input').value = this.value;
+});
+document.getElementById('variant-color-hex-input').addEventListener('input', function() {
+    if (/^#[0-9a-fA-F]{6}$/.test(this.value)) {
+        document.getElementById('variant-color-hex-picker').value = this.value;
+    }
+});
+
+async function submitVariant() {
+    const editId = document.getElementById('variant-edit-id').value;
+    const modelId = document.getElementById('variant-model-id').value;
+    const ram = document.getElementById('variant-ram-input').value.trim();
+    const storage = document.getElementById('variant-storage-input').value.trim();
+    const color = document.getElementById('variant-color-input').value.trim();
+    const color_hex = document.getElementById('variant-color-hex-input').value.trim();
+    if (!ram && !storage && !color) return showToast('At least RAM, storage, or colour is required', false);
+
+    let url = editId
+        ? `/admin/catalog/phone-models/variant/${editId}/update/`
+        : "{% url 'backoffice:phone-variant-create' %}";
+    const data = editId
+        ? { ram, storage, color, color_hex }
+        : { ram, storage, color, color_hex, phone_model_id: modelId };
+    const r = await csrfPost(url, data);
+    const j = await r.json();
+    if (!r.ok) return showToast(j.error || 'Error', false);
+    showToast(editId ? 'Variant updated!' : 'Variant added!');
+    closeModal('modal-variant');
+    location.reload();
+}
+async function restoreVariant(id) {
+    const confirmed = await askConfirm({
+        title: 'Restore variant',
+        message: 'Restore this variant?',
+        confirmText: 'Restore',
+        tone: 'restore',
+    });
+    if (!confirmed) return;
+    const r = await csrfPost(`/admin/catalog/phone-models/variant/${id}/restore/`, {});
+    if (!r.ok) return showToast('Restore failed', false);
+    showToast('Variant restored');
+    location.reload();
+}
+async function permanentDeleteVariant(id) {
+    const confirmed = await askConfirm({
+        title: 'Delete variant',
+        message: 'Permanently delete this variant? Products linked to it will lose this association.',
+        confirmText: 'Delete Permanently',
+    });
+    if (!confirmed) return;
+    const r = await csrfPost(`/admin/catalog/phone-models/variant/${id}/delete-permanent/`, {});
+    if (!r.ok) return showToast('Permanent delete failed', false);
+    showToast('Variant permanently deleted');
+    location.reload();
+}
+async function deleteVariant(id) {
+    const confirmed = await askConfirm({
+        title: 'Delete variant',
+        message: 'Delete this variant? Products linked to it will lose this association.',
+        confirmText: 'Delete',
+    });
+    if (!confirmed) return;
+    const r = await csrfPost(`/admin/catalog/phone-models/variant/${id}/delete/`, {});
+    if (!r.ok) return showToast('Delete failed', false);
+    showToast('Variant deleted');
+    document.querySelector(`[data-variant-id="${id}"]`)?.remove();
+}
+
+// Close modals on backdrop click
+document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+    backdrop.addEventListener('click', e => {
+        if (e.target !== backdrop) return;
+        if (backdrop.id === 'modal-confirm') {
+            resolveConfirm(false);
+            return;
+        }
+        backdrop.style.display = 'none';
+    });
+});
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const confirmModal = document.getElementById('modal-confirm');
+        if (confirmModal && confirmModal.style.display !== 'none') {
+            resolveConfirm(false);
+            return;
+        }
+        document.querySelectorAll('.modal-backdrop').forEach(backdrop => backdrop.style.display = 'none');
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% load static %}
+{% load currency_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ page_title }}</title>
+    <link rel="stylesheet" href="{% static 'catalog/product.css' %}">
+</head>
+<body class="product-body">
+    <main class="product-shell">
+        <section class="gallery-panel">
+            <div class="main-image-wrap">
+                {% with primary=image_items.first %}
+                    {% if primary and primary.file %}
+                        <img id="main-product-image" src="{{ primary.file.url }}" alt="{{ primary.alt_text|default:object.name }}" class="main-image">
+                    {% endif %}
+                {% endwith %}
+                <div id="zoom-lens" class="zoom-lens"></div>
+            </div>
+            <div class="thumb-row">
+                {% for image in image_items %}
+                    {% if image.file %}
+                        <button type="button" class="thumb-button" data-image="{{ image.file.url }}">
+                            <img src="{{ image.file.url }}" alt="{{ image.alt_text|default:object.name }}">
+                        </button>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </section>
+        <section class="detail-panel">
+            <p class="eyebrow">{{ object.category.name }}</p>
+            <h1>{{ object.name }}</h1>
+            <p class="price-line">
+                <strong>{{ object.price|format_currency:object.store.currency_code }}</strong>
+                {% if object.discount_price %}<span>{{ object.discount_price|format_currency:object.store.currency_code }}</span>{% endif %}
+            </p>
+            <p>{{ object.short_description|default:object.description }}</p>
+            <div class="meta-grid">
+                <div><label>SKU</label><span>{{ object.sku }}</span></div>
+                <div><label>Barcode</label><span>{{ object.barcode|default:"-" }}</span></div>
+                <div><label>Tax</label><span>{{ object.tax_rate }}%</span></div>
+                <div><label>Warranty</label><span>{{ object.warranty|default:"-" }}</span></div>
+                <div><label>Weight</label><span>{{ object.weight }}</span></div>
+                <div><label>Dimensions</label><span>{{ object.length }} x {{ object.width }} x {{ object.height }}</span></div>
+            </div>
+            {% if default_variant %}
+                <div class="variant-box">
+                    <h3>Default Variant</h3>
+                    <p>{{ default_variant.name }} · {{ default_variant.sku }}</p>
+                </div>
+            {% endif %}
+            {% if video_items %}
+                <div class="asset-box">
+                    <h3>Product Video</h3>
+                    {% for item in video_items %}
+                        {% if item.file %}
+                            <video controls preload="metadata" style="width: 100%; border-radius: 16px; margin-bottom: 12px;">
+                                <source src="{{ item.file.url }}">
+                            </video>
+                        {% else %}
+                            <p>{{ item.title|default:item.external_url }}</p>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            {% if spin_items %}
+                <div class="asset-box">
+                    <h3>360 View Frames</h3>
+                    {% for item in spin_items %}
+                        {% if item.file %}
+                            <a href="{{ item.file.url }}" target="_blank" rel="noopener">{{ item.title|default:item.file.name }}</a>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            {% endif %}
+        </section>
+    </main>
+    <script src="{% static 'catalog/product.js' %}"></script>
+</body>
+</html>

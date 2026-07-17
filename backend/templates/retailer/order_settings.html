@@ -1,0 +1,2 @@
+{% extends "retailer/base.html" %}
+{% block content %}<div class="ra-page-head"><h1>Order Workflow Settings</h1><p>Control automatic documents and customer notifications for your retailer account.</p></div><div class="ra-card"><form method="post">{% csrf_token %}{{ form.as_p }}<button class="primary-button" type="submit">Save settings</button></form><p class="help-text">Invoice design templates are managed by the platform administrator.</p></div>{% endblock %}

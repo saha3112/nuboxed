@@ -1,0 +1,261 @@
+{% extends "storefront/base.html" %}
+{% load currency_tags %}
+
+{% block content %}
+<style>
+.compare-search-section {
+    text-align: center;
+    padding: 40px 15px;
+    background: #fff;
+    border-bottom: 1px solid #eaeaea;
+}
+.compare-search-form {
+    display: inline-flex;
+    width: 100%;
+    max-width: 600px;
+    gap: 10px;
+}
+.compare-search-input {
+    flex: 1;
+    padding: 14px 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 16px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+.compare-search-input:focus {
+    outline: none;
+    border-color: var(--primary, #000);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+.compare-search-btn {
+    padding: 14px 28px;
+    border: none;
+    background: var(--primary, #000);
+    color: #fff;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: opacity 0.2s;
+}
+.compare-search-btn:hover {
+    opacity: 0.9;
+}
+.compare-meta {
+    font-size: 14px;
+    margin-top: 15px;
+    color: #666;
+}
+.compare-meta strong {
+    color: #222;
+}
+
+.comparison-stack {
+    padding: 40px 15px;
+    max-width: 1180px;
+    margin: 0 auto;
+}
+.comparison-card {
+    background: #fff;
+    border: 1px solid #eaeaea;
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+}
+.comparison-card h2 {
+    font-size: 22px;
+    margin: 0 0 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #eaeaea;
+    color: #222;
+}
+.comparison-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 24px;
+}
+.comparison-item {
+    background: #fdfdfd;
+    border: 1px solid #eaeaea;
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.comparison-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+    border-color: #d0d0d0;
+}
+.comparison-item-header {
+    margin-bottom: 15px;
+}
+.comparison-item h3 {
+    margin: 0;
+    font-size: 18px;
+    color: #111;
+}
+.comparison-item-location {
+    font-size: 13px;
+    color: #777;
+    margin-top: 4px;
+}
+.comparison-item-price {
+    font-size: 26px;
+    font-weight: 700;
+    color: #000;
+    margin-bottom: 15px;
+}
+.comparison-item-details {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 24px;
+    flex-grow: 1;
+}
+.comparison-item-details div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.comparison-item-details i {
+    width: 18px;
+    color: #888;
+    text-align: center;
+    font-size: 14px;
+}
+.comparison-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.btn-compare-primary {
+    display: block;
+    width: 100%;
+    text-align: center;
+    background: var(--primary, #000);
+    color: #fff;
+    border: none;
+    padding: 12px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 14px;
+    transition: opacity 0.2s;
+}
+.btn-compare-primary:hover {
+    opacity: 0.9;
+}
+.btn-compare-secondary {
+    display: block;
+    width: 100%;
+    text-align: center;
+    background: #fff;
+    color: #333;
+    border: 1px solid #ddd;
+    padding: 12px;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+.btn-compare-secondary:hover {
+    background: #f8f8f8;
+}
+.not-serviceable-badge {
+    background: #fee2e2;
+    color: #ef4444;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    display: inline-block;
+    margin-bottom: 15px;
+}
+</style>
+
+<section class="page-head">
+  <div class="container">
+    <h1>Compare Sellers</h1>
+    <div class="breadcrumb">
+        <a href="{% url 'storefront:home' %}">Home</a>
+        <span>/</span>
+        <span>Compare Sellers</span>
+    </div>
+  </div>
+</section>
+
+<section class="compare-search-section">
+    <form method="get" class="compare-search-form">
+        <input type="search" name="q" value="{{ search_query }}" placeholder="Search for a product to compare..." class="compare-search-input">
+        <button type="submit" class="compare-search-btn">Search</button>
+    </form>
+    <p class="compare-meta">Showing seller comparisons for delivery to: <strong>{{ selected_delivery_location.label }}</strong></p>
+</section>
+
+<section class="comparison-stack">
+    {% for product_name, offers in comparison_groups.items %}
+        <article class="comparison-card">
+            <h2>{{ product_name }}</h2>
+            <div class="comparison-grid">
+                {% for offer in offers %}
+                    <div class="comparison-item">
+                        <div class="comparison-item-header">
+                            <h3>{{ offer.retailer_name }}</h3>
+                            <div class="comparison-item-location">{{ offer.location }}</div>
+                        </div>
+                        <div class="comparison-item-price">
+                            {{ offer.price|format_currency:offer.product.store.currency_code }}
+                        </div>
+                        
+                        {% if not offer.is_serviceable %}
+                            <div class="not-serviceable-badge">
+                                <i class="fa-solid fa-triangle-exclamation" style="margin-right: 5px;"></i> Delivery not available
+                            </div>
+                        {% endif %}
+                        
+                        <div class="comparison-item-details">
+                            <div>
+                                <i class="fa-solid fa-box"></i>
+                                <span>Stock: <strong>{{ offer.stock }}</strong></span>
+                            </div>
+                            <div>
+                                <i class="fa-solid fa-truck-fast"></i>
+                                <span>ETA: <strong>{{ offer.delivery_estimate }}</strong></span>
+                            </div>
+                            <div>
+                                <i class="fa-solid fa-star"></i>
+                                <span>Rating: <strong>{{ offer.rating }}/5</strong></span>
+                            </div>
+                        </div>
+                        
+                        <div class="comparison-actions">
+                            <form method="post" action="{% url 'storefront:buy-now' product_id=offer.product.id %}" style="width: 100%;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn-compare-primary">Buy Now</button>
+                            </form>
+                            <a href="{% url 'catalog:product-detail' slug=offer.product.slug %}" class="btn-compare-secondary">View Product</a>
+                            <a href="{% url 'storefront:store-detail' slug=offer.product.store.slug %}" class="btn-compare-secondary" style="border: none; color: var(--primary);">Visit Store <i class="fa-solid fa-arrow-right" style="font-size: 12px; margin-left: 4px;"></i></a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </article>
+    {% empty %}
+        <div style="text-align: center; padding: 60px 20px; color: #666; font-size: 16px;">
+            <i class="fa-solid fa-magnifying-glass" style="font-size: 40px; color: #ccc; margin-bottom: 15px; display: block;"></i>
+            Search for a product above to compare seller offers.
+        </div>
+    {% endfor %}
+</section>
+{% endblock %}

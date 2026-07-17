@@ -1,0 +1,128 @@
+{% extends "backoffice/base.html" %}
+
+{% block content %}
+{{ performance_chart_labels|json_script:"bo-performance-labels" }}
+{{ performance_chart_series|json_script:"bo-performance-series" }}
+{{ traffic_chart_series|json_script:"bo-traffic-series" }}
+
+<section class="page-shell">
+    <section class="hero-panel">
+        <div>
+            <p class="eyebrow">Platform Overview</p>
+            <h3 style="max-width:620px;">Unified visibility across commerce, storefront, and governance.</h3>
+            <p style="margin:14px 0 0; color:var(--muted); max-width:560px;">A TailAdmin-style control center with charts, KPI movement, queue visibility, and one consistent navigation shell.</p>
+        </div>
+        <div class="hero-actions">
+            <span class="status-pill success">Live operational data</span>
+            <a class="primary-button" href="{% url 'backoffice:module-list' module='retailers' %}">Review Retailers</a>
+        </div>
+    </section>
+
+    <section class="stats-grid">
+        {% for card in dashboard_cards %}
+            <article class="stat-card tone-{{ card.tone }}" style="border-radius:20px;">
+                <p style="font-size:.82rem; letter-spacing:.04em; text-transform:uppercase;">{{ card.label }}</p>
+                <h3>{{ card.value }}</h3>
+                <span>{{ card.trend }} this cycle</span>
+            </article>
+        {% endfor %}
+    </section>
+
+    <section class="content-grid" style="grid-template-columns: minmax(0, 1.5fr) minmax(320px, .85fr);">
+        <div class="panel">
+            <div class="panel-header">
+                <div>
+                    <p class="eyebrow">Statistics</p>
+                    <h3>Platform Performance</h3>
+                    <p class="subtle-copy" style="margin:8px 0 0;">Animated month-over-month signal for approval, catalog, and operational activity.</p>
+                </div>
+                <span class="status-pill neutral">Overview</span>
+            </div>
+            <div id="bo-performance-chart" style="height:320px;"></div>
+        </div>
+        <div class="panel">
+            <div class="panel-header">
+                <div>
+                    <p class="eyebrow">Traffic Source</p>
+                    <h3>Commerce Mix</h3>
+                </div>
+            </div>
+            <div id="bo-traffic-chart" style="height:320px;"></div>
+        </div>
+    </section>
+
+    <section class="content-grid">
+        <div class="panel">
+            <div class="panel-header">
+                <div>
+                    <p class="eyebrow">Executive Modules</p>
+                    <h3>Focus Areas</h3>
+                </div>
+            </div>
+            <div class="quick-panel-grid">
+                {% for panel in quick_panels %}
+                    <article class="quick-panel">
+                        <h4>{{ panel.title }}</h4>
+                        {% for item in panel.items %}
+                            <p><a href="{% url 'backoffice:module-list' module=item.1 %}">{{ item.0 }}</a></p>
+                        {% endfor %}
+                    </article>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="panel">
+            <div class="panel-header">
+                <div>
+                    <p class="eyebrow">Attention Queue</p>
+                    <h3>Current Attention Items</h3>
+                </div>
+            </div>
+            <div class="timeline">
+                {% for item in activity_items %}
+                    <a class="timeline-item" href="{{ item.url }}">
+                        <span class="timeline-dot"></span>
+                        <p>{{ item.label }}</p>
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    </section>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script>
+(() => {
+    const labels = JSON.parse(document.getElementById("bo-performance-labels").textContent);
+    const perfSeries = JSON.parse(document.getElementById("bo-performance-series").textContent);
+    const trafficSeries = JSON.parse(document.getElementById("bo-traffic-series").textContent);
+
+    const perfEl = document.getElementById("bo-performance-chart");
+    if (perfEl && window.ApexCharts) {
+        new ApexCharts(perfEl, {
+            chart: { type: "area", height: 320, toolbar: { show: false }, zoom: { enabled: false } },
+            series: [{ name: "Performance", data: perfSeries }],
+            xaxis: { categories: labels, axisBorder: { show: false }, axisTicks: { show: false } },
+            stroke: { curve: "smooth", width: 3 },
+            fill: { type: "gradient", gradient: { opacityFrom: 0.35, opacityTo: 0.02 } },
+            colors: ["#e04420"],
+            dataLabels: { enabled: false },
+            grid: { borderColor: "#E2E8F0", strokeDashArray: 5 },
+            legend: { show: false },
+        }).render();
+    }
+
+    const trafficEl = document.getElementById("bo-traffic-chart");
+    if (trafficEl && window.ApexCharts) {
+        new ApexCharts(trafficEl, {
+            chart: { type: "donut", height: 320 },
+            series: trafficSeries,
+            labels: ["Retailers", "Stores", "Products"],
+            colors: ["#e04420", "#22C55E", "#F59E0B"],
+            legend: { position: "bottom" },
+            dataLabels: { enabled: false },
+            stroke: { width: 0 },
+        }).render();
+    }
+})();
+</script>
+{% endblock %}

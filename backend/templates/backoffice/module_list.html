@@ -1,0 +1,1291 @@
+{% extends "backoffice/base.html" %}
+{% load backoffice_tags %}
+
+{% block content %}
+<style>
+    .toast-notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px 20px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        animation: slideIn 0.3s ease-out;
+        max-width: 400px;
+        backdrop-filter: blur(10px);
+    }
+
+    .toast-notification.success {
+        border-left: 4px solid #22c55e;
+        background: #f0fdf4;
+        border-color: #dcfce7;
+    }
+
+    .toast-notification.success::backdrop {
+        background: #f0fdf4 !important;
+    }
+
+    .toast-notification.error {
+        border-left: 4px solid #ef4444;
+        background: #fef2f2;
+        border-color: #fee2e2;
+    }
+
+    body.dark-mode .toast-notification.success {
+        background: rgba(34, 197, 94, 0.15);
+        border-color: rgba(34, 197, 94, 0.3);
+    }
+
+    body.dark-mode .toast-notification.error {
+        background: rgba(239, 68, 68, 0.15);
+        border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .toast-message {
+        color: var(--text-main);
+        font-size: 14px;
+        font-weight: 500;
+        flex: 1;
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateX(420px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(420px);
+            opacity: 0;
+        }
+    }
+
+    /* Custom Confirmation Modal */
+    .confirm-modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 10000;
+        backdrop-filter: blur(4px);
+        animation: fadeIn 0.2s ease-out;
+    }
+
+    .confirm-modal-overlay.active {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+        to {
+            opacity: 1;
+        }
+    }
+
+    .confirm-modal {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 32px;
+        max-width: 420px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        animation: slideDown 0.3s ease-out;
+    }
+
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .confirm-modal-icon {
+        font-size: 48px;
+        margin-bottom: 16px;
+    }
+
+    .confirm-modal-title {
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--text-main);
+        margin-bottom: 8px;
+    }
+
+    .confirm-modal-message {
+        font-size: 14px;
+        color: var(--muted);
+        line-height: 1.6;
+        margin-bottom: 24px;
+    }
+
+    .confirm-modal-buttons {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+    }
+
+    .confirm-btn {
+        padding: 10px 20px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-family: inherit;
+    }
+
+    .confirm-btn-cancel {
+        background: var(--surface-soft);
+        color: var(--text-main);
+        border-color: var(--border);
+    }
+
+    .confirm-btn-cancel:hover {
+        background: var(--border);
+        border-color: var(--border);
+    }
+
+    .confirm-btn-danger {
+        background: #ef4444;
+        color: #fff;
+        border-color: #ef4444;
+    }
+
+    .confirm-btn-danger:hover {
+        background: #dc2626;
+        border-color: #dc2626;
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+
+    .confirm-btn-success {
+        background: #22c55e;
+        color: #fff;
+        border-color: #22c55e;
+    }
+
+    .confirm-btn-success:hover {
+        background: #16a34a;
+        border-color: #16a34a;
+        box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+    }
+
+    .module-toolbar {
+        padding: 26px 28px;
+        border-radius: 16px;
+    }
+
+    .module-toolbar .page-intro {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 20px;
+        align-items: start;
+        margin-bottom: 22px;
+    }
+
+    .module-toolbar .eyebrow {
+        margin: 0 0 6px;
+        letter-spacing: 0.12em;
+    }
+
+    .module-toolbar h3 {
+        margin: 0;
+        font-size: 28px;
+        line-height: 1.15;
+    }
+
+    .module-toolbar .subtle-copy {
+        margin: 8px 0 0;
+        max-width: 720px;
+        line-height: 1.45;
+    }
+
+    .module-toolbar .toolbar-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+
+    .module-toolbar .filter-bar {
+        display: grid;
+        grid-template-columns: minmax(260px, 1.3fr) minmax(210px, .9fr) minmax(190px, .7fr) auto;
+        gap: 14px;
+        align-items: end;
+        padding-top: 18px;
+        border-top: 1px solid var(--border);
+    }
+
+    .module-toolbar .filter-bar.no-trash-filter {
+        grid-template-columns: minmax(260px, 1.3fr) minmax(210px, .9fr) auto;
+    }
+
+    .module-toolbar .field-inline {
+        display: grid;
+        gap: 8px;
+    }
+
+    .module-toolbar .field-inline label {
+        color: var(--text-main);
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .module-toolbar input,
+    .module-toolbar select {
+        width: 100%;
+        min-height: 44px;
+        border-radius: 10px !important;
+        padding: 10px 14px !important;
+    }
+
+    .module-toolbar button[type="submit"] {
+        min-height: 44px;
+        padding-inline: 20px;
+    }
+
+    body.dark-mode .module-toolbar {
+        background: #111827;
+        border-color: #243041;
+    }
+
+    body.dark-mode .module-toolbar .filter-bar {
+        border-top-color: #243041;
+    }
+
+    @media (max-width: 1100px) {
+        .module-toolbar .page-intro {
+            grid-template-columns: 1fr;
+        }
+
+        .module-toolbar .toolbar-actions {
+            justify-content: flex-start;
+        }
+
+        .module-toolbar .filter-bar {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 680px) {
+        .module-toolbar {
+            padding: 20px;
+        }
+
+        .module-toolbar .filter-bar {
+            grid-template-columns: 1fr;
+        }
+
+        .module-toolbar .toolbar-actions a,
+        .module-toolbar .toolbar-actions .ghost-button,
+        .module-toolbar .toolbar-actions .primary-button,
+        .module-toolbar button[type="submit"] {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
+<section class="page-shell">
+<section class="toolbar-panel module-toolbar">
+    <div class="page-intro">
+        <div>
+            <p class="eyebrow">Module Workspace</p>
+            <h3>{{ module_config.title }}</h3>
+            <p class="subtle-copy">Search, filter, and manage records from one TailAdmin-style workspace.</p>
+        </div>
+        <div class="toolbar-actions">
+            {% if supports_trash %}
+                {% if deleted_status == 'deleted' %}
+                    <a class="ghost-button" href="{% url 'backoffice:module-list' module=module_key %}">Active Records</a>
+                {% else %}
+                    <a class="ghost-button" href="{% url 'backoffice:module-list' module=module_key %}?deleted_status=deleted">Trash</a>
+                {% endif %}
+            {% endif %}
+            <a class="ghost-button" href="{{ export_url }}">Export CSV</a>
+            {% if not module_config.singleton %}
+                <a class="primary-button" href="{{ create_url }}">
+                    {% if module_key == 'attributes' %}Add Attribute{% else %}Create New{% endif %}
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    <form method="get" class="filter-bar {% if not supports_trash %}no-trash-filter{% endif %}">
+        <div class="field-inline">
+            <label for="search-field">Search</label>
+            <input id="search-field" type="search" name="q" value="{{ search }}" placeholder="Search {{ module_config.title|lower }}">
+        </div>
+        <div class="field-inline">
+            <label for="status-field">Status</label>
+            <input id="status-field" type="text" name="status" value="{{ status }}" placeholder="active, draft, live">
+        </div>
+        {% if supports_trash %}
+        <div class="field-inline">
+            <label for="deleted-status-field">Show</label>
+            <select id="deleted-status-field" name="deleted_status" style="padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text-main); font-size: 14px;">
+                <option value="active" {% if deleted_status == 'active' %}selected{% endif %}>Active Only</option>
+                <option value="deleted" {% if deleted_status == 'deleted' %}selected{% endif %}>Deleted Only</option>
+                <option value="all" {% if deleted_status == 'all' %}selected{% endif %}>All (Active + Deleted)</option>
+            </select>
+        </div>
+        {% endif %}
+        <button class="ghost-button" type="submit">Filter</button>
+    </form>
+</section>
+
+<!-- Bulk Actions Bar for All Modules -->
+<div id="bulk-actions-bar" style="display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin: 0 0 24px 0; gap: 12px; align-items: center; flex-wrap: wrap;">
+    <span id="selection-count" style="color: var(--text-main); font-weight: 500;">0 items selected</span>
+    <div style="flex: 1;"></div>
+    {% if supports_trash %}
+        <button id="bulk-restore-btn" class="ghost-button" onclick="bulkRestore()" style="display: none; color: #22c55e; border-color: #22c55e; background: rgba(34, 197, 94, 0.05); padding: 8px 16px;">
+            ✓ Restore Selected
+        </button>
+    {% endif %}
+    <button id="bulk-delete-btn" class="ghost-button" onclick="bulkDeleteGeneral()" style="display: none; color: #ef4444; border-color: #ef4444; background: rgba(239, 68, 68, 0.05); padding: 8px 16px;">
+        🗑️ Delete Selected
+    </button>
+    {% if supports_trash %}
+        <button id="bulk-purge-btn" class="ghost-button" onclick="bulkPurge()" style="display: none; color: #dc2626; border-color: #dc2626; background: rgba(220, 38, 38, 0.05); padding: 8px 16px;">
+            ⚠️ Permanent Delete Selected
+        </button>
+    {% endif %}
+</div>
+
+<!-- Custom Confirmation Modal -->
+<div id="confirm-modal-overlay" class="confirm-modal-overlay">
+    <div class="confirm-modal">
+        <div class="confirm-modal-icon" id="confirm-icon">🗑️</div>
+        <h3 class="confirm-modal-title" id="confirm-title">Confirm Action</h3>
+        <p class="confirm-modal-message" id="confirm-message">Are you sure?</p>
+        <div class="confirm-modal-buttons">
+            <button class="confirm-btn confirm-btn-cancel" id="confirm-cancel">Cancel</button>
+            <button class="confirm-btn confirm-btn-danger" id="confirm-ok">Delete</button>
+        </div>
+    </div>
+</div>
+
+<section class="panel">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">Data Grid</p>
+            <h3>{{ total_count }} records</h3>
+            <p style="margin:8px 0 0; color:var(--muted);">Manage {{ module_config.title|lower }} with TailAdmin-style filters, actions, and quick drill-down.</p>
+        </div>
+        <span class="status-pill neutral">{{ module_config.group }}</span>
+    </div>
+    <div class="table-wrap" data-module-key="{{ module_key }}">
+        <table class="data-table" style="border-collapse:separate; border-spacing:0 10px;">
+            <thead>
+                <tr>
+                    <th style="width: 40px;">
+                        <input type="checkbox" id="select-all" onchange="toggleSelectAll(this)" style="width: 18px; height: 18px; cursor: pointer;">
+                    </th>
+                    {% for column in columns %}
+                        <th>{{ column|titlecase_slug }}</th>
+                    {% endfor %}
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in items %}
+                    <tr class="{% if item|is_deleted_record %}deleted-row{% endif %}" data-item-id="{{ item.pk }}" data-deleted="{% if item|is_deleted_record %}true{% else %}false{% endif %}" {% if item|is_deleted_record %}style="opacity: 0.6; background: rgba(239, 68, 68, 0.02);"{% endif %}>
+                        <td style="background:#fff;">
+                            <input type="checkbox" class="item-checkbox" data-pk="{{ item.pk }}" data-name="{{ item.name }}" onchange="updateBulkActions()" style="width: 18px; height: 18px; cursor: pointer;">
+                        </td>
+                        {% for column in columns %}
+                            {% with value=item|attr:column %}
+                                <td style="background:#fff;">
+                                    {% if column == 'name' and item|is_deleted_record %}
+                                        <div style="display: flex; align-items: center; gap: 8px;">
+                                            <span>{{ value }}</span>
+                                            <span style="font-size: 11px; color: #fff; background: #ef4444; padding: 3px 10px; border-radius: 4px; font-weight: 600;">DELETED</span>
+                                        </div>
+                                    {% elif module_key == 'attributes' and column == 'name' %}
+                                        <a class="text-action" href="{% url 'backoffice:attribute-options' pk=item.pk %}">{{ value }}</a>
+                                    {% elif column == status_field or column == 'is_active' %}
+                                        <span class="status-pill {% if value == True or value == 'active' or value == 'live' %}success{% elif value == False or value == 'draft' %}warning{% else %}neutral{% endif %}">
+                                            {{ value }}
+                                        </span>
+                                    {% else %}
+                                        {{ value }}
+                                    {% endif %}
+                                </td>
+                            {% endwith %}
+                        {% endfor %}
+                        <td class="actions-cell" style="background:#fff; white-space:nowrap; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                            {% if item|is_deleted_record and supports_trash %}
+                                <button class="ghost-button" onclick="restoreItem('{{ item.pk }}')" style="padding: 6px 12px; font-size: 13px; color: #22c55e; border-color: #22c55e; background: rgba(34, 197, 94, 0.05);">
+                                    ✓ Restore
+                                </button>
+                                <button class="ghost-button" onclick="permanentlyDeleteItem('{{ item.pk }}', '{{ item.name }}')" style="padding: 6px 12px; font-size: 13px; color: #ef4444; border-color: #ef4444; background: rgba(239, 68, 68, 0.05);">
+                                    🗑️ Permanent Delete
+                                </button>
+                            {% else %}
+                                <a class="ghost-button" href="{% url 'backoffice:module-edit' module=module_key pk=item.pk %}" style="padding: 6px 12px; font-size: 13px;">
+                                    ✏️ Edit
+                                </a>
+                                {% if module_key == 'attributes' %}
+                                    <a class="ghost-button" href="{% url 'backoffice:attribute-options' pk=item.pk %}" style="padding: 6px 12px; font-size: 13px; color: #e04420; border-color: #e04420; background: rgba(224, 68, 32, 0.05);">
+                                        ⚙️ Manage
+                                    </a>
+                                    <button class="ghost-button" onclick="deleteItem('{{ item.pk }}', '{{ item.name }}')" style="padding: 6px 12px; font-size: 13px; color: #ef4444; border-color: #ef4444; background: rgba(239, 68, 68, 0.05);">
+                                        🗑️ Delete
+                                    </button>
+                                {% endif %}
+                                {% if supports_trash and module_key != 'attributes' %}
+                                    <button class="ghost-button" onclick="deleteItem('{{ item.pk }}', '{{ item.name }}')" style="padding: 6px 12px; font-size: 13px; color: #ef4444; border-color: #ef4444; background: rgba(239, 68, 68, 0.05);">
+                                        🗑️ Delete
+                                    </button>
+                                {% endif %}
+                                {% if module_key == 'retailers' and item.status == 'pending_approval' %}
+                                    <form method="post" action="{% url 'retailers:approve' pk=item.pk %}" class="inline-form">
+                                        {% csrf_token %}
+                                        <button class="ghost-button approve-action" type="submit" style="padding: 6px 12px; font-size: 13px;">Approve</button>
+                                    </form>
+                                {% endif %}
+                                {% if module_key == 'products' and item.status == 'pending_approval' %}
+                                    <form method="post" action="{% url 'catalog:admin-approve' pk=item.pk action='approve' %}" class="inline-form">
+                                        {% csrf_token %}
+                                        <button class="ghost-button approve-action" type="submit" style="padding: 6px 12px; font-size: 13px;">Approve</button>
+                                    </form>
+                                    <form method="post" action="{% url 'catalog:admin-approve' pk=item.pk action='reject' %}" class="inline-form">
+                                        {% csrf_token %}
+                                        <button class="ghost-button reject-action" type="submit" style="padding: 6px 12px; font-size: 13px;">Reject</button>
+                                    </form>
+                                {% endif %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% empty %}
+                    <tr>
+                        <td colspan="{{ columns|length|add:3 }}">
+                            <div class="empty-state">
+                                <h4>No records found</h4>
+                                <p>Adjust the filters or create a new record for this module.</p>
+                            </div>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+</section>
+
+<script>
+let selectedItems = new Set();
+
+function toggleSelectAll(checkbox) {
+    document.querySelectorAll('.item-checkbox').forEach(cb => {
+        cb.checked = checkbox.checked;
+    });
+    updateBulkActions();
+}
+
+function updateSelectedItems() {
+    selectedItems.clear();
+    document.querySelectorAll('.item-checkbox:checked').forEach(cb => {
+        selectedItems.add(cb.dataset.pk);
+    });
+}
+
+function updateBulkActions() {
+    updateSelectedItems();
+    const count = selectedItems.size;
+    const bar = document.getElementById('bulk-actions-bar');
+    const countEl = document.getElementById('selection-count');
+    const deleteBtn = document.getElementById('bulk-delete-btn');
+    const restoreBtn = document.getElementById('bulk-restore-btn');
+    const purgeBtn = document.getElementById('bulk-purge-btn');
+    const selectedRows = Array.from(document.querySelectorAll('.item-checkbox:checked'))
+        .map(cb => cb.closest('tr[data-item-id]'))
+        .filter(Boolean);
+    const hasDeleted = selectedRows.some(row => row.dataset.deleted === 'true');
+    const hasActive = selectedRows.some(row => row.dataset.deleted !== 'true');
+
+    if (count > 0) {
+        bar.style.display = 'flex';
+        countEl.textContent = `${count} item${count !== 1 ? 's' : ''} selected`;
+
+        if (restoreBtn) restoreBtn.style.display = hasDeleted ? 'inline-block' : 'none';
+        if (purgeBtn) purgeBtn.style.display = hasDeleted ? 'inline-block' : 'none';
+        if (deleteBtn) deleteBtn.style.display = hasActive ? 'inline-block' : 'none';
+    } else {
+        bar.style.display = 'none';
+    }
+}
+
+function deleteAttribute(pk, name) {
+    showConfirm(
+        `Delete "${name}"?`,
+        'You can restore it later from the Deleted section.',
+        '🗑️',
+        true
+    );
+    confirmCallback = () => performDelete(pk);
+}
+
+function performDelete(pk) {
+    fetch(`/admin/modules/attributes/${pk}/delete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showToast('✓ Attribute deleted!', 'success');
+            setTimeout(() => location.reload(), 600);
+        } else {
+            showToast('✕ Error: ' + (data.message || 'Unknown error'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Delete error:', error);
+        showToast('✕ Error: ' + error.message, 'error');
+    });
+}
+
+function bulkDeleteGeneral() {
+    const count = selectedItems.size;
+    const module = document.querySelector('[data-module-key]')?.dataset.moduleKey || 'attributes';
+    const message = module === 'attributes'
+        ? 'You can restore them later from the Deleted section.'
+        : 'This action cannot be undone for this module.';
+
+    showConfirm(
+        `Delete ${count} Item${count !== 1 ? 's' : ''}?`,
+        message,
+        '🗑️',
+        true
+    );
+
+    if (module === 'attributes') {
+        confirmCallback = () => bulkPerformDelete(Array.from(selectedItems));
+    } else {
+        confirmCallback = () => bulkDeleteOtherModules(Array.from(selectedItems));
+    }
+}
+
+function bulkDelete() {
+    const count = selectedItems.size;
+    showConfirm(
+        `Delete ${count} Item${count !== 1 ? 's' : ''}?`,
+        'You can restore them later from the Deleted section.',
+        '🗑️',
+        true
+    );
+    confirmCallback = () => bulkPerformDelete(Array.from(selectedItems));
+}
+
+function bulkPerformDelete(pks) {
+    let completed = 0;
+    let errors = 0;
+    pks.forEach(pk => {
+        fetch(`/admin/modules/attributes/${pk}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            completed++;
+            if (!data.success) errors++;
+            if (completed === pks.length) {
+                if (errors === 0) {
+                    showToast(`✓ ${pks.length} item${pks.length !== 1 ? 's' : ''} deleted!`, 'success');
+                } else {
+                    showToast(`⚠️ ${pks.length - errors}/${pks.length} items deleted`, 'error');
+                }
+                setTimeout(() => location.reload(), 600);
+            }
+        })
+        .catch(error => {
+            console.error('Delete error:', error);
+            completed++;
+            errors++;
+            if (completed === pks.length) {
+                showToast(`✕ Error deleting attributes`, 'error');
+            }
+        });
+    });
+}
+
+function restoreAttribute(pk) {
+    showConfirm(
+        'Restore Attribute?',
+        'This attribute will be moved back to the active section.',
+        '✓',
+        false
+    );
+    confirmCallback = () => performRestore(pk);
+}
+
+function performRestore(pk) {
+    fetch(`/admin/modules/attributes/${pk}/restore/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showToast('✓ Attribute restored!', 'success');
+            setTimeout(() => location.reload(), 600);
+        } else {
+            showToast('✕ Error: ' + (data.message || 'Unknown error'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Restore error:', error);
+        showToast('✕ Error: ' + error.message, 'error');
+    });
+}
+
+function bulkRestore() {
+    const count = selectedItems.size;
+    showConfirm(
+        `Restore ${count} Item${count !== 1 ? 's' : ''}?`,
+        'These attributes will be moved back to the active section.',
+        '✓',
+        false
+    );
+    confirmCallback = () => bulkPerformRestore(Array.from(selectedItems));
+}
+
+function bulkPerformRestore(pks) {
+    let completed = 0;
+    let errors = 0;
+    pks.forEach(pk => {
+        fetch(`/admin/modules/attributes/${pk}/restore/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            completed++;
+            if (!data.success) errors++;
+            if (completed === pks.length) {
+                if (errors === 0) {
+                    showToast(`✓ ${pks.length} item${pks.length !== 1 ? 's' : ''} restored!`, 'success');
+                } else {
+                    showToast(`⚠️ ${pks.length - errors}/${pks.length} items restored`, 'error');
+                }
+                setTimeout(() => location.reload(), 600);
+            }
+        })
+        .catch(error => {
+            console.error('Restore error:', error);
+            completed++;
+            errors++;
+            if (completed === pks.length) {
+                showToast(`✕ Error restoring attributes`, 'error');
+            }
+        });
+    });
+}
+
+function permanentlyDeleteAttribute(pk, name) {
+    showConfirm(
+        `Permanently Delete "${name}"?`,
+        '⚠️ This cannot be undone. All data will be permanently removed.',
+        '⚠️',
+        true
+    );
+    const okBtn = document.getElementById('confirm-ok');
+    okBtn.textContent = 'Delete Forever';
+    confirmCallback = () => {
+        fetch(`/admin/modules/attributes/${pk}/delete-permanent/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('✓ Attribute permanently deleted!', 'success');
+                    setTimeout(() => location.reload(), 600);
+                } else {
+                    showToast('✕ Error: ' + data.message, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showToast('✕ An error occurred', 'error');
+            });
+    };
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Custom Confirmation Modal System
+let confirmCallback = null;
+
+function showConfirm(title, message, icon, isDanger = true) {
+    if (window.appConfirm) {
+        window.appConfirm({
+            title,
+            message,
+            confirmText: isDanger ? 'Delete' : 'Restore',
+            tone: isDanger ? 'danger' : 'restore',
+        }).then((confirmed) => {
+            if (confirmed && confirmCallback) {
+                const callback = confirmCallback;
+                confirmCallback = null;
+                callback();
+            }
+        });
+        return;
+    }
+    const overlay = document.getElementById('confirm-modal-overlay');
+    const titleEl = document.getElementById('confirm-title');
+    const messageEl = document.getElementById('confirm-message');
+    const iconEl = document.getElementById('confirm-icon');
+    const okBtn = document.getElementById('confirm-ok');
+
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    iconEl.textContent = icon;
+
+    if (isDanger) {
+        okBtn.className = 'confirm-btn confirm-btn-danger';
+        okBtn.textContent = 'Delete';
+    } else {
+        okBtn.className = 'confirm-btn confirm-btn-success';
+        okBtn.textContent = 'Restore';
+    }
+
+    overlay.classList.add('active');
+}
+
+function hideConfirm() {
+    const overlay = document.getElementById('confirm-modal-overlay');
+    overlay.classList.remove('active');
+    confirmCallback = null;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const cancelBtn = document.getElementById('confirm-cancel');
+    const okBtn = document.getElementById('confirm-ok');
+
+    cancelBtn.addEventListener('click', hideConfirm);
+    okBtn.addEventListener('click', () => {
+        if (confirmCallback) {
+            confirmCallback();
+        }
+        hideConfirm();
+    });
+});
+
+// Toast notification system
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast-notification ${type}`;
+    toast.innerHTML = `<span class="toast-message">${message}</span>`;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease-out forwards';
+        setTimeout(() => toast.remove(), 300);
+    }, 2500);
+}
+
+// Update delete function to show toast
+function performDelete(pk) {
+    fetch(`/admin/modules/attributes/${pk}/delete/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showToast('✓ Attribute deleted!', 'success');
+            setTimeout(() => location.reload(), 600);
+        } else {
+            showToast('✕ Error: ' + (data.message || 'Unknown error'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Delete error:', error);
+        showToast('✕ Error: ' + error.message, 'error');
+    });
+}
+
+// Update restore function to show toast
+function performRestore(pk) {
+    fetch(`/admin/modules/attributes/${pk}/restore/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            showToast('✓ Attribute restored!', 'success');
+            setTimeout(() => location.reload(), 600);
+        } else {
+            showToast('✕ Error: ' + (data.message || 'Unknown error'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Restore error:', error);
+        showToast('✕ Error: ' + error.message, 'error');
+    });
+}
+
+// Update bulk delete to show toast
+function bulkPerformDelete(pks) {
+    let completed = 0;
+    let errors = 0;
+    pks.forEach(pk => {
+        fetch(`/admin/modules/attributes/${pk}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            completed++;
+            if (!data.success) errors++;
+            if (completed === pks.length) {
+                if (errors === 0) {
+                    showToast(`✓ ${pks.length} item${pks.length !== 1 ? 's' : ''} deleted!`, 'success');
+                } else {
+                    showToast(`⚠️ ${pks.length - errors}/${pks.length} items deleted`, 'error');
+                }
+                setTimeout(() => location.reload(), 600);
+            }
+        })
+        .catch(error => {
+            console.error('Delete error:', error);
+            completed++;
+            errors++;
+            if (completed === pks.length) {
+                showToast(`✕ Error deleting attributes`, 'error');
+            }
+        });
+    });
+}
+
+// Update bulk restore to show toast
+function bulkPerformRestore(pks) {
+    let completed = 0;
+    let errors = 0;
+    pks.forEach(pk => {
+        fetch(`/admin/modules/attributes/${pk}/restore/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            completed++;
+            if (!data.success) errors++;
+            if (completed === pks.length) {
+                if (errors === 0) {
+                    showToast(`✓ ${pks.length} item${pks.length !== 1 ? 's' : ''} restored!`, 'success');
+                } else {
+                    showToast(`⚠️ ${pks.length - errors}/${pks.length} items restored`, 'error');
+                }
+                setTimeout(() => location.reload(), 600);
+            }
+        })
+        .catch(error => {
+            console.error('Restore error:', error);
+            completed++;
+            errors++;
+            if (completed === pks.length) {
+                showToast(`✕ Error restoring attributes`, 'error');
+            }
+        });
+    });
+}
+
+// Live Search Filter
+(() => {
+    const searchInput = document.getElementById('search-field');
+    const tableRows = document.querySelectorAll('tbody tr[data-item-id]');
+    const tableBody = document.querySelector('tbody');
+    const emptyState = document.querySelector('.empty-state');
+
+    if (!searchInput || tableRows.length === 0) return;
+
+    searchInput.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase().trim();
+        let visibleCount = 0;
+
+        tableRows.forEach(row => {
+            const rowText = row.textContent.toLowerCase();
+            const matches = rowText.includes(searchTerm) || searchTerm === '';
+
+            if (matches) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Show/hide empty state
+        if (visibleCount === 0 && searchTerm !== '') {
+            if (emptyState) {
+                emptyState.style.display = '';
+            } else {
+                const noResultsRow = tableBody.querySelector('tr.no-results');
+                if (noResultsRow) {
+                    noResultsRow.style.display = '';
+                } else {
+                    const tr = document.createElement('tr');
+                    tr.className = 'no-results';
+                    tr.innerHTML = `<td colspan="10" style="text-align: center; padding: 40px; color: var(--muted);">
+                        <div style="font-size: 16px; font-weight: 500;">No results found for "${searchTerm}"</div>
+                    </td>`;
+                    tableBody.appendChild(tr);
+                }
+            }
+        } else if (visibleCount > 0) {
+            if (emptyState) {
+                emptyState.style.display = 'none';
+            }
+            const noResultsRow = tableBody.querySelector('tr.no-results');
+            if (noResultsRow) {
+                noResultsRow.remove();
+            }
+        }
+    });
+
+    // Clear search on Escape key
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            searchInput.value = '';
+            searchInput.dispatchEvent(new Event('input'));
+        }
+    });
+})();
+
+function bulkDeleteOtherModules(pks) {
+    let completed = 0;
+    pks.forEach(pk => {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = window.location.href;
+        form.style.display = 'none';
+
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = getCookie('csrftoken');
+
+        const idInput = document.createElement('input');
+        idInput.type = 'hidden';
+        idInput.name = 'delete_id';
+        idInput.value = pk;
+
+        form.appendChild(csrfInput);
+        form.appendChild(idInput);
+        document.body.appendChild(form);
+
+        completed++;
+        if (completed === pks.length) {
+            showToast(`✓ ${pks.length} item${pks.length !== 1 ? 's' : ''} deleted!`, 'success');
+            setTimeout(() => location.reload(), 600);
+        }
+    });
+}
+
+function bulkPurge() {
+    const count = selectedItems.size;
+    showConfirm(
+        `Permanently Delete ${count} Item${count !== 1 ? 's' : ''}?`,
+        '⚠️ This cannot be undone. All data will be permanently removed.',
+        '⚠️',
+        true
+    );
+    const okBtn = document.getElementById('confirm-ok');
+    okBtn.textContent = 'Delete Forever';
+    confirmCallback = () => bulkPerformPurge(Array.from(selectedItems));
+}
+
+function bulkPerformPurge(pks) {
+    let completed = 0;
+    pks.forEach(pk => {
+        fetch(`/admin/modules/attributes/${pk}/delete-permanent/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            completed++;
+            if (completed === pks.length) {
+                showToast(`✓ ${pks.length} item${pks.length !== 1 ? 's' : ''} permanently deleted!`, 'success');
+                setTimeout(() => location.reload(), 600);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    });
+}
+
+function getActionModule() {
+    const module = document.querySelector('[data-module-key]')?.dataset.moduleKey || 'attributes';
+    return module === 'featured-products' ? 'products' : module;
+}
+
+function getActionLabel() {
+    const module = getActionModule();
+    if (module === 'products') return 'Product';
+    if (module === 'attributes') return 'Attribute';
+    return 'Item';
+}
+
+function getActionUrl(pk, action) {
+    return `/admin/modules/${getActionModule()}/${pk}/${action}/`;
+}
+
+function performItemRequest(pk, action, successMessage) {
+    fetch(getActionUrl(pk, action), {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+        }
+    })
+    .then(response => response.json().then(data => ({ ok: response.ok, data })))
+    .then(({ ok, data }) => {
+        if (ok && data.success) {
+            showToast(successMessage || data.message, 'success');
+            setTimeout(() => location.reload(), 600);
+        } else {
+            showToast('✕ Error: ' + (data.message || 'Unknown error'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Action error:', error);
+        showToast('✕ Error: ' + error.message, 'error');
+    });
+}
+
+function deleteItem(pk, name) {
+    showConfirm(
+        `Delete "${name}"?`,
+        'You can restore it later from the Deleted section.',
+        '🗑️',
+        true
+    );
+    confirmCallback = () => performItemRequest(pk, 'delete', `✓ ${getActionLabel()} deleted!`);
+}
+
+function restoreItem(pk) {
+    showConfirm(
+        `Restore ${getActionLabel()}?`,
+        'This item will be moved back to the active section.',
+        '✓',
+        false
+    );
+    confirmCallback = () => performItemRequest(pk, 'restore', `✓ ${getActionLabel()} restored!`);
+}
+
+function permanentlyDeleteItem(pk, name) {
+    showConfirm(
+        `Permanently Delete "${name}"?`,
+        '⚠️ This cannot be undone. All data will be permanently removed.',
+        '⚠️',
+        true
+    );
+    const okBtn = document.getElementById('confirm-ok');
+    okBtn.textContent = 'Delete Forever';
+    confirmCallback = () => performItemRequest(pk, 'delete-permanent', `✓ ${getActionLabel()} permanently deleted!`);
+}
+
+function deleteAttribute(pk, name) {
+    deleteItem(pk, name);
+}
+
+function restoreAttribute(pk) {
+    restoreItem(pk);
+}
+
+function permanentlyDeleteAttribute(pk, name) {
+    permanentlyDeleteItem(pk, name);
+}
+
+function bulkDeleteGeneral() {
+    const count = selectedItems.size;
+    showConfirm(
+        `Delete ${count} Item${count !== 1 ? 's' : ''}?`,
+        'You can restore them later from the Deleted section.',
+        '🗑️',
+        true
+    );
+    confirmCallback = () => bulkPerformDelete(Array.from(selectedItems));
+}
+
+function bulkRestore() {
+    const count = selectedItems.size;
+    showConfirm(
+        `Restore ${count} Item${count !== 1 ? 's' : ''}?`,
+        'These items will be moved back to the active section.',
+        '✓',
+        false
+    );
+    confirmCallback = () => bulkPerformRestore(Array.from(selectedItems));
+}
+
+function bulkPurge() {
+    const count = selectedItems.size;
+    showConfirm(
+        `Permanently Delete ${count} Item${count !== 1 ? 's' : ''}?`,
+        '⚠️ This cannot be undone. All data will be permanently removed.',
+        '⚠️',
+        true
+    );
+    const okBtn = document.getElementById('confirm-ok');
+    okBtn.textContent = 'Delete Forever';
+    confirmCallback = () => bulkPerformPurge(Array.from(selectedItems));
+}
+
+function bulkPerformAction(pks, action, pastTense) {
+    let completed = 0;
+    let errors = 0;
+
+    pks.forEach(pk => {
+        fetch(getActionUrl(pk, action), {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            }
+        })
+        .then(response => response.json().then(data => ({ ok: response.ok, data })))
+        .then(({ ok, data }) => {
+            completed++;
+            if (!ok || !data.success) errors++;
+            if (completed === pks.length) {
+                if (errors === 0) {
+                    showToast(`✓ ${pks.length} item${pks.length !== 1 ? 's' : ''} ${pastTense}!`, 'success');
+                } else {
+                    showToast(`⚠️ ${pks.length - errors}/${pks.length} items ${pastTense}`, 'error');
+                }
+                setTimeout(() => location.reload(), 600);
+            }
+        })
+        .catch(error => {
+            console.error('Bulk action error:', error);
+            completed++;
+            errors++;
+            if (completed === pks.length) {
+                showToast(`✕ Error: ${errors} item${errors !== 1 ? 's' : ''} failed`, 'error');
+            }
+        });
+    });
+}
+
+function bulkPerformDelete(pks) {
+    bulkPerformAction(pks, 'delete', 'deleted');
+}
+
+function bulkPerformRestore(pks) {
+    bulkPerformAction(pks, 'restore', 'restored');
+}
+
+function bulkPerformPurge(pks) {
+    bulkPerformAction(pks, 'delete-permanent', 'permanently deleted');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const bar = document.getElementById('bulk-actions-bar');
+    if (bar) {
+        bar.style.display = 'none';
+    }
+});
+</script>
+{% endblock %}

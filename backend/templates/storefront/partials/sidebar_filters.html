@@ -1,0 +1,105 @@
+<div class="sidebar-filters">
+    <form method="get" id="filter-form">
+        <input type="hidden" name="q" value="{{ search_query }}">
+        <input type="hidden" name="sort" value="{{ sort_by }}">
+
+        {% if nav_device_categories %}
+        <div class="sidebar-block">
+            <div class="sidebar-title">Categories</div>
+            <div class="category-menu">
+                <a href="{% url 'storefront:products' %}"><strong>Home</strong></a>
+                {% for c in nav_device_categories %}
+                    {% if c.children_with_products.exists %}
+                        <div class="category-item {% for child in c.children_with_products %}{% if child.id|stringformat:'s' in selected_category_ids %}open{% endif %}{% endfor %}{% if c.id|stringformat:'s' in selected_category_ids %}open{% endif %}">
+                            <button class="category-toggle" type="button">
+                                <span>{{ c.name }}</span>
+                                <b>+</b>
+                            </button>
+                            <div class="category-children">
+                                <div>
+                                    <a href="{% url 'storefront:category' slug=c.slug %}" class="{% if c.id|stringformat:'s' in selected_category_ids %}is-active{% endif %}">All {{ c.name }}</a>
+                                    {% for child in c.children_with_products %}
+                                        <a href="{% url 'storefront:category' slug=child.slug %}" class="{% if child.id|stringformat:'s' in selected_category_ids %}is-active{% endif %}">{{ child.name }}</a>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <a href="{% url 'storefront:category' slug=c.slug %}" class="{% if c.id|stringformat:'s' in selected_category_ids %}is-active{% endif %}">
+                            <span>{{ c.name }}</span>
+                            <b>•</b>
+                        </a>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="sidebar-block">
+            <div class="sidebar-title" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>Filter By</span>
+                {% if in_stock_only or selected_brand_ids or selected_color_ids or min_price or max_price %}
+                    <a href="{{ request.path }}" class="clear-all-btn">✕ Clear all</a>
+                {% endif %}
+            </div>
+            <div class="filter-wrap">
+                <div class="filter-section">
+                    <h3>Availability</h3>
+                    <label class="check">
+                        <input type="checkbox" name="in_stock" value="1" {% if in_stock_only %}checked{% endif %} onchange="this.form.submit()">
+                        In stock ({% if in_stock_count is not None %}{{ in_stock_count }}{% else %}0{% endif %})
+                    </label>
+                </div>
+
+                <div class="filter-section">
+                    <h3>Price</h3>
+                    <div class="price-values">
+                        <span id="minPriceLabel">${{ min_price|default:price_floor|floatformat:2 }}</span>
+                        <span>-</span>
+                        <span id="maxPriceLabel">${{ max_price|default:price_ceiling|floatformat:2 }}</span>
+                    </div>
+                    <div class="price-slider">
+                        <div class="price-track"></div>
+                        <div class="price-range" id="priceRange"></div>
+                        <input id="minPrice" name="min_price" type="range" 
+                               min="{{ price_floor|floatformat:0 }}" 
+                               max="{{ price_ceiling|floatformat:0 }}" 
+                               value="{{ min_price|default:price_floor|floatformat:0 }}">
+                        <input id="maxPrice" name="max_price" type="range" 
+                               min="{{ price_floor|floatformat:0 }}" 
+                               max="{{ price_ceiling|floatformat:0 }}" 
+                               value="{{ max_price|default:price_ceiling|floatformat:0 }}">
+                    </div>
+                </div>
+
+                {% if all_colors %}
+                <div class="filter-section">
+                    <h3>Color</h3>
+                    <div class="color-filter">
+                        {% for c in all_colors %}
+                            <label class="color-option {% if c.id|stringformat:'s' in selected_color_ids %}selected{% endif %}" {% if c.hex_color == "#ffffff" or c.value|lower == "white" %}data-white="1"{% endif %}>
+                                <input type="checkbox" name="color_id" value="{{ c.id }}" {% if c.id|stringformat:"s" in selected_color_ids %}checked{% endif %} style="display: none;" onchange="this.form.submit()">
+                                <span class="color-swatch" style="--swatch: {{ c.hex_color|default:'#ccc' }}"></span>
+                                <span>{{ c.value }}</span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if all_brands %}
+                <div class="filter-section">
+                    <h3>Brand</h3>
+                    {% for b in all_brands %}
+                        <label class="check">
+                            <input type="checkbox" name="brand_id" value="{{ b.id }}" {% if b.id|stringformat:"s" in selected_brand_ids %}checked{% endif %} onchange="this.form.submit()">
+                            {{ b.name }}
+                        </label>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </form>
+</div>

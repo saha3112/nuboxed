@@ -1,0 +1,1298 @@
+{% extends "backoffice/base.html" %}
+
+{% block content %}
+<style>
+    /* Form Page Styling - Light & Dark Mode */
+    .page-shell {
+        background: var(--bg);
+        min-height: 100vh;
+        padding: 40px 24px;
+    }
+
+    .form-panel {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        max-width: 1200px;
+        margin: 0 auto;
+        overflow: hidden;
+    }
+
+    .panel-header {
+        border-bottom: 1px solid var(--border);
+        padding: 32px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 24px;
+    }
+
+    .panel-header > div:first-child {
+        flex: 1;
+    }
+
+    .panel-header h3 {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--text-main);
+        margin: 0 0 8px 0;
+    }
+
+    .panel-header p {
+        color: var(--muted);
+        font-size: 14px;
+        margin: 0;
+        line-height: 1.6;
+    }
+
+    .panel-header .eyebrow {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 0 0 12px 0;
+    }
+
+    /* Form Styling */
+    .admin-form {
+        padding: 32px;
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 24px;
+    }
+
+    .form-field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .form-field label {
+        font-weight: 600;
+        color: var(--text-main);
+        font-size: 14px;
+    }
+
+    .form-field small {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    /* Input Styling */
+    .admin-form input[type="text"],
+    .admin-form input[type="color"],
+    .admin-form select {
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface-soft);
+        color: var(--text-main);
+        font-size: 14px;
+        font-family: inherit;
+        transition: all 0.2s ease;
+    }
+
+    .admin-form input[type="text"]:focus,
+    .admin-form select:focus {
+        outline: none;
+        border-color: var(--primary);
+        background: var(--surface);
+        box-shadow: 0 0 0 3px rgba(224, 68, 32, 0.1);
+    }
+
+    /* Builder Shell */
+    .builder-shell {
+        display: grid;
+        gap: 16px;
+        grid-column: 1 / -1;
+    }
+
+    .builder-card {
+        background: var(--surface-soft);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .builder-card-head {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .builder-card-title {
+        display: flex;
+        gap: 12px;
+        flex: 1;
+        align-items: center;
+    }
+
+    .builder-card-title input,
+    .builder-card-title select {
+        flex: 1;
+    }
+
+    .builder-card-title input[type="text"] {
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--text-main);
+        font-size: 14px;
+        font-family: inherit;
+    }
+
+    .builder-card-title select {
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--text-main);
+        font-size: 14px;
+    }
+
+    /* Button Styling */
+    .form-actions {
+        grid-column: 1 / -1;
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        padding-top: 24px;
+        border-top: 1px solid var(--border);
+        margin-top: 24px;
+    }
+
+    .ghost-button,
+    .primary-button {
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 1px solid var(--border);
+        font-family: inherit;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .ghost-button {
+        background: var(--surface-soft);
+        color: var(--text-main);
+        border-color: var(--border);
+    }
+
+    .ghost-button:hover {
+        background: var(--border);
+        border-color: var(--muted);
+    }
+
+    .primary-button {
+        background: var(--primary);
+        color: #fff;
+        border-color: var(--primary);
+    }
+
+    .primary-button:hover {
+        background: #b9381c;
+        border-color: #b9381c;
+        box-shadow: 0 8px 16px rgba(224, 68, 32, 0.2);
+    }
+
+    .primary-button:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+
+    /* Dark Mode Adjustments */
+    body.dark-mode .admin-form input[type="text"],
+    body.dark-mode .admin-form select {
+        background: #172033;
+        border-color: #243041;
+    }
+
+    body.dark-mode .admin-form input[type="text"]:focus,
+    body.dark-mode .admin-form select:focus {
+        background: #0f172a;
+        border-color: #e04420;
+    }
+
+    body.dark-mode .ghost-button {
+        background: #172033;
+        border-color: #243041;
+        color: #e5edf9;
+    }
+
+    body.dark-mode .ghost-button:hover {
+        background: #243041;
+        border-color: #e04420;
+        color: #fff;
+    }
+
+    body.dark-mode .builder-card-title input,
+    body.dark-mode .builder-card-title select {
+        background: #0f172a;
+        border-color: #243041;
+        color: #e5edf9;
+    }
+
+    .toast-notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px 20px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        animation: slideIn 0.3s ease-out;
+        max-width: 400px;
+        backdrop-filter: blur(10px);
+    }
+
+    .toast-notification.success {
+        border-left: 4px solid #22c55e;
+        background: #f0fdf4;
+        border-color: #dcfce7;
+    }
+
+    .toast-notification.success::backdrop {
+        background: #f0fdf4 !important;
+    }
+
+    .toast-notification.error {
+        border-left: 4px solid #ef4444;
+        background: #fef2f2;
+        border-color: #fee2e2;
+    }
+
+    body.dark-mode .toast-notification.success {
+        background: rgba(34, 197, 94, 0.15);
+        border-color: rgba(34, 197, 94, 0.3);
+    }
+
+    body.dark-mode .toast-notification.error {
+        background: rgba(239, 68, 68, 0.15);
+        border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .toast-message {
+        color: var(--text-main);
+        font-size: 14px;
+        font-weight: 500;
+        flex: 1;
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateX(420px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(420px);
+            opacity: 0;
+        }
+    }
+
+    /* Color Chip Styling */
+    .builder-color-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 12px;
+        padding: 12px;
+        background: var(--surface-soft);
+        border-radius: 8px;
+    }
+
+    .builder-color-chip {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+    }
+
+    .builder-color-chip input[type="color"] {
+        width: 48px;
+        height: 48px;
+        border: 2px solid var(--border);
+        border-radius: 50%;
+        cursor: pointer;
+        padding: 0;
+        appearance: none;
+        -webkit-appearance: none;
+        background: none;
+    }
+
+    .builder-color-chip input[type="color"]::-webkit-color-swatch {
+        border-radius: 50%;
+        border: none;
+    }
+
+    .builder-color-chip input[type="color"]::-moz-color-swatch {
+        border-radius: 50%;
+        border: none;
+    }
+
+    .builder-color-chip span {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--text-main);
+        min-width: 80px;
+        font-family: 'Courier New', monospace;
+    }
+
+    .builder-color-chip .ghost-button {
+        margin-left: auto;
+        padding: 4px 8px;
+        font-size: 12px;
+    }
+
+    /* Color Palette Preview (for mix colors) */
+    .builder-color-palette {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 8px;
+    }
+
+    .builder-color-palette-label {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .builder-color-palette-preview {
+        display: flex;
+        gap: 0;
+        border-radius: 50%;
+        overflow: hidden;
+        border: 2px solid var(--border);
+        width: 48px;
+        height: 48px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .builder-color-palette-preview.single-color {
+        border-radius: 50%;
+    }
+
+    .builder-color-palette-preview.multi-color {
+        border-radius: 50%;
+    }
+
+    .builder-color-palette-preview div {
+        flex: 1;
+        height: 100%;
+    }
+
+    .option-page {
+        background: #f4f7fb;
+        padding: 28px;
+    }
+
+    .option-panel {
+        max-width: 1080px;
+        border-radius: 14px;
+        box-shadow: 0 14px 40px rgba(15, 23, 42, 0.08);
+    }
+
+    .option-header {
+        padding: 28px 32px;
+        background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+    }
+
+    .option-header-main {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 20px;
+    }
+
+    .option-title-wrap {
+        min-width: 0;
+    }
+
+    .option-header .eyebrow {
+        letter-spacing: 0.08em;
+        color: #667085;
+        margin-bottom: 8px;
+    }
+
+    .option-header h3 {
+        font-size: 28px;
+        letter-spacing: 0;
+        margin-bottom: 10px;
+    }
+
+    .option-header-copy {
+        max-width: 640px;
+        color: #667085;
+    }
+
+    .option-meta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 16px;
+    }
+
+    .option-meta-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: #eef4ff;
+        color: #344054;
+        border: 1px solid #d9e6ff;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .option-back-button {
+        min-width: 104px;
+        justify-content: center;
+        background: #ffffff;
+    }
+
+    .option-form {
+        padding: 28px 32px 32px;
+        gap: 20px;
+        background: #ffffff;
+    }
+
+    .builder-intro {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 18px 20px;
+        border: 1px solid #e4e7ec;
+        border-radius: 12px;
+        background: #f9fafb;
+    }
+
+    .builder-intro label {
+        font-size: 16px;
+        margin-bottom: 4px;
+    }
+
+    .builder-count {
+        flex: 0 0 auto;
+        padding: 7px 10px;
+        border-radius: 999px;
+        background: #ffffff;
+        border: 1px solid #e4e7ec;
+        color: #475467;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .builder-shell {
+        gap: 14px;
+    }
+
+    .builder-card {
+        position: relative;
+        background: #ffffff;
+        border: 1px solid #e4e7ec;
+        border-radius: 12px;
+        padding: 18px;
+        gap: 14px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
+    .builder-card:hover {
+        border-color: #c7d7fe;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.07);
+    }
+
+    .builder-card-head {
+        align-items: stretch;
+    }
+
+    .builder-card-title {
+        display: grid;
+        grid-template-columns: minmax(220px, 1fr) 180px;
+        gap: 12px;
+    }
+
+    .builder-card-title input[type="text"],
+    .builder-card-title select {
+        min-height: 42px;
+        border-radius: 10px;
+        background: #ffffff;
+    }
+
+    .option-index {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 999px;
+        background: #eef4ff;
+        color: #e04420;
+        font-size: 12px;
+        font-weight: 800;
+        margin-right: 10px;
+        flex: 0 0 auto;
+    }
+
+    .option-title-line {
+        display: flex;
+        align-items: center;
+        min-width: 0;
+        flex: 1;
+    }
+
+    .builder-color-palette {
+        padding: 14px 16px;
+        border-radius: 10px;
+        background: #f8fafc;
+        border: 1px solid #eef2f7;
+        margin-top: 0;
+    }
+
+    .builder-color-palette-label {
+        min-width: 96px;
+        color: #667085;
+    }
+
+    .builder-color-palette-preview {
+        width: 56px;
+        height: 56px;
+        border: 3px solid #ffffff;
+        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.18);
+    }
+
+    .builder-color-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 10px;
+        padding: 0;
+        margin-top: 0;
+        background: transparent;
+    }
+
+    .builder-color-chip {
+        min-height: 56px;
+        padding: 8px 10px;
+        border-radius: 10px;
+        background: #ffffff;
+        border: 1px solid #e4e7ec;
+    }
+
+    .builder-color-chip input[type="color"] {
+        width: 42px;
+        height: 42px;
+        border: 2px solid #eef2f7;
+        box-shadow: none;
+    }
+
+    .builder-color-chip span {
+        color: #344054;
+        font-size: 13px;
+        min-width: 74px;
+    }
+
+    .form-actions {
+        position: sticky;
+        bottom: 0;
+        z-index: 5;
+        background: rgba(255, 255, 255, 0.92);
+        backdrop-filter: blur(10px);
+        margin: 6px -32px -32px;
+        padding: 16px 32px;
+        border-top: 1px solid #e4e7ec;
+    }
+
+    .ghost-button,
+    .primary-button {
+        min-height: 42px;
+        border-radius: 10px;
+    }
+
+    .empty-builder {
+        border: 1px dashed #cfd8e3;
+        border-radius: 12px;
+        padding: 34px 20px;
+        text-align: center;
+        color: #667085;
+        background: #f8fafc;
+    }
+
+    .empty-builder strong {
+        display: block;
+        color: #101828;
+        margin-bottom: 4px;
+    }
+
+    body.dark-mode .option-page {
+        background: #0b1220;
+    }
+
+    body.dark-mode .option-header,
+    body.dark-mode .option-form,
+    body.dark-mode .builder-card,
+    body.dark-mode .builder-color-chip {
+        background: #111827;
+    }
+
+    body.dark-mode .builder-intro,
+    body.dark-mode .builder-color-palette,
+    body.dark-mode .empty-builder {
+        background: #0f172a;
+        border-color: #243041;
+    }
+
+    body.dark-mode .form-actions {
+        background: rgba(17, 24, 39, 0.92);
+        border-color: #243041;
+    }
+
+    @media (max-width: 760px) {
+        .option-page {
+            padding: 16px;
+        }
+
+        .option-header,
+        .option-form {
+            padding: 22px;
+        }
+
+        .option-header-main,
+        .builder-intro,
+        .builder-card-head {
+            flex-direction: column;
+        }
+
+        .builder-card-title {
+            grid-template-columns: 1fr;
+        }
+
+        .form-actions {
+            margin: 4px -22px -22px;
+            padding: 14px 22px;
+        }
+    }
+
+    .option-panel {
+        max-width: 1240px;
+        overflow: visible;
+    }
+
+    .option-form {
+        display: block;
+    }
+
+    .options-workspace {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 320px;
+        gap: 24px;
+        align-items: start;
+    }
+
+    .options-main {
+        min-width: 0;
+    }
+
+    .options-sidebar {
+        position: sticky;
+        top: 24px;
+        display: grid;
+        gap: 14px;
+    }
+
+    .side-panel {
+        background: #ffffff;
+        border: 1px solid #e4e7ec;
+        border-radius: 12px;
+        padding: 18px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
+    .side-panel h4 {
+        margin: 0 0 12px;
+        font-size: 13px;
+        color: #667085;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+    }
+
+    .preview-list {
+        display: grid;
+        gap: 10px;
+    }
+
+    .preview-chip {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px;
+        border: 1px solid #e4e7ec;
+        border-radius: 10px;
+        background: #f9fafb;
+    }
+
+    .preview-swatch {
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        overflow: hidden;
+        display: flex;
+        border: 2px solid #ffffff;
+        box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+        flex: 0 0 auto;
+    }
+
+    .preview-swatch span {
+        flex: 1;
+    }
+
+    .preview-text {
+        min-width: 0;
+    }
+
+    .preview-name {
+        font-size: 13px;
+        font-weight: 700;
+        color: #101828;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .preview-code {
+        font-size: 12px;
+        color: #667085;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        margin-top: 2px;
+    }
+
+    .stat-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .stat-box {
+        padding: 12px;
+        border: 1px solid #e4e7ec;
+        border-radius: 10px;
+        background: #f9fafb;
+    }
+
+    .stat-value {
+        font-size: 20px;
+        font-weight: 800;
+        color: #101828;
+    }
+
+    .stat-label {
+        font-size: 12px;
+        color: #667085;
+        margin-top: 2px;
+    }
+
+    .form-actions {
+        margin: 20px 0 0;
+        border: 1px solid #e4e7ec;
+        border-radius: 12px;
+        justify-content: space-between;
+    }
+
+    .actions-copy {
+        color: #667085;
+        font-size: 13px;
+        align-self: center;
+    }
+
+    .actions-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+
+    body.dark-mode .side-panel,
+    body.dark-mode .preview-chip,
+    body.dark-mode .stat-box {
+        background: #111827;
+        border-color: #243041;
+    }
+
+    body.dark-mode .preview-name,
+    body.dark-mode .stat-value {
+        color: #e5edf9;
+    }
+
+    @media (max-width: 1100px) {
+        .options-workspace {
+            grid-template-columns: 1fr;
+        }
+
+        .options-sidebar {
+            position: static;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 760px) {
+        .options-sidebar {
+            grid-template-columns: 1fr;
+        }
+
+        .form-actions {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .actions-buttons,
+        .actions-buttons .ghost-button,
+        .actions-buttons .primary-button {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>
+<section class="page-shell form-page option-page">
+    <div class="panel form-panel option-panel">
+        <div class="panel-header option-header">
+            <div class="option-header-main">
+                <div class="option-title-wrap">
+                    <p class="eyebrow">Attribute Options</p>
+                    <h3>{{ attribute.name }} Options</h3>
+                    <p class="option-header-copy">
+                        Build clean selectable values for catalog products. Color attributes support single swatches and mixed palettes.
+                    </p>
+                    <div class="option-meta-row">
+                        <span class="option-meta-pill">{{ attribute.get_data_type_display }}</span>
+                        {% if attribute.is_variant_attribute %}<span class="option-meta-pill">Variant Attribute</span>{% endif %}
+                        {% if attribute.is_required %}<span class="option-meta-pill">Required</span>{% endif %}
+                    </div>
+                </div>
+                <a class="ghost-button option-back-button" href="{{ cancel_url }}">Back</a>
+            </div>
+        </div>
+        <form method="post" class="admin-form option-form" id="attribute-options-form">
+            {% csrf_token %}
+            {{ form.options_payload }}
+            <div class="options-workspace">
+                <div class="options-main">
+                    <div class="form-field builder-intro">
+                        <div>
+                            <label>Options Builder</label>
+                            <small>
+                                {% if attribute.data_type == "color" %}
+                                    Add color names, choose single or mixed palette mode, and tune swatches from the picker.
+                                {% else %}
+                                    Add {{ attribute.name }} option names. These values appear as selectable product options.
+                                {% endif %}
+                            </small>
+                        </div>
+                        <span class="builder-count" id="option-count">0 options</span>
+                    </div>
+                    <div id="attribute-options-builder" class="builder-shell" data-mode="{{ attribute.data_type }}" data-initial="{{ options_rows_json|escape }}"></div>
+                    <div class="form-actions">
+                        <span class="actions-copy">Changes are saved only after pressing Save Options.</span>
+                        <div class="actions-buttons">
+                            <button class="ghost-button" type="button" id="add-option-row">Add Option</button>
+                            <button class="primary-button" type="submit">Save Options</button>
+                        </div>
+                    </div>
+                </div>
+                <aside class="options-sidebar">
+                    <div class="side-panel">
+                        <h4>Summary</h4>
+                        <div class="stat-grid">
+                            <div class="stat-box">
+                                <div class="stat-value" id="summary-total">0</div>
+                                <div class="stat-label">Options</div>
+                            </div>
+                            <div class="stat-box">
+                                <div class="stat-value" id="summary-mixed">0</div>
+                                <div class="stat-label">Mixed</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="side-panel">
+                        <h4>Live Preview</h4>
+                        <div class="preview-list" id="option-preview-list"></div>
+                    </div>
+                </aside>
+            </div>
+        </form>
+    </div>
+</section>
+
+<script>
+(() => {
+    const builder = document.getElementById("attribute-options-builder");
+    const payloadInput = document.getElementById("id_options_payload");
+    const addButton = document.getElementById("add-option-row");
+    const optionCount = document.getElementById("option-count");
+    const summaryTotal = document.getElementById("summary-total");
+    const summaryMixed = document.getElementById("summary-mixed");
+    const previewList = document.getElementById("option-preview-list");
+    if (!builder || !payloadInput) return;
+
+    const mode = builder.dataset.mode;
+    let rows = [];
+    try {
+        rows = JSON.parse(builder.dataset.initial || "[]");
+    } catch (error) {
+        rows = [];
+    }
+
+    const renderSidebar = () => {
+        const mixedCount = rows.filter((row) => (row.mode || "single") === "multi").length;
+        if (optionCount) optionCount.textContent = `${rows.length} option${rows.length === 1 ? "" : "s"}`;
+        if (summaryTotal) summaryTotal.textContent = rows.length;
+        if (summaryMixed) summaryMixed.textContent = mixedCount;
+
+        if (!previewList) return;
+        previewList.innerHTML = "";
+
+        if (!rows.length) {
+            const empty = document.createElement("div");
+            empty.className = "empty-builder";
+            empty.innerHTML = `<strong>No preview yet</strong><span>Add options to see how customers will scan them.</span>`;
+            previewList.appendChild(empty);
+            return;
+        }
+
+        rows.slice(0, 8).forEach((row, index) => {
+            const chip = document.createElement("div");
+            chip.className = "preview-chip";
+
+            const swatch = document.createElement("div");
+            swatch.className = "preview-swatch";
+            const colors = mode === "color" ? (row.colors && row.colors.length ? row.colors : ["#000000"]) : ["#e4e7ec"];
+            colors.forEach((color) => {
+                const part = document.createElement("span");
+                part.style.backgroundColor = color;
+                swatch.appendChild(part);
+            });
+
+            const text = document.createElement("div");
+            text.className = "preview-text";
+            const name = document.createElement("div");
+            name.className = "preview-name";
+            name.textContent = row.label || `Option ${index + 1}`;
+            const code = document.createElement("div");
+            code.className = "preview-code";
+            code.textContent = mode === "color" ? colors.join(" / ") : "Selectable value";
+            text.appendChild(name);
+            text.appendChild(code);
+
+            chip.appendChild(swatch);
+            chip.appendChild(text);
+            previewList.appendChild(chip);
+        });
+
+        if (rows.length > 8) {
+            const more = document.createElement("div");
+            more.className = "preview-code";
+            more.textContent = `+ ${rows.length - 8} more options`;
+            previewList.appendChild(more);
+        }
+    };
+
+    const syncPayload = () => {
+        payloadInput.value = JSON.stringify(rows);
+        renderSidebar();
+    };
+
+    const updatePalettePreview = (palettePreview, row) => {
+        // Clear existing colors
+        palettePreview.innerHTML = "";
+
+        // Update class
+        if ((row.mode || "single") === "multi") {
+            palettePreview.className = "builder-color-palette-preview multi-color";
+            // Show all colors
+            row.colors.forEach((color) => {
+                const colorPart = document.createElement("div");
+                colorPart.style.backgroundColor = color;
+                palettePreview.appendChild(colorPart);
+            });
+        } else {
+            palettePreview.className = "builder-color-palette-preview single-color";
+            // Show single color
+            const colorPart = document.createElement("div");
+            colorPart.style.backgroundColor = row.colors[0] || "#000000";
+            palettePreview.appendChild(colorPart);
+        }
+    };
+
+    const render = () => {
+        builder.innerHTML = "";
+        syncPayload();
+
+        if (!rows.length) {
+            const empty = document.createElement("div");
+            empty.className = "empty-builder";
+            empty.innerHTML = `<strong>No options yet</strong><span>Use Add Option to create the first value.</span>`;
+            builder.appendChild(empty);
+            return;
+        }
+
+        rows.forEach((row, rowIndex) => {
+            if (!row.colors || !row.colors.length) {
+                row.colors = ["#000000"];
+            }
+
+            const card = document.createElement("div");
+            card.className = "builder-card";
+
+            const head = document.createElement("div");
+            head.className = "builder-card-head";
+
+            const titleLine = document.createElement("div");
+            titleLine.className = "option-title-line";
+
+            const indexBadge = document.createElement("span");
+            indexBadge.className = "option-index";
+            indexBadge.textContent = rowIndex + 1;
+            titleLine.appendChild(indexBadge);
+
+            const title = document.createElement("div");
+            title.className = "builder-card-title";
+
+            const nameInput = document.createElement("input");
+            nameInput.type = "text";
+            nameInput.placeholder = `${mode === "color" ? "Color" : "Option"} name`;
+            nameInput.value = row.label || "";
+            nameInput.addEventListener("input", (event) => {
+                rows[rowIndex].label = event.target.value;
+                syncPayload();
+            });
+            title.appendChild(nameInput);
+
+            if (mode === "color") {
+                const modeSelect = document.createElement("select");
+                modeSelect.innerHTML = '<option value="single">Single</option><option value="multi">Mix Color</option>';
+                modeSelect.value = row.mode || "single";
+                modeSelect.addEventListener("change", (event) => {
+                    rows[rowIndex].mode = event.target.value;
+                    if (event.target.value === "single") {
+                        rows[rowIndex].colors = [rows[rowIndex].colors[0] || "#000000"];
+                    }
+                    syncPayload();
+
+                    // Live update the palette preview and label
+                    const palettePreview = card.querySelector(".builder-color-palette-preview");
+                    const paletteLabel = card.querySelector(".builder-color-palette-label");
+                    if (palettePreview && paletteLabel) {
+                        updatePalettePreview(palettePreview, rows[rowIndex]);
+                        paletteLabel.textContent = (rows[rowIndex].mode || "single") === "multi" ? "Mix Preview" : "Color";
+                    }
+
+                    render();
+                });
+                title.appendChild(modeSelect);
+            }
+
+            const removeButton = document.createElement("button");
+            removeButton.type = "button";
+            removeButton.className = "ghost-button";
+            removeButton.textContent = "Remove";
+            removeButton.addEventListener("click", () => {
+                rows.splice(rowIndex, 1);
+                render();
+            });
+
+            titleLine.appendChild(title);
+            head.appendChild(titleLine);
+            head.appendChild(removeButton);
+            card.appendChild(head);
+
+            if (mode === "color") {
+                // Add palette preview
+                const paletteSection = document.createElement("div");
+                paletteSection.className = "builder-color-palette";
+
+                const paletteLabel = document.createElement("span");
+                paletteLabel.className = "builder-color-palette-label";
+                paletteLabel.textContent = (row.mode || "single") === "multi" ? "Mix Preview" : "Color";
+
+                const palettePreview = document.createElement("div");
+                palettePreview.className = `builder-color-palette-preview ${(row.mode || "single") === "multi" ? "multi-color" : "single-color"}`;
+
+                if ((row.mode || "single") === "multi") {
+                    // Show all colors mixed together
+                    row.colors.forEach((color) => {
+                        const colorPart = document.createElement("div");
+                        colorPart.style.backgroundColor = color;
+                        palettePreview.appendChild(colorPart);
+                    });
+                } else {
+                    // Show single color
+                    const colorPart = document.createElement("div");
+                    colorPart.style.backgroundColor = row.colors[0] || "#000000";
+                    palettePreview.appendChild(colorPart);
+                }
+
+                paletteSection.appendChild(paletteLabel);
+                paletteSection.appendChild(palettePreview);
+                card.appendChild(paletteSection);
+
+                const colorRow = document.createElement("div");
+                colorRow.className = "builder-color-row";
+
+                row.colors.forEach((color, colorIndex) => {
+                    const chip = document.createElement("div");
+                    chip.className = "builder-color-chip";
+
+                    const colorInput = document.createElement("input");
+                    colorInput.type = "color";
+                    colorInput.value = color;
+                    colorInput.addEventListener("input", (event) => {
+                        rows[rowIndex].colors[colorIndex] = event.target.value;
+                        code.textContent = event.target.value;
+                        syncPayload();
+
+                        // Live update the palette preview
+                        const palettePreview = card.querySelector(".builder-color-palette-preview");
+                        if (palettePreview) {
+                            updatePalettePreview(palettePreview, rows[rowIndex]);
+                        }
+                    });
+
+                    const code = document.createElement("span");
+                    code.textContent = color;
+
+                    chip.appendChild(colorInput);
+                    chip.appendChild(code);
+
+                    if ((row.mode || "single") === "multi") {
+                        const removeColor = document.createElement("button");
+                        removeColor.type = "button";
+                        removeColor.className = "ghost-button";
+                        removeColor.textContent = "Remove";
+                        removeColor.addEventListener("click", () => {
+                            rows[rowIndex].colors.splice(colorIndex, 1);
+                            if (!rows[rowIndex].colors.length) {
+                                rows[rowIndex].colors.push("#000000");
+                            }
+                            render();
+                        });
+                        chip.appendChild(removeColor);
+                    }
+
+                    colorRow.appendChild(chip);
+                });
+
+                if ((row.mode || "single") === "multi") {
+                const addColor = document.createElement("button");
+                addColor.type = "button";
+                addColor.className = "ghost-button";
+                addColor.textContent = "Add Swatch";
+                    addColor.addEventListener("click", () => {
+                        rows[rowIndex].colors.push("#000000");
+                        render();
+                    });
+                    colorRow.appendChild(addColor);
+                }
+
+                card.appendChild(colorRow);
+            }
+
+            builder.appendChild(card);
+        });
+    };
+
+    addButton.addEventListener("click", () => {
+        rows.push({label: "", mode: "single", colors: mode === "color" ? ["#000000"] : []});
+        render();
+    });
+
+    render();
+})();
+
+// Toast notification system
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast-notification ${type}`;
+    toast.innerHTML = `<span class="toast-message">${message}</span>`;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease-out forwards';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Handle form submission for options/colors
+(() => {
+    const form = document.getElementById('attribute-options-form');
+    if (!form) return;
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        // Show loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Saving...';
+
+        // Submit form
+        const formData = new FormData(form);
+        fetch(form.action || window.location.href, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+
+            if (response.ok) {
+                showToast('✓ Options saved successfully!', 'success');
+            } else {
+                showToast('✕ Error saving options', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+            showToast('✕ An error occurred while saving', 'error');
+        });
+    });
+})();
+</script>
+{% endblock %}

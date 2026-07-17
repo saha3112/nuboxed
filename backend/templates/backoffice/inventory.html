@@ -1,0 +1,46 @@
+{% extends "backoffice/base.html" %}
+
+{% block content %}
+<div class="bo-page-head">
+    <div>
+        <div class="bo-eyebrow">Operations</div>
+        <h1>Inventory</h1>
+        <p>Actual stock by product, variant, warehouse, and store.</p>
+    </div>
+</div>
+
+<div class="toolbar-panel" style="margin-bottom:18px;">
+    <form method="get" style="display:flex;align-items:end;gap:12px;flex-wrap:wrap;">
+        <div class="form-field" style="min-width:280px;">
+            <label for="inventory-store">Store</label>
+            <select id="inventory-store" name="store">
+                <option value="">All stores</option>
+                {% for store in stores %}<option value="{{ store.id }}" {% if selected_store == store.id|stringformat:"s" %}selected{% endif %}>{{ store.name }}</option>{% endfor %}
+            </select>
+        </div>
+        <button class="primary-button" type="submit">Filter stock</button>
+        {% if selected_store %}<a class="ghost-button" href="{% url 'backoffice:inventory' %}">Clear</a>{% endif %}
+    </form>
+</div>
+
+<div class="panel">
+    <div class="panel-header"><h3>Current Stock</h3><span class="subtle-copy">{{ stock_items|length }} records</span></div>
+    <div style="overflow:auto;"><table class="data-table">
+        <thead><tr><th>Product</th><th>Store</th><th>Variant</th><th>Warehouse</th><th>On hand</th><th>Reserved</th><th>Available</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for stock in stock_items %}
+        <tr>
+            <td><strong>{{ stock.product.name }}</strong><br><small>{{ stock.product.sku }}</small></td>
+            <td>{{ stock.store_name|default:"Store not assigned" }}</td>
+            <td>{{ stock.variant.name|default:"General" }}</td>
+            <td>{{ stock.warehouse.name }}</td>
+            <td>{{ stock.on_hand_quantity }}</td>
+            <td>{{ stock.reserved_quantity }}</td>
+            <td><strong>{{ stock.available_quantity }}</strong></td>
+            <td>{% if stock.available_quantity > 0 %}<span class="bo-status success">In stock</span>{% else %}<span class="bo-status danger">Out of stock</span>{% endif %}</td>
+        </tr>
+        {% empty %}<tr><td colspan="8" class="empty-state">No stock records found.</td></tr>{% endfor %}
+        </tbody>
+    </table></div>
+</div>
+{% endblock %}

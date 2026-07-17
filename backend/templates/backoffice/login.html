@@ -1,0 +1,244 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Super Admin Control Center | CommerceOS</title>
+    <!-- Google Fonts & Phosphor Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="{% static 'shared/icon-fallback.css' %}">
+    <style>
+        :root {
+            --primary: #e04420;
+            --primary-hover: #b9381c;
+            --bg-gradient: linear-gradient(135deg, #020617 0%, #0f172a 100%);
+            --card-bg: rgba(15, 23, 42, 0.7);
+            --border: rgba(255, 255, 255, 0.08);
+            --text-main: #f8fafc;
+            --text-muted: #64748b;
+            --input-bg: rgba(2, 6, 23, 0.6);
+            --danger: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            overflow-x: hidden;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 460px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 40px;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .logo-area {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .logo-img {
+            max-height: 56px;
+            object-fit: contain;
+            margin-bottom: 12px;
+        }
+
+        .logo-fallback {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(to right, #e04420, #ee6a43);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+
+        .title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .subtitle {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            text-align: center;
+            line-height: 1.5;
+            margin-bottom: 32px;
+        }
+
+        .form-field {
+            margin-bottom: 20px;
+        }
+
+        .label {
+            display: block;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 18px;
+        }
+
+        .input-field {
+            width: 100%;
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 16px 12px 42px;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        .input-field:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(224, 68, 32, 0.15);
+        }
+
+        .error-message {
+            color: var(--danger);
+            font-size: 12.5px;
+            margin-top: 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .non-field-errors {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 13px;
+            color: #fca5a5;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .btn-submit {
+            width: 100%;
+            background: var(--primary);
+            border: none;
+            border-radius: 12px;
+            padding: 14px;
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.1s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 24px;
+        }
+
+        .btn-submit:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-submit:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo-area">
+            {% if global_brand_settings.logo_big %}
+                <img class="logo-img" src="{{ global_brand_settings.logo_big.url }}" alt="{{ global_brand_settings.brand_name }}">
+            {% else %}
+                <div class="logo-fallback">{{ global_brand_settings.brand_name|default:"CommerceOS" }}</div>
+            {% endif %}
+            <h1 class="title">Super Admin Control Center</h1>
+            <p class="subtitle">Platform administration for retailers, system operations, and marketplace management.</p>
+        </div>
+
+        <form method="post" action="{% url 'backoffice:login' %}" autocomplete="off">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="non-field-errors">
+                {% for err in form.non_field_errors %}
+                <div><i class="ph ph-warning-circle"></i> {{ err }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Username Field -->
+            <div class="form-field">
+                <label class="label" for="id_username">Admin Email / Username</label>
+                <div class="input-wrapper">
+                    <i class="ph ph-user-gear input-icon"></i>
+                    <input type="text" name="username" id="id_username" class="input-field" placeholder="admin@platform.com" required autofocus>
+                </div>
+                {% if form.username.errors %}
+                <div class="error-message"><i class="ph ph-warning-circle"></i> {{ form.username.errors.as_text }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Password Field -->
+            <div class="form-field">
+                <label class="label" for="id_password">Password</label>
+                <div class="input-wrapper">
+                    <i class="ph ph-lock input-icon"></i>
+                    <input type="password" name="password" id="id_password" class="input-field" placeholder="••••••••" required>
+                </div>
+                {% if form.password.errors %}
+                <div class="error-message"><i class="ph ph-warning-circle"></i> {{ form.password.errors.as_text }}</div>
+                {% endif %}
+            </div>
+
+            <button type="submit" class="btn-submit">
+                <span>Sign In to Admin Control Panel</span>
+                <i class="ph ph-arrow-right"></i>
+            </button>
+        </form>
+    </div>
+<script src="{% static 'common/password-toggle.js' %}"></script>
+</body>
+</html>

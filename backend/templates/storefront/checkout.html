@@ -1,0 +1,150 @@
+{% extends "storefront/base.html" %}
+
+{% block content %}
+<section class="page-head">
+  <div class="container">
+    <h1>Checkout</h1>
+    <div class="breadcrumb">
+        <a href="{% url 'storefront:home' %}">Home</a>
+        <span>/</span>
+        <a href="{% url 'storefront:cart' %}">Cart</a>
+        <span>/</span>
+        <span>Checkout</span>
+    </div>
+  </div>
+</section>
+<section class="page-shell order-layout">
+    <div class="order-main">
+        {% if requires_login_for_order %}
+            <p class="eta-copy">Login is required before placing a website order.</p>
+        {% endif %}
+        <div class="checkout-location-card checkout-band">
+            <div>
+                <label>Delivery pincode</label>
+                <p>{{ selected_delivery_location.label }}</p>
+            </div>
+            <form action="{% url 'storefront:delivery-location-set' %}" method="post" class="checkout-location-form">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                <input type="hidden" name="source" value="manual">
+                <input type="text" name="pincode" value="{{ selected_delivery_location.pincode }}" placeholder="Enter pincode">
+                <button type="submit" class="button-compact ghost">Update</button>
+            </form>
+        </div>
+        {% if request.user.is_authenticated %}
+            <form class="checkout-form" method="post" action="{% url 'storefront:place-order' %}">
+                {% csrf_token %}
+                {% if address_book %}
+                    <div class="field-group">
+                        <label>Saved addresses</label>
+                        <div class="comparison-stack">
+                            {% for address in address_book %}
+                                <label class="comparison-card">
+                                    <input type="radio" name="checkout-address_id" value="{{ address.id }}" {% if selected_address and selected_address.id == address.id %}checked{% endif %}>
+                                    <strong>{{ address.label }}{% if address.is_default %} · Default{% endif %}</strong>
+                                    <span>{{ address.full_name }} · {{ address.phone }}</span>
+                                    <span>{{ address.address_line1 }} {{ address.address_line2 }}, {{ address.city }}, {{ address.state }} {{ address.postal_code }}</span>
+                                </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+                <div class="field-group">
+                    <label>Add or update shipping address</label>
+                    <div class="address-grid">
+                        {% for field in address_form %}
+                            <div class="field-group">
+                                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {{ field.errors }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="field-group">
+                    <label for="{{ checkout_form.payment_method.id_for_label }}">Payment method</label>
+                    {{ checkout_form.payment_method }}
+                </div>
+                <div class="field-group">
+                    <label for="{{ checkout_form.note.id_for_label }}">Order note</label>
+                    {{ checkout_form.note }}
+                </div>
+                <button type="submit" class="primary-link button-reset">Place order</button>
+            </form>
+        {% endif %}
+    </div>
+    <aside class="summary-panel order-summary-panel">
+        <h2>Order summary</h2>
+        {% for row in delivery_items %}
+            <div class="summary-row checkout-summary-row">
+                <div>
+                    <span>{{ row.item.product.name }} x {{ row.item.quantity }}</span>
+                    <small>{{ row.delivery.label }}</small>
+                </div>
+                <strong>{{ row.item.line_total }}</strong>
+            </div>
+        {% endfor %}
+        <div class="summary-row"><span>Subtotal</span><strong>{{ subtotal }}</strong></div>
+        <div class="summary-row"><span>Discount</span><strong>{{ discount }}</strong></div>
+        <div class="summary-row"><span>Tax</span><strong>{{ tax }}</strong></div>
+        <div class="summary-row"><span>Shipping</span><strong>{{ shipping }}</strong></div>
+        <div class="summary-row total"><span>Total</span><strong>{{ total }}</strong></div>
+    </aside>
+</section>
+{% endblock %}
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const pinInput = document.getElementById("id_address-postal_code");
+        const cityInput = document.getElementById("id_address-city");
+        const stateInput = document.getElementById("id_address-state");
+        
+        function autofillCityState(pincode) {
+            if (pincode && pincode.length >= 4) {
+                fetch(`https://api.postalpincode.in/pincode/${pincode}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data && data[0].Status === "Success") {
+                            const postOffice = data[0].PostOffice[0];
+                            const city = postOffice.Name || postOffice.District;
+                            const state = postOffice.State;
+                            if (cityInput && !cityInput.value) {
+                                cityInput.value = city;
+                            }
+                            if (stateInput && !stateInput.value) {
+                                stateInput.value = state;
+                            }
+                        }
+                    })
+                    .catch(() => {});
+            }
+        }
+
+        if (pinInput) {
+            // Autofill on load if pincode is present and city/state are empty
+            if (pinInput.value && (!cityInput.value || !stateInput.value)) {
+                autofillCityState(pinInput.value);
+            }
+
+            // Autofill on pincode change
+            pinInput.addEventListener("blur", function() {
+                // Clear city/state if user intends to fetch a new one? No, maybe they just changed pincode. Let's just fetch and if city is empty or maybe overwrite? 
+                // Better to overwrite if they blur on pincode.
+                if (pinInput.value && pinInput.value.length >= 4) {
+                     fetch(`https://api.postalpincode.in/pincode/${pinInput.value}`)
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data && data[0].Status === "Success") {
+                                const postOffice = data[0].PostOffice[0];
+                                const city = postOffice.Name || postOffice.District;
+                                const state = postOffice.State;
+                                if (cityInput) cityInput.value = city;
+                                if (stateInput) stateInput.value = state;
+                            }
+                        })
+                        .catch(() => {});
+                }
+            });
+        }
+    });
+</script>

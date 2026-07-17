@@ -1,0 +1,138 @@
+/* Shared icon fallback for pages that rely on Phosphor icons.
+   This keeps core UI visible when the icon CDN is unavailable.
+   These rules only apply if 'fallback-active' class is explicitly added to the body. */
+
+body.fallback-active .ph,
+body.fallback-active .fa-solid,
+body.fallback-active .fa-regular {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-style: normal;
+    line-height: 1;
+}
+
+body.fallback-active .ph::before,
+body.fallback-active .fa-solid::before,
+body.fallback-active .fa-regular::before {
+    font-family: Arial, sans-serif;
+    content: "•";
+}
+
+body.fallback-active .ph-plus::before { content: "+"; }
+body.fallback-active .ph-x::before,
+body.fallback-active .fa-xmark::before { content: "×"; }
+body.fallback-active .ph-check::before,
+body.fallback-active .ph-check-circle::before,
+body.fallback-active .ph-check-square::before { content: "✓"; }
+body.fallback-active .ph-info::before { content: "i"; }
+body.fallback-active .ph-warning::before,
+body.fallback-active .ph-warning-circle::before,
+body.fallback-active .ph-warning-octagon::before { content: "!"; }
+body.fallback-active .ph-question::before { content: "?"; }
+body.fallback-active .ph-caret-down::before,
+body.fallback-active .fa-chevron-down::before { content: "⌄"; }
+body.fallback-active .ph-caret-right::before { content: "›"; }
+body.fallback-active .ph-caret-left::before { content: "‹"; }
+body.fallback-active .ph-arrow-left::before,
+body.fallback-active .fa-arrow-left::before { content: "←"; }
+body.fallback-active .ph-arrow-right::before,
+body.fallback-active .fa-arrow-right::before { content: "→"; }
+body.fallback-active .ph-house::before,
+body.fallback-active .fa-house::before { content: "⌂"; }
+body.fallback-active .ph-list::before,
+body.fallback-active .fa-bars::before { content: "☰"; }
+body.fallback-active .ph-magnifying-glass::before,
+body.fallback-active .fa-magnifying-glass::before { content: "⌕"; }
+body.fallback-active .ph-user::before,
+body.fallback-active .ph-user-circle::before,
+body.fallback-active .ph-user-gear::before,
+body.fallback-active .fa-user::before { content: "👤"; }
+body.fallback-active .ph-user-gear::before { content: "⚙"; }
+body.fallback-active .ph-user-plus::before { content: "👥"; }
+body.fallback-active .ph-users::before,
+body.fallback-active .ph-users-three::before { content: "👥"; }
+body.fallback-active .fa-mobile-screen-button::before { content: "▣"; }
+body.fallback-active .ph-device-mobile-camera::before,
+body.fallback-active .ph-device-mobile::before { content: "▯"; }
+body.fallback-active .ph-storefront::before,
+body.fallback-active .fa-store::before { content: "▣"; }
+body.fallback-active .ph-buildings::before { content: "🏢"; }
+body.fallback-active .ph-stack::before { content: "▤"; }
+body.fallback-active .ph-package::before,
+body.fallback-active .fa-box::before { content: "▦"; }
+body.fallback-active .ph-shopping-cart::before,
+body.fallback-active .fa-cart-shopping::before { content: "🛒"; }
+body.fallback-active .ph-shopping-bag::before { content: "🛍"; }
+body.fallback-active .ph-heart::before,
+body.fallback-active .fa-heart::before { content: "♡"; }
+body.fallback-active .fa-bolt::before { content: "⚡"; }
+body.fallback-active .ph-bell::before { content: "🔔"; }
+body.fallback-active .ph-gear::before,
+body.fallback-active .ph-gear-six::before { content: "⚙"; }
+body.fallback-active .ph-sliders-horizontal::before { content: "≡"; }
+body.fallback-active .ph-lockers::before { content: "🔐"; }
+body.fallback-active .ph-squares-four::before,
+body.fallback-active .ph-grid-four::before { content: "▦"; }
+body.fallback-active .ph-sparkle::before { content: "✦"; }
+body.fallback-active .ph-truck::before { content: "🚚"; }
+body.fallback-active .ph-rocket-launch::before { content: "🚀"; }
+body.fallback-active .ph-apple-logo::before { content: ""; }
+body.fallback-active .ph-android-logo::before { content: "A"; }
+body.fallback-active .ph-plus-circle::before { content: "+"; }
+body.fallback-active .ph-map-pin::before,
+body.fallback-active .ph-map-pin-area::before { content: "⌖"; }
+body.fallback-active .ph-crosshair::before { content: "⊕"; }
+body.fallback-active .ph-credit-card::before { content: "💳"; }
+body.fallback-active .ph-shield-check::before { content: "🛡"; }
+body.fallback-active .ph-eye::before { content: "◉"; }
+body.fallback-active .ph-image::before,
+body.fallback-active .ph-image-square::before,
+body.fallback-active .ph-images::before,
+body.fallback-active .fa-image::before { content: "□"; }
+body.fallback-active .ph-video::before,
+body.fallback-active .ph-monitor-play::before,
+body.fallback-active .fa-play::before { content: "▶"; }
+body.fallback-active .ph-play-circle::before { content: "▶"; }
+body.fallback-active .ph-arrows-clockwise::before,
+body.fallback-active .ph-arrows-counter-clockwise::before,
+body.fallback-active .fa-arrows-rotate::before { content: "↻"; }
+body.fallback-active .ph-arrow-counter-clockwise::before { content: "↺"; }
+body.fallback-active .ph-arrows-left-right::before { content: "↔"; }
+body.fallback-active .fa-scale-balanced::before { content: "⇄"; }
+body.fallback-active .ph-clock::before,
+body.fallback-active .ph-clock-countdown::before { content: "⏱"; }
+body.fallback-active .ph-calendar-x::before { content: "📅"; }
+body.fallback-active .ph-star::before { content: "★"; }
+body.fallback-active .ph-sign-out::before { content: "⇦"; }
+body.fallback-active .ph-gauge::before { content: "⟲"; }
+body.fallback-active .ph-moon::before { content: "☾"; }
+body.fallback-active .ph-sun::before { content: "☼"; }
+body.fallback-active .ph-files::before,
+body.fallback-active .ph-file::before,
+body.fallback-active .ph-file-text::before { content: "📄"; }
+body.fallback-active .ph-cloud-arrow-up::before { content: "☁"; }
+body.fallback-active .ph-folder-open::before { content: "📂"; }
+body.fallback-active .ph-warehouse::before { content: "🏬"; }
+body.fallback-active .ph-calculator::before { content: "∑"; }
+body.fallback-active .ph-git-merge::before,
+body.fallback-active .ph-git-branch::before { content: "⎇"; }
+body.fallback-active .ph-trend-up::before { content: "↗"; }
+body.fallback-active .ph-note-pencil::before,
+body.fallback-active .ph-pencil-simple::before,
+body.fallback-active .ph-pen-nib::before { content: "✎"; }
+body.fallback-active .ph-lock::before,
+body.fallback-active .ph-lock-key::before,
+body.fallback-active .fa-lock::before { content: "🔒"; }
+body.fallback-active .ph-envelope::before { content: "✉"; }
+body.fallback-active .ph-phone::before { content: "☎"; }
+body.fallback-active .ph-identification-badge::before,
+body.fallback-active .ph-identification-card::before { content: "🪪"; }
+body.fallback-active .ph-bank::before { content: "🏦"; }
+body.fallback-active .ph-receipt::before { content: "🧾"; }
+body.fallback-active .ph-certificate::before { content: "🏅"; }
+body.fallback-active .ph-factory::before { content: "🏭"; }
+body.fallback-active .ph-cookie::before { content: "🍪"; }
+body.fallback-active .ph-trash::before { content: "🗑"; }
+body.fallback-active .ph-dot-outline::before { content: "•"; }
+body.fallback-active .ph-fill::before { content: "●"; }

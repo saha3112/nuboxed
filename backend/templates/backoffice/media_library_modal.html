@@ -1,0 +1,427 @@
+<div id="media-library-modal" style="display: none; position: fixed; inset: 0; z-index: 99999; font-family: system-ui, -apple-system, sans-serif; box-sizing: border-box;">
+    <!-- Backdrop -->
+    <div id="media-library-backdrop" style="position: absolute; inset: 0; background: rgba(15, 23, 42, 0.45); backdrop-filter: blur(8px); transition: opacity 0.25s ease;"></div>
+    
+    <!-- Modal Dialog container -->
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 800px; height: 80%; max-height: 640px; background: var(--card-bg, #ffffff); border: 1px solid var(--border, #e2e8f0); border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04); display: flex; flex-direction: column; overflow: hidden; animation: mlModalFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);">
+        
+        <!-- Header -->
+        <div style="padding: 18px 24px; border-bottom: 1px solid var(--border, #e2e8f0); display: flex; align-items: center; justify-content: space-between;">
+            <div>
+                <h4 style="margin: 0; font-size: 16px; font-weight: 700; color: var(--text-main, #0f172a);">Select Media</h4>
+                <p style="margin: 4px 0 0; font-size: 12px; color: var(--text-muted, #64748b);">Choose an existing file or upload a new one.</p>
+            </div>
+            <button type="button" onclick="window.closeMediaLibrary()" style="background: none; border: none; color: var(--text-muted, #64748b); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 6px; border-radius: 8px; transition: background 0.15s;" onmouseover="this.style.background='rgba(0,0,0,0.04)'" onmouseout="this.style.background='none'">
+                <i class="ph ph-x" style="font-size: 20px;"></i>
+            </button>
+        </div>
+        
+        <!-- Tab Bar -->
+        <div style="display: flex; border-bottom: 1px solid var(--border, #e2e8f0); background: rgba(0,0,0,0.005); padding: 0 12px;">
+            <button type="button" id="ml-tab-gallery" onclick="window.switchMediaLibraryTab('gallery')" style="padding: 14px 16px; font-size: 13.5px; font-weight: 600; background: none; border: none; border-bottom: 2px solid var(--primary, #e04420); color: var(--primary, #e04420); cursor: pointer; transition: all 0.2s;">
+                <i class="ph ph-images" style="margin-right: 6px; vertical-align: middle;"></i>Media Gallery
+            </button>
+            <button type="button" id="ml-tab-upload" onclick="window.switchMediaLibraryTab('upload')" style="padding: 14px 16px; font-size: 13.5px; font-weight: 600; background: none; border: none; border-bottom: 2px solid transparent; color: var(--text-muted, #64748b); cursor: pointer; transition: all 0.2s;">
+                <i class="ph ph-cloud-arrow-up" style="margin-right: 6px; vertical-align: middle;"></i>Manual Upload
+            </button>
+        </div>
+        
+        <!-- Search bar (Only shown on gallery tab) -->
+        <div id="ml-search-bar-container" style="padding: 12px 24px; border-bottom: 1px solid var(--border, #e2e8f0); display: flex; align-items: center; gap: 10px;">
+            <div style="position: relative; flex-grow: 1;">
+                <i class="ph ph-magnifying-glass" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted, #64748b); font-size: 16px;"></i>
+                <input type="text" id="ml-search-input" oninput="window.filterMediaLibrary()" placeholder="Search files by name..." style="width: 100%; padding: 8px 12px 8px 36px; border: 1px solid var(--border, #e2e8f0); border-radius: 8px; font-size: 13px; outline: none; background: var(--body-bg, #ffffff); color: var(--text-main, #0f172a);" />
+            </div>
+            <button type="button" onclick="window.loadMediaLibraryFiles()" class="ghost-button" style="padding: 6px 12px; font-size: 12px; display: flex; align-items: center; gap: 6px;">
+                <i class="ph ph-arrows-counter-clockwise"></i>Refresh
+            </button>
+        </div>
+        
+        <!-- Tab Content Area -->
+        <div style="flex-grow: 1; overflow-y: auto; padding: 24px; position: relative;">
+            
+            <!-- Tab 1: Gallery -->
+            <div id="ml-content-gallery" style="display: block; height: 100%;">
+                <div id="ml-gallery-loading" style="display: none; position: absolute; inset: 0; background: rgba(255,255,255,0.7); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; z-index: 10;">
+                    <div style="width: 32px; height: 32px; border: 3px solid var(--border, #e2e8f0); border-top-color: var(--primary, #e04420); border-radius: 50%; animation: mlSpin 0.8s linear infinite;"></div>
+                    <span style="font-size: 12.5px; color: var(--text-muted, #64748b);">Loading library...</span>
+                </div>
+                
+                <div id="ml-gallery-empty" style="display: none; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; color: var(--text-muted, #64748b);">
+                    <i class="ph ph-folder-open" style="font-size: 48px; color: var(--border, #e2e8f0);"></i>
+                    <p style="margin: 0; font-weight: 600; font-size: 14px;">No files found</p>
+                    <p style="margin: 0; font-size: 12px;">You haven't uploaded any media items yet. Head to manual upload tab!</p>
+                </div>
+                
+                <div id="ml-gallery-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 16px;">
+                    <!-- Thumbnails appended dynamically -->
+                </div>
+            </div>
+            
+            <!-- Tab 2: Manual Upload -->
+            <div id="ml-content-upload" style="display: none;">
+                <div id="ml-upload-zone" 
+                     ondragover="event.preventDefault(); this.style.borderColor='var(--primary)'; this.style.background='rgba(224, 68, 32, 0.04)';" 
+                     ondragleave="event.preventDefault(); this.style.borderColor='var(--border)'; this.style.background='none';" 
+                     ondrop="window.handleMediaLibraryDrop(event)"
+                     onclick="document.getElementById('ml-upload-file-input').click()"
+                     style="border: 2px dashed var(--border, #e2e8f0); border-radius: 12px; padding: 48px 24px; text-align: center; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; transition: all 0.2s;">
+                    <i class="ph ph-cloud-arrow-up" style="font-size: 48px; color: var(--primary, #e04420);"></i>
+                    <div>
+                        <p style="margin: 0; font-weight: 600; font-size: 14px; color: var(--text-main, #0f172a);">Drag & Drop file here or click to browse</p>
+                        <p style="margin: 4px 0 0; font-size: 12px; color: var(--text-muted, #64748b);">Supports JPG, PNG, GIF, WebP, MP4, WebM (Max 20MB)</p>
+                    </div>
+                    <button type="button" class="primary-button" style="pointer-events: none; padding: 6px 14px; font-size: 12.5px;">Choose File</button>
+                    <input type="file" id="ml-upload-file-input" style="display: none;" onchange="window.handleMediaLibrarySelect(this)">
+                </div>
+                
+                <!-- Uploading Status -->
+                <div id="ml-upload-status" style="display: none; margin-top: 20px; border: 1px solid var(--border, #e2e8f0); border-radius: 8px; padding: 14px; background: rgba(0,0,0,0.015);">
+                    <div style="display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 500; color: var(--text-main, #0f172a); margin-bottom: 6px;">
+                        <span id="ml-upload-filename">Uploading file...</span>
+                        <span id="ml-upload-percent">0%</span>
+                    </div>
+                    <div style="width: 100%; height: 6px; background: var(--border, #e2e8f0); border-radius: 4px; overflow: hidden;">
+                        <div id="ml-upload-progress-bar" style="width: 0%; height: 100%; background: var(--primary, #e04420); transition: width 0.1s;"></div>
+                    </div>
+                </div>
+            </div>
+            
+        </div>
+        
+        <!-- Footer -->
+        <div style="padding: 16px 24px; border-top: 1px solid var(--border, #e2e8f0); display: flex; justify-content: flex-end; gap: 10px; background: rgba(0,0,0,0.005);">
+            <button type="button" onclick="window.closeMediaLibrary()" class="ghost-button" style="padding: 8px 16px; font-size: 13px;">Cancel</button>
+            <button type="button" id="ml-select-button" onclick="window.confirmMediaLibrarySelection()" class="primary-button" style="padding: 8px 16px; font-size: 13px;" disabled>Select Media</button>
+        </div>
+        
+    </div>
+</div>
+
+<style>
+@keyframes mlModalFadeIn {
+    from { opacity: 0; transform: translate(-50%, -48%) scale(0.96); }
+    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes mlSpin {
+    to { transform: rotate(360deg); }
+}
+.ml-thumb-card {
+    position: relative;
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 10px;
+    overflow: hidden;
+    aspect-ratio: 1;
+    background: var(--body-bg, #f8fafc);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.ml-thumb-card:hover {
+    border-color: var(--primary, #e04420);
+    box-shadow: 0 4px 12px rgba(224, 68, 32, 0.08);
+}
+.ml-thumb-card.selected {
+    border-color: var(--primary, #e04420);
+    box-shadow: 0 0 0 2px var(--primary, #e04420);
+}
+.ml-thumb-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--primary, #e04420);
+    color: #ffffff;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.ml-thumb-card.selected .ml-thumb-badge {
+    display: flex;
+}
+</style>
+
+<script>
+(() => {
+    let currentCallback = null;
+    let selectedAsset = null;
+    let allAssets = [];
+
+    function getPortalContext() {
+        return document.body?.dataset?.portalContext || '';
+    }
+
+    function getMediaRequestOptions() {
+        const headers = {};
+        const portalContext = getPortalContext();
+        if (portalContext) {
+            headers['X-Portal-Context'] = portalContext;
+        }
+        return { headers };
+    }
+
+    function normalizeMediaAsset(asset) {
+        const url = asset?.url || asset?.file_url || asset?.file || asset?.absolute_url || asset?.src || asset?.thumbnail_url || '';
+        return { ...(asset || {}), url };
+    }
+    
+    // Open Media Library Modal
+    window.openMediaLibrary = function(callback) {
+        currentCallback = callback;
+        selectedAsset = null;
+        
+        // Reset selections and UI
+        document.getElementById('ml-select-button').disabled = true;
+        document.getElementById('ml-search-input').value = '';
+        
+        // Show modal
+        const modal = document.getElementById('media-library-modal');
+        modal.style.display = 'block';
+        
+        // Default to gallery tab and load files
+        window.switchMediaLibraryTab('gallery');
+        window.loadMediaLibraryFiles();
+    };
+    
+    // Close Modal
+    window.closeMediaLibrary = function() {
+        document.getElementById('media-library-modal').style.display = 'none';
+        currentCallback = null;
+    };
+    
+    // Switch tabs
+    window.switchMediaLibraryTab = function(tabName) {
+        const tabGallery = document.getElementById('ml-tab-gallery');
+        const tabUpload = document.getElementById('ml-tab-upload');
+        const contentGallery = document.getElementById('ml-content-gallery');
+        const contentUpload = document.getElementById('ml-content-upload');
+        const searchBar = document.getElementById('ml-search-bar-container');
+        
+        if (tabName === 'gallery') {
+            tabGallery.style.color = 'var(--primary, #e04420)';
+            tabGallery.style.borderBottomColor = 'var(--primary, #e04420)';
+            tabUpload.style.color = 'var(--text-muted, #64748b)';
+            tabUpload.style.borderBottomColor = 'transparent';
+            contentGallery.style.display = 'block';
+            contentUpload.style.display = 'none';
+            searchBar.style.display = 'flex';
+        } else {
+            tabUpload.style.color = 'var(--primary, #e04420)';
+            tabUpload.style.borderBottomColor = 'var(--primary, #e04420)';
+            tabGallery.style.color = 'var(--text-muted, #64748b)';
+            tabGallery.style.borderBottomColor = 'transparent';
+            contentGallery.style.display = 'none';
+            contentUpload.style.display = 'block';
+            searchBar.style.display = 'none';
+        }
+    };
+    
+    // Load Files from server
+    window.loadMediaLibraryFiles = function() {
+        const loading = document.getElementById('ml-gallery-loading');
+        const empty = document.getElementById('ml-gallery-empty');
+        const grid = document.getElementById('ml-gallery-grid');
+        
+        loading.style.display = 'flex';
+        empty.style.display = 'none';
+        grid.innerHTML = '';
+        
+        fetch('/api/media-library/', getMediaRequestOptions())
+            .then(res => res.json())
+            .then(res => {
+                loading.style.display = 'none';
+                if (res.status === 'success') {
+                    allAssets = (res.data || []).map(normalizeMediaAsset);
+                    window.renderMediaLibraryGrid(allAssets);
+                } else {
+                    console.error('Failed to load media assets');
+                }
+            })
+            .catch(err => {
+                loading.style.display = 'none';
+                console.error(err);
+            });
+    };
+    
+    // Render Grid items
+    window.renderMediaLibraryGrid = function(assets) {
+        const empty = document.getElementById('ml-gallery-empty');
+        const grid = document.getElementById('ml-gallery-grid');
+        grid.innerHTML = '';
+        
+        if (assets.length === 0) {
+            empty.style.display = 'flex';
+            return;
+        }
+        empty.style.display = 'none';
+        
+        assets.forEach(asset => {
+            asset = normalizeMediaAsset(asset);
+            const card = document.createElement('div');
+            card.className = 'ml-thumb-card';
+            card.dataset.id = asset.id;
+            
+            // Check file type
+            const filename = asset.filename || 'Media asset';
+            const isVideo = filename.toLowerCase().endsWith('.mp4') || filename.toLowerCase().endsWith('.webm');
+            if (isVideo) {
+                card.innerHTML = `
+                    <div style="width:100%; height:100%; background:#0f172a; display:grid; place-items:center; color:#fff;">
+                        <i class="ph-fill ph-play-circle" style="font-size: 28px;"></i>
+                    </div>
+                `;
+            } else {
+                card.innerHTML = `
+                    <img src="${asset.url}" alt="${filename}" style="width:100%; height:100%; object-fit:cover;">
+                `;
+            }
+            
+            // Add checkmark badge
+            const badge = document.createElement('div');
+            badge.className = 'ml-thumb-badge';
+            badge.innerHTML = '<i class="ph ph-check"></i>';
+            card.appendChild(badge);
+            
+            // Tooltip info on hover
+            card.title = `${filename}\nSize: ${asset.file_size_display || ''}\nDate: ${asset.created_at || ''}`;
+            
+            // Click to select
+            card.onclick = () => {
+                grid.querySelectorAll('.ml-thumb-card').forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                selectedAsset = asset;
+                document.getElementById('ml-select-button').disabled = false;
+            };
+            
+            // Handle double click to confirm instantly
+            card.ondblclick = () => {
+                selectedAsset = asset;
+                window.confirmMediaLibrarySelection();
+            };
+            
+            grid.appendChild(card);
+        });
+    };
+    
+    // Filter / Search library
+    window.filterMediaLibrary = function() {
+        const query = document.getElementById('ml-search-input').value.trim().toLowerCase();
+        if (!query) {
+            window.renderMediaLibraryGrid(allAssets);
+            return;
+        }
+        const filtered = allAssets.filter(asset => asset.filename.toLowerCase().includes(query));
+        window.renderMediaLibraryGrid(filtered);
+    };
+    
+    // Trigger confirm and return selection to caller
+    window.confirmMediaLibrarySelection = function() {
+        if (!selectedAsset || !currentCallback) return;
+        currentCallback(normalizeMediaAsset(selectedAsset));
+        window.closeMediaLibrary();
+    };
+    
+    // Handle Drop file for upload
+    window.handleMediaLibraryDrop = function(e) {
+        e.preventDefault();
+        const files = e.dataTransfer.files;
+        if (files && files[0]) {
+            window.uploadMediaLibraryFile(files[0]);
+        }
+    };
+    
+    // Handle File select for upload
+    window.handleMediaLibrarySelect = function(input) {
+        if (input.files && input.files[0]) {
+            window.uploadMediaLibraryFile(input.files[0]);
+        }
+    };
+    
+    // AJAX file upload with dynamic progress bar
+    window.uploadMediaLibraryFile = function(file) {
+        const statusDiv = document.getElementById('ml-upload-status');
+        const filenameSpan = document.getElementById('ml-upload-filename');
+        const percentSpan = document.getElementById('ml-upload-percent');
+        const progressBar = document.getElementById('ml-upload-progress-bar');
+        
+        statusDiv.style.display = 'block';
+        filenameSpan.textContent = file.name;
+        percentSpan.textContent = '0%';
+        progressBar.style.width = '0%';
+        
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/media-library/upload/', true);
+        
+        // Fetch CSRF Token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value;
+        if (csrfToken) {
+            xhr.setRequestHeader('X-CSRFToken', csrfToken);
+        }
+        const portalContext = getPortalContext();
+        if (portalContext) {
+            xhr.setRequestHeader('X-Portal-Context', portalContext);
+        }
+        
+        xhr.upload.onprogress = function(e) {
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                percentSpan.textContent = percent + '%';
+                progressBar.style.width = percent + '%';
+            }
+        };
+        
+        xhr.onload = function() {
+            if (xhr.status === 200) {
+                const res = JSON.parse(xhr.responseText);
+                if (res.status === 'success') {
+                    // Reset upload input
+                    document.getElementById('ml-upload-file-input').value = '';
+                    statusDiv.style.display = 'none';
+                    
+                    // Switch back to gallery, reload files, and auto-select
+                    window.switchMediaLibraryTab('gallery');
+                    
+                    // Load and select newly uploaded file
+                    const loading = document.getElementById('ml-gallery-loading');
+                    loading.style.display = 'flex';
+                    
+                    fetch('/api/media-library/', getMediaRequestOptions())
+                        .then(r => r.json())
+                        .then(r => {
+                            loading.style.display = 'none';
+                            if (r.status === 'success') {
+                                allAssets = (r.data || []).map(normalizeMediaAsset);
+                                window.renderMediaLibraryGrid(allAssets);
+                                
+                                // Find card for the newly uploaded file and highlight it
+                                setTimeout(() => {
+                                    const grid = document.getElementById('ml-gallery-grid');
+                                    const newCard = grid.querySelector(`[data-id="${res.data.id}"]`);
+                                    if (newCard) {
+                                        newCard.click();
+                                    }
+                                }, 100);
+                            }
+                        })
+                        .catch(err => {
+                            loading.style.display = 'none';
+                            console.error(err);
+                        });
+                } else {
+                    window.appAlert ? window.appAlert('Upload failed: ' + res.message, { title: 'Upload failed', tone: 'danger' }) : console.warn('Upload failed: ' + res.message);
+                }
+            } else {
+                window.appAlert ? window.appAlert('Upload failed with status: ' + xhr.status, { title: 'Upload failed', tone: 'danger' }) : console.warn('Upload failed with status: ' + xhr.status);
+            }
+        };
+        
+        xhr.send(formData);
+    };
+})();
+</script>

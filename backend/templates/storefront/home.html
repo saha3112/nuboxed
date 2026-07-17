@@ -1,0 +1,127 @@
+{% extends "storefront/base.html" %}
+
+{% block content %}
+<section class="hero-carousel">
+    <div class="hero-carousel-track">
+        {% for slide in sliders %}
+            <article class="hero-slide{% if forloop.first %} active{% endif %}" style="{% if slide.image %}background-image:url('{{ slide.image.url }}');{% endif %}">
+                <div class="hero-slide-overlay"></div>
+                <div class="hero-slide-copy">
+                    <p class="eyebrow">New Smartphone Collection</p>
+                    <h1>{{ slide.title }}</h1>
+                    <p>{{ slide.subtitle|default:"Latest flagship phones with faster performance and premium design." }}</p>
+                    <a href="{{ slide.cta_url|default:'#' }}" class="primary-link">{{ slide.cta_label|default:"Shop now" }}</a>
+                </div>
+                <div class="hero-slide-visual">
+                    {% for product in featured_products|slice:":1" %}
+                        {% if product.primary_image %}
+                            <img src="{{ product.primary_image.url }}" alt="{{ product.name }}">
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </article>
+        {% empty %}
+            <article class="hero-slide active">
+                <div class="hero-slide-overlay"></div>
+                <div class="hero-slide-copy">
+                    <p class="eyebrow">New Smartphone Collection</p>
+                    <h1>Future of mobile technology.</h1>
+                    <p>Premium phones, accessories, and smart devices from verified sellers.</p>
+                    <a href="{% url 'storefront:products' %}" class="primary-link">Shop now</a>
+                </div>
+                <div class="hero-slide-visual">
+                    <i class="fa-solid fa-mobile-screen-button"></i>
+                </div>
+            </article>
+        {% endfor %}
+    </div>
+    <button type="button" class="hero-carousel-nav prev" data-hero-prev><i class="fa-solid fa-chevron-left"></i></button>
+    <button type="button" class="hero-carousel-nav next" data-hero-next><i class="fa-solid fa-chevron-right"></i></button>
+    <div class="hero-carousel-dots" data-hero-dots></div>
+</section>
+
+<section class="promo-three">
+    <a href="{% url 'storefront:products' %}" class="promo-tile">
+        <span>Big Sale</span><h3>Smart Watch Series</h3><p>From $99.00</p><i class="fa-solid fa-clock"></i>
+    </a>
+    <a href="{% url 'storefront:products' %}" class="promo-tile">
+        <span>Best Deal</span><h3>Wireless Headphones</h3><p>Save up to 30%</p><i class="fa-solid fa-headphones"></i>
+    </a>
+    <a href="{% url 'storefront:products' %}" class="promo-tile">
+        <span>New Offer</span><h3>Mobile Accessories</h3><p>Starting $19.00</p><i class="fa-solid fa-bolt"></i>
+    </a>
+</section>
+
+{% if location_msg %}
+<div class="container" style="max-width:1440px; margin: 20px auto; padding: 0 15px;">
+    <div style="background: #fff1ec; border: 1px solid #f1c3b5; padding: 15px 20px; border-radius: 8px; color: #b9381c; text-align: center; display: flex; justify-content: center; align-items: center; gap: 15px; font-weight: 500;">
+        <span><i class="fa-solid fa-location-dot"></i> {{ location_msg }}</span>
+        <a href="{{ location_url }}" style="background: #e04420; color: #fff; padding: 6px 16px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600; box-shadow: 0 2px 4px rgba(224,68,32,0.3); transition: background 0.2s;" onmouseover="this.style.background='#b9381c'" onmouseout="this.style.background='#e04420'">Show All Stores</a>
+    </div>
+</div>
+{% endif %}
+
+<section class="section-shell mobishop-products">
+    <div class="section-head">
+        <div>
+            <h2>Latest Products</h2>
+        </div>
+        <div class="section-tabs"><span class="active">All</span><span>Featured</span><span>Best seller</span></div>
+    </div>
+    <div class="product-grid">
+        {% for product in featured_products %}
+            {% include "storefront/partials/product_card.html" with product=product %}
+        {% endfor %}
+    </div>
+</section>
+
+<section class="cms-four-banners">
+    <a href="{% url 'storefront:products' %}"><span>Galaxy Series</span><strong>20% Off Smart Phones</strong><em>Shop now</em></a>
+    <a href="{% url 'storefront:products' %}"><span>Audio Sale</span><strong>Noise Cancel Headphones</strong><em>Shop now</em></a>
+    <a href="{% url 'storefront:products' %}"><span>New Launch</span><strong>Foldable Mobile Deals</strong><em>Shop now</em></a>
+    <a href="{% url 'storefront:products' %}"><span>Accessories</span><strong>Chargers, Cases & More</strong><em>Shop now</em></a>
+</section>
+
+{% for section in category_sections|slice:":1" %}
+    <section class="section-shell mobishop-products">
+        <div class="section-head">
+            <div><h2>Featured Products</h2></div>
+            <a href="{% url 'storefront:category' slug=section.category.slug %}" class="ghost-link">View all</a>
+        </div>
+        <div class="product-grid">
+            {% for product in section.products %}
+                {% include "storefront/partials/product_card.html" with product=product %}
+            {% endfor %}
+        </div>
+    </section>
+{% endfor %}
+
+<section class="service-strip">
+    <div><i class="fa-solid fa-truck"></i><strong>Free Shipping</strong><span>On order above $599</span></div>
+    <div><i class="fa-solid fa-rotate-left"></i><strong>Easy Returns</strong><span>Return within 30 days</span></div>
+    <div><i class="fa-solid fa-credit-card"></i><strong>Secure Payment</strong><span>100% protected</span></div>
+    <div><i class="fa-solid fa-headset"></i><strong>24/7 Support</strong><span>Friendly assistance</span></div>
+</section>
+
+<section class="section-shell">
+    <div class="section-head">
+        <div>
+            <h2>Customer Reviews</h2>
+        </div>
+    </div>
+    <div class="testimonial-grid">
+        <article><div>★★★★★</div><p>Great prices and fast delivery. Product comparison made buying easier.</p><strong>Lawrence Nones</strong><span>CEO</span></article>
+        <article><div>★★★★★</div><p>Clean store experience and reliable electronics from verified retailers.</p><strong>Augusta Wind</strong><span>Founder</span></article>
+        <article><div>★★★★★</div><p>Checkout was smooth and the seller details were clear before ordering.</p><strong>Stefanie Rashford</strong><span>Manager</span></article>
+    </div>
+</section>
+
+<section class="section-shell mobishop-blog">
+    <div class="section-head"><div><h2>Latest Blog</h2></div></div>
+    <div class="blog-grid">
+        <article><div><i class="fa-regular fa-newspaper"></i></div><h3>How to choose the right smartphone in 2026</h3></article>
+        <article><div><i class="fa-regular fa-newspaper"></i></div><h3>Best accessories to improve your mobile setup</h3></article>
+        <article><div><i class="fa-regular fa-newspaper"></i></div><h3>Simple ways to compare electronics before buying</h3></article>
+    </div>
+</section>
+{% endblock %}

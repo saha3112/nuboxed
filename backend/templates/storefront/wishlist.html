@@ -1,0 +1,63 @@
+{% extends "storefront/base.html" %}
+{% load currency_tags %}
+{% load static %}
+
+{% block content %}
+<section class="page-head">
+  <div class="container">
+    <h1>Your Wishlist</h1>
+    <div class="breadcrumb">
+        <a href="{% url 'storefront:home' %}">Home</a>
+        <span>/</span>
+        <span>Wishlist</span>
+    </div>
+  </div>
+</section>
+<div class="page-shell">
+
+    <div class="section-shell">
+        {% if products %}
+            <div class="product-grid">
+                {% for product in products %}
+                    <div class="product-card wishlist-product-card">
+                        <a href="javascript:void(0)" class="product-media">
+                            {% if product.primary_image %}
+                                <img src="{{ product.primary_image.url }}" alt="{{ product.name }}">
+                            {% else %}
+                                <img src="{% static 'storefront/placeholder-product.png' %}" alt="{{ product.name }}">
+                            {% endif %}
+                        </a>
+                        <div class="product-body">
+                            <p class="meta-line">{{ product.category.name|default:"General" }} &bull; {{ product.brand.name|default:"Generic" }}</p>
+                            <h3>{{ product.name }}</h3>
+                            <div class="price-row">
+                                {% if product.discount_price and product.discount_price < product.price %}
+                                    <strong>{{ product.discount_price|format_currency:product.store.currency_code }}</strong>
+                                    <span>{{ product.price|format_currency:product.store.currency_code }}</span>
+                                {% else %}
+                                    <strong>{{ product.price|format_currency:product.store.currency_code }}</strong>
+                                {% endif %}
+                            </div>
+                            <div class="card-actions">
+                                <form action="{% url 'storefront:cart-add' product_id=product.id %}" method="post">
+                                    {% csrf_token %}
+                                    <button type="submit" class="button-compact">Add to Cart</button>
+                                </form>
+                                <form action="{% url 'storefront:wishlist-remove' product_id=product.id %}" method="post">
+                                    {% csrf_token %}
+                                    <button type="submit" class="button-compact ghost">Remove</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="summary-panel" style="text-align: center; padding: 40px;">
+                <p>Your wishlist is currently empty.</p>
+                <a href="{% url 'storefront:products' %}" class="primary-link">Continue Shopping</a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

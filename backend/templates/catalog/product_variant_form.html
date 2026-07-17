@@ -1,0 +1,28 @@
+{% extends "retailer/base.html" %}
+
+{% block content %}
+<div class="ra-card" style="max-width: 800px;">
+    <div class="ra-card-header">
+        <span class="ra-card-title">{{ page_title }}</span>
+    </div>
+    <div class="ra-card-body">
+        <form method="post" enctype="multipart/form-data" class="ra-form">
+            {% csrf_token %}
+            <div class="ra-form-grid">
+                {% for field in form %}
+                <div class="ra-field">
+                    <label class="ra-label">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}
+                    <div class="ra-field-error">{{ field.errors.as_text }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <button type="submit" class="ra-btn ra-btn-primary" style="margin-top: 8px;">
+                <i class="ph ph-floppy-disk"></i> Save Variant
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

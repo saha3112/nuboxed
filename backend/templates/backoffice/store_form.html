@@ -1,0 +1,911 @@
+{% extends "backoffice/base.html" %}
+
+{% block content %}
+<style>
+    .ra-store-form-shell { padding: 24px; }
+    .ra-card, .ra-form-section {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        box-shadow: 0 4px 16px rgba(15, 23, 42, .06);
+    }
+    .ra-hero { margin-bottom: 22px; }
+    .ra-hero-body {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 18px;
+        padding: 22px;
+    }
+    .ra-hero-title { color: var(--text-main); font-size: 24px; font-weight: 800; }
+    .ra-hero-copy, .ra-section-copy, .ra-card-body, .ra-tip-list { color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .ra-hero-actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .ra-store-form-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 22px; align-items: start; }
+    .ra-store-form-main { min-width: 0; }
+    .ra-form { display: grid; gap: 18px; }
+    .ra-form-section { padding: 20px; }
+    .ra-form-section-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 16px;
+        margin-bottom: 18px;
+    }
+    .ra-section-title, .ra-card-title { color: var(--text-main); font-size: 16px; font-weight: 800; }
+    .ra-form-grid, .ra-visual-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+    .ra-field { display: grid; gap: 7px; }
+    .ra-label { color: var(--text-main); font-size: 13px; font-weight: 700; }
+    .ra-input, .ra-form input[type="text"], .ra-form input[type="email"], .ra-form input[type="number"], .ra-form input[type="url"], .ra-form input[type="search"], .ra-form textarea, .ra-form select {
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface-soft);
+        color: var(--text-main);
+        padding: 10px 12px;
+        font: inherit;
+        font-size: 14px;
+    }
+    .ra-form textarea { min-height: 110px; resize: vertical; }
+    .ra-field-error, .errorlist { color: #dc2626; font-size: 12px; list-style: none; margin: 0; padding: 0; }
+    .ra-btn {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface);
+        color: var(--text-main);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px 14px;
+        font-size: 13px;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+    }
+    .ra-btn-sm { padding: 7px 10px; font-size: 12px; }
+    .ra-btn-primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .ra-badge { border-radius: 999px; background: rgba(224, 68, 32, .1); color: var(--primary); padding: 6px 10px; font-size: 12px; font-weight: 700; }
+    .upload-zone {
+        min-height: 190px;
+        border: 1px dashed var(--border);
+        border-radius: 10px;
+        background: var(--surface-soft);
+        display: grid;
+        place-items: center;
+        text-align: center;
+        padding: 18px;
+        cursor: pointer;
+    }
+    .upload-zone-title { color: var(--text-main); font-weight: 800; margin: 4px 0; }
+    .upload-zone-subtitle { color: var(--muted); font-size: 12px; margin: 0; }
+    .file-preview-wrap img { max-height: 90px; max-width: 100%; object-fit: contain; border-radius: 8px; margin-top: 10px; }
+    .ra-country-details, .ra-store-summary {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 10px;
+    }
+    .ra-store-summary { grid-template-columns: 1fr; margin: 0; }
+    .ra-country-details div, .ra-store-summary div {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 10px;
+        background: var(--surface-soft);
+        display: grid;
+        gap: 3px;
+    }
+    .ra-country-details span, .ra-store-summary span { color: var(--muted); font-size: 11px; text-transform: uppercase; font-weight: 700; }
+    .ra-country-details strong, .ra-store-summary strong { color: var(--text-main); font-size: 13px; }
+    .ra-card-header { padding: 16px; border-bottom: 1px solid var(--border); }
+    .ra-card-body { padding: 16px; }
+    .store-builder-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        padding: 12px 14px;
+        margin: 16px 0;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface-soft);
+        color: var(--muted);
+        font-size: 13px;
+    }
+    .store-builder-list { display: grid; gap: 14px; }
+    .store-builder-card { border: 1px solid var(--border); border-radius: 8px; padding: 16px; background: var(--surface); }
+    .store-builder-card.is-deleted { display: none; opacity: .72; border-style: dashed; }
+    .store-builder-list.show-trash .store-builder-card { display: none; }
+    .store-builder-list.show-trash .store-builder-card.is-deleted { display: block; }
+    .store-builder-trash-action, .store-builder-list.show-trash .store-builder-active-action { display: none; }
+    .store-builder-list.show-trash .store-builder-trash-action { display: inline-flex; }
+    .store-builder-select { width: 18px; height: 18px; accent-color: var(--primary); flex: 0 0 auto; }
+    .store-builder-card-head, .store-builder-tiles-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .store-builder-card-head strong, .store-builder-tiles-head strong { color: var(--text-main); font-size: 14px; }
+    .store-builder-card-head span { color: var(--muted); font-size: 12px; }
+    .store-builder-tiles { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--border); }
+    .store-builder-tile { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+    .store-builder-url-row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; align-items: center; }
+    @media (max-width: 980px) {
+        .ra-store-form-grid, .ra-form-grid, .ra-visual-grid, .ra-country-details, .store-builder-tile, .store-builder-url-row { grid-template-columns: 1fr; }
+        .ra-hero-body, .ra-form-section-head { flex-direction: column; }
+    }
+</style>
+
+<div class="ra-store-form-shell">
+    <div class="ra-card ra-hero">
+        <div class="ra-hero-body">
+            <div>
+                <div class="ra-hero-title">{{ page_title }}</div>
+                {% if form.instance.pk %}
+                    <div class="ra-hero-copy">Slug: {{ form.instance.slug }} · Modules: {{ form.store_page_sections_json|length }}</div>
+                {% endif %}
+                <div class="ra-hero-copy">Configure store identity, location, visuals, storefront modules, and operational defaults.</div>
+            </div>
+            <div class="ra-hero-actions">
+                <span class="ra-badge">Admin Store Builder</span>
+                <a href="{{ cancel_url }}" class="ra-btn"><i class="ph ph-arrow-left"></i> Back</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="ra-store-form-grid">
+        <div class="ra-store-form-main">
+            <form method="post" enctype="multipart/form-data" class="ra-form ra-store-form">
+                {% csrf_token %}
+                {{ form.non_field_errors }}
+                {{ form.country_meta_json|json_script:"store-country-data" }}
+                {{ form.country_location_defaults_json|json_script:"store-country-defaults" }}
+                {{ form.store_page_sections_json|json_script:"store-page-sections-initial" }}
+                {{ form.logo_library_id }}
+                {{ form.banner_library_id }}
+                {{ form.store_page_sections_payload }}
+
+                <div class="ra-form-section">
+                    <div class="ra-form-section-head">
+                        <div>
+                            <div class="ra-section-title">Store Identity</div>
+                            <div class="ra-section-copy">Select retailer, name the storefront, and set the public status.</div>
+                        </div>
+                    </div>
+                    <div class="ra-form-grid">
+                        <div class="ra-field">
+                            <label class="ra-label">{{ form.retailer.label }}</label>
+                            {{ form.retailer }}
+                            {{ form.retailer.errors }}
+                        </div>
+                        {% if form.instance.pk %}
+                        <div class="ra-field">
+                            <label class="ra-label">{{ form.retailer_name.label }}</label>
+                            {{ form.retailer_name }}
+                            {{ form.retailer_name.errors }}
+                        </div>
+                        {% endif %}
+                        <div class="ra-field">
+                            <label class="ra-label">{{ form.status.label }}</label>
+                            {{ form.status }}
+                            {{ form.status.errors }}
+                        </div>
+                        <div class="ra-field" style="grid-column: 1 / -1;">
+                            <label class="ra-label">{{ form.name.label }}</label>
+                            {{ form.name }}
+                            {{ form.name.errors }}
+                        </div>
+                        <div class="ra-field" style="grid-column: 1 / -1;">
+                            <label class="ra-label">{{ form.description.label }}</label>
+                            {{ form.description }}
+                            {{ form.description.errors }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ra-form-section">
+                    <div class="ra-form-section-head">
+                        <div>
+                            <div class="ra-section-title">Visual Identity</div>
+                            <div class="ra-section-copy">Choose logo and banner from the shared media library.</div>
+                        </div>
+                    </div>
+                    <div class="ra-visual-grid">
+                        <div class="ra-field file-field-custom">
+                            <label class="ra-label">{{ form.logo.label }}</label>
+                            <div class="upload-zone" id="logo-upload-zone" onclick="selectStoreFileFromLibrary('logo')">
+                                <div>
+                                    <i class="ph ph-storefront" style="font-size:34px; color:var(--primary);"></i>
+                                    <p class="upload-zone-title">Select Logo from Media Library</p>
+                                    <p class="upload-zone-subtitle">Used on cards, headers, and mobile previews.</p>
+                                    <div class="file-preview-wrap">{% if form.instance.logo %}<img src="{{ form.instance.logo.url }}" alt="Logo preview">{% endif %}</div>
+                                </div>
+                            </div>
+                            {{ form.logo.errors }}
+                        </div>
+                        <div class="ra-field file-field-custom">
+                            <label class="ra-label">{{ form.banner.label }}</label>
+                            <div class="upload-zone" id="banner-upload-zone" onclick="selectStoreFileFromLibrary('banner')">
+                                <div>
+                                    <i class="ph ph-image" style="font-size:34px; color:var(--primary);"></i>
+                                    <p class="upload-zone-title">Select Banner from Media Library</p>
+                                    <p class="upload-zone-subtitle">Wide image for the store hero header.</p>
+                                    <div class="file-preview-wrap">{% if form.instance.banner %}<img src="{{ form.instance.banner.url }}" alt="Banner preview">{% endif %}</div>
+                                </div>
+                            </div>
+                            {{ form.banner.errors }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ra-form-section">
+                    <div class="ra-form-section-head">
+                        <div>
+                            <div class="ra-section-title">Store Page Builder</div>
+                            <div class="ra-section-copy">Build Amazon-style modules: hero promos, image tiles, product shelves, and category highlights.</div>
+                        </div>
+                        <button type="button" class="ra-btn ra-btn-sm" data-add-store-section><i class="ph ph-plus"></i> Add Module</button>
+                    </div>
+                    <div class="ra-form-grid">
+                        <div class="ra-field" style="grid-column: 1 / -1;">
+                            <label class="ra-label">{{ form.store_page_tagline.label }}</label>
+                            {{ form.store_page_tagline }}
+                            {{ form.store_page_tagline.errors }}
+                        </div>
+                        <div class="ra-field" style="grid-column: 1 / -1;">
+                            <label class="ra-label">{{ form.store_page_announcement.label }}</label>
+                            {{ form.store_page_announcement }}
+                            {{ form.store_page_announcement.errors }}
+                        </div>
+                    </div>
+                    <div class="store-builder-toolbar">
+                        <button type="button" class="ra-btn ra-btn-sm" data-template="haier"><i class="ph ph-squares-four"></i> Load Brand Store Template</button>
+                        <button type="button" class="ra-btn ra-btn-sm" data-add-image-banner><i class="ph ph-image"></i> Add Image Banner</button>
+                        <button type="button" class="ra-btn ra-btn-sm" data-add-image-pair><i class="ph ph-columns"></i> Add Two Images</button>
+                        <button type="button" class="ra-btn ra-btn-sm" data-builder-show-active>Active Modules</button>
+                        <button type="button" class="ra-btn ra-btn-sm" data-builder-show-trash>Trash</button>
+                        <button type="button" class="ra-btn ra-btn-sm" data-soft-delete-selected>Remove Selected</button>
+                        <button type="button" class="ra-btn ra-btn-sm" data-restore-selected>Restore Selected</button>
+                        <button type="button" class="ra-btn ra-btn-sm" data-permanent-delete-selected>Permanent Delete</button>
+                        <span>Use category slugs and product slugs from the catalog for shelves.</span>
+                    </div>
+                    <div class="store-builder-list" data-store-builder-list></div>
+                    <template id="store-section-template">
+                        <article class="store-builder-card" data-store-section>
+                            <div class="store-builder-card-head">
+                                <input type="checkbox" class="store-builder-select" data-select-section aria-label="Select module">
+                                <div>
+                                    <strong data-section-label>Store Module</strong>
+                                    <span data-section-status>Shown on the public store page in this order.</span>
+                                </div>
+                                <button type="button" class="ra-btn ra-btn-sm store-builder-active-action" data-remove-section><i class="ph ph-x"></i> Remove</button>
+                                <button type="button" class="ra-btn ra-btn-sm store-builder-trash-action" data-restore-section>Restore</button>
+                                <button type="button" class="ra-btn ra-btn-sm store-builder-trash-action" data-delete-section>Permanent Delete</button>
+                            </div>
+                            <div class="ra-form-grid">
+                                <div class="ra-field">
+                                    <label class="ra-label">Module Type</label>
+                                    <select class="ra-input" data-field="type">
+                                        <option value="hero">Wide hero banner</option>
+                                        <option value="image_banner">Image-only banner</option>
+                                        <option value="image_pair">Two images side by side</option>
+                                        <option value="tile_grid">Image tile grid</option>
+                                        <option value="promo_band">Promo band</option>
+                                        <option value="product_shelf">Product shelf</option>
+                                        <option value="category_feature">Category feature</option>
+                                    </select>
+                                </div>
+                                <div class="ra-field"><label class="ra-label">Title</label><input class="ra-input" data-field="title" placeholder="Shop refrigerators, ACs, and more"></div>
+                                <div class="ra-field" style="grid-column: 1 / -1;"><label class="ra-label">Subtitle</label><input class="ra-input" data-field="subtitle" placeholder="Short supporting copy"></div>
+                                <div class="ra-field">
+                                    <label class="ra-label">Image URL</label>
+                                    <div class="store-builder-url-row">
+                                        <input class="ra-input" data-field="image_url" placeholder="https://...">
+                                        <button type="button" class="ra-btn ra-btn-sm" data-pick-section-image><i class="ph ph-image"></i> Gallery</button>
+                                        <button type="button" class="ra-btn ra-btn-sm" data-clear-section-image aria-label="Clear image"><i class="ph ph-trash"></i> Clear</button>
+                                    </div>
+                                </div>
+                                <div class="ra-field" data-image-pair-field>
+                                    <label class="ra-label">Second Image URL</label>
+                                    <div class="store-builder-url-row">
+                                        <input class="ra-input" data-field="image_url_2" placeholder="https://...">
+                                        <button type="button" class="ra-btn ra-btn-sm" data-pick-section-image-2><i class="ph ph-image"></i> Gallery</button>
+                                        <button type="button" class="ra-btn ra-btn-sm" data-clear-section-image-2 aria-label="Clear second image"><i class="ph ph-trash"></i> Clear</button>
+                                    </div>
+                                </div>
+                                <div class="ra-field">
+                                    <label class="ra-label">Image Size</label>
+                                    <select class="ra-input" data-field="image_size">
+                                        <option value="actual">Actual image fit</option>
+                                        <option value="compact">Compact</option>
+                                        <option value="standard">Standard</option>
+                                        <option value="tall">Tall</option>
+                                        <option value="wide">Wide</option>
+                                        <option value="full">Full viewport</option>
+                                        <option value="custom">Custom</option>
+                                    </select>
+                                </div>
+                                <div class="ra-field">
+                                    <label class="ra-label">Object Fit</label>
+                                    <select class="ra-input" data-field="image_fit">
+                                        <option value="cover">Cover</option>
+                                        <option value="contain">Contain</option>
+                                        <option value="none">Actual size</option>
+                                        <option value="fill">Stretch</option>
+                                        <option value="scale-down">Scale down</option>
+                                    </select>
+                                </div>
+                                <div class="ra-field"><label class="ra-label">Custom Width</label><input class="ra-input" data-field="image_width" placeholder="100%, 900px, 70vw"></div>
+                                <div class="ra-field"><label class="ra-label">Custom Height</label><input class="ra-input" data-field="image_height" placeholder="420px, 60vh"></div>
+                                <div class="ra-field">
+                                    <label class="ra-label">Image Position</label>
+                                    <select class="ra-input" data-field="image_position">
+                                        <option value="center">Center</option>
+                                        <option value="top">Top</option>
+                                        <option value="bottom">Bottom</option>
+                                        <option value="left">Left</option>
+                                        <option value="right">Right</option>
+                                        <option value="center top">Center Top</option>
+                                        <option value="center bottom">Center Bottom</option>
+                                    </select>
+                                </div>
+                                <div class="ra-field"><label class="ra-label">CTA Label</label><input class="ra-input" data-field="cta_label" placeholder="Shop now"></div>
+                                <div class="ra-field"><label class="ra-label">CTA URL</label><input class="ra-input" data-field="cta_url" placeholder="/products/"></div>
+                                <div class="ra-field"><label class="ra-label">Category Slug</label><input class="ra-input" data-field="category_slug" placeholder="refrigerators"></div>
+                                <div class="ra-field" style="grid-column: 1 / -1;"><label class="ra-label">Product Slugs</label><input class="ra-input" data-field="product_slugs" placeholder="slug-one, slug-two"></div>
+                            </div>
+                            <div class="store-builder-tiles">
+                                <div class="store-builder-tiles-head">
+                                    <strong>Tiles</strong>
+                                    <button type="button" class="ra-btn ra-btn-sm" data-add-tile><i class="ph ph-plus"></i> Add Tile</button>
+                                </div>
+                                <div data-tile-list></div>
+                            </div>
+                        </article>
+                    </template>
+                    <template id="store-tile-template">
+                        <div class="store-builder-tile" data-store-tile>
+                            <input class="ra-input" data-tile-field="title" placeholder="Tile title">
+                            <input class="ra-input" data-tile-field="subtitle" placeholder="Short copy">
+                            <div class="store-builder-url-row">
+                                <input class="ra-input" data-tile-field="image_url" placeholder="Image URL">
+                                <button type="button" class="ra-btn ra-btn-sm" data-pick-tile-image><i class="ph ph-image"></i></button>
+                            </div>
+                            <select class="ra-input" data-tile-field="image_size">
+                                <option value="actual">Actual</option>
+                                <option value="compact">Compact</option>
+                                <option value="standard">Standard</option>
+                                <option value="tall">Tall</option>
+                                <option value="wide">Wide</option>
+                                <option value="custom">Custom</option>
+                            </select>
+                            <select class="ra-input" data-tile-field="image_fit">
+                                <option value="cover">Cover</option>
+                                <option value="contain">Contain</option>
+                                <option value="none">Actual</option>
+                                <option value="fill">Stretch</option>
+                                <option value="scale-down">Scale down</option>
+                            </select>
+                            <input class="ra-input" data-tile-field="image_height" placeholder="Height e.g. 260px">
+                            <input class="ra-input" data-tile-field="image_width" placeholder="Width e.g. 100%">
+                            <select class="ra-input" data-tile-field="image_position">
+                                <option value="center">Center</option>
+                                <option value="top">Top</option>
+                                <option value="bottom">Bottom</option>
+                                <option value="left">Left</option>
+                                <option value="right">Right</option>
+                            </select>
+                            <input class="ra-input" data-tile-field="url" placeholder="Link URL">
+                            <button type="button" class="ra-btn ra-btn-sm" data-remove-tile><i class="ph ph-x"></i></button>
+                        </div>
+                    </template>
+                    {{ form.store_page_sections_payload.errors }}
+                </div>
+
+                <div class="ra-form-section">
+                    <div class="ra-form-section-head">
+                        <div>
+                            <div class="ra-section-title">Location & Contact</div>
+                            <div class="ra-section-copy">Country controls currency, state, city, and postal options.</div>
+                        </div>
+                    </div>
+                    <div class="ra-form-grid">
+                        <div class="ra-field" style="grid-column: 1 / -1;">
+                            <label class="ra-label">Country</label>
+                            <input type="search" id="countrySearch" class="ra-input" placeholder="Search country by name or code" autocomplete="off" style="margin-bottom:10px;">
+                            {{ form.country_code }}
+                            <div id="countryDetails" class="ra-country-details">
+                                <div><span>Country</span><strong id="countryName">Select a country</strong></div>
+                                <div><span>Code</span><strong id="countryCodePreview">--</strong></div>
+                                <div><span>Currency</span><strong id="countryCurrency">--</strong></div>
+                                <div><span>Dial code</span><strong id="countryDialCode">--</strong></div>
+                            </div>
+                            {{ form.country_code.errors }}
+                        </div>
+                        <div class="ra-field"><label class="ra-label">{{ form.currency_code.label }}</label>{{ form.currency_code }}{{ form.currency_code.errors }}</div>
+                        <div class="ra-field"><label class="ra-label">{{ form.contact_email.label }}</label>{{ form.contact_email }}{{ form.contact_email.errors }}</div>
+                        <div class="ra-field"><label class="ra-label">{{ form.contact_phone.label }}</label>{{ form.contact_phone }}{{ form.contact_phone.errors }}</div>
+                        <div class="ra-field"><label class="ra-label">{{ form.contact_whatsapp.label }}</label>{{ form.contact_whatsapp }}{{ form.contact_whatsapp.errors }}</div>
+                        <div class="ra-field"><label class="ra-label">{{ form.state.label }}</label>{{ form.state }}{{ form.state.errors }}</div>
+                        <div class="ra-field"><label class="ra-label">{{ form.city.label }}</label>{{ form.city }}{{ form.city.errors }}</div>
+                        <div class="ra-field"><label class="ra-label">{{ form.postal_code.label }}</label>{{ form.postal_code }}{{ form.postal_code.errors }}</div>
+                        <div class="ra-field" style="grid-column: 1 / -1;"><label class="ra-label">{{ form.address_line1.label }}</label>{{ form.address_line1 }}{{ form.address_line1.errors }}</div>
+                        <div class="ra-field" style="grid-column: 1 / -1;"><label class="ra-label">{{ form.address_line2.label }}</label>{{ form.address_line2 }}{{ form.address_line2.errors }}</div>
+                    </div>
+                </div>
+
+                <div class="ra-form-section">
+                    <div class="ra-form-section-head">
+                        <div>
+                            <div class="ra-section-title">Web Presence</div>
+                            <div class="ra-section-copy">Connect store website and social channels.</div>
+                        </div>
+                    </div>
+                    <div class="ra-form-grid">
+                        <div class="ra-field"><label class="ra-label">{{ form.website_url.label }}</label>{{ form.website_url }}{{ form.website_url.errors }}</div>
+                        <div class="ra-field"><label class="ra-label">{{ form.facebook_url.label }}</label>{{ form.facebook_url }}{{ form.facebook_url.errors }}</div>
+                        <div class="ra-field"><label class="ra-label">{{ form.instagram_url.label }}</label>{{ form.instagram_url }}{{ form.instagram_url.errors }}</div>
+                        <div class="ra-field"><label class="ra-label">{{ form.linkedin_url.label }}</label>{{ form.linkedin_url }}{{ form.linkedin_url.errors }}</div>
+                        <div class="ra-field"><label class="ra-label">{{ form.x_url.label }}</label>{{ form.x_url }}{{ form.x_url.errors }}</div>
+                        <div class="ra-field"><label class="ra-label">{{ form.youtube_url.label }}</label>{{ form.youtube_url }}{{ form.youtube_url.errors }}</div>
+                    </div>
+                </div>
+
+                <div class="ra-form-section">
+                    <div class="ra-form-section-head">
+                        <div>
+                            <div class="ra-section-title">Operations</div>
+                            <div class="ra-section-copy">Store metrics used by storefront badges and delivery estimates.</div>
+                        </div>
+                    </div>
+                    <div class="ra-form-grid">
+                        <div class="ra-field"><label class="ra-label">{{ form.rating.label }}</label>{{ form.rating }}{{ form.rating.errors }}</div>
+                        <div class="ra-field"><label class="ra-label">{{ form.average_delivery_days.label }}</label>{{ form.average_delivery_days }}{{ form.average_delivery_days.errors }}</div>
+                    </div>
+                </div>
+
+                <div class="ra-form-actions-sticky" style="display:flex; gap:12px; flex-wrap:wrap;">
+                    <button type="submit" name="save_action" value="stay" class="ra-btn ra-btn-primary"><i class="ph ph-floppy-disk"></i> Save & stay</button>
+                    <button type="submit" name="save_action" value="exit" class="ra-btn ra-btn-outline"><i class="ph ph-arrow-square-out"></i> Save & exit</button>
+                    <a href="{{ cancel_url }}" class="ra-btn">Cancel</a>
+                </div>
+            </form>
+        </div>
+
+        <aside>
+            <div class="ra-card">
+                <div class="ra-card-header"><span class="ra-card-title">Store Summary</span></div>
+                <div class="ra-card-body ra-store-summary">
+                    <div><span>Retailer</span><strong id="summaryRetailer">{{ form.instance.retailer|default:"Select retailer" }}</strong></div>
+                    <div><span>Current Store</span><strong>{{ form.instance.name|default:"New store" }}</strong></div>
+                    <div><span>Country</span><strong id="summaryCountry">--</strong></div>
+                    <div><span>Currency</span><strong id="summaryCurrency">--</strong></div>
+                    <div><span>Contact</span><strong id="summaryContact">--</strong></div>
+                </div>
+            </div>
+            <div class="ra-card" style="margin-top:16px;">
+                <div class="ra-card-header"><span class="ra-card-title">Tips</span></div>
+                <div class="ra-card-body">
+                    <ul class="ra-tip-list">
+                        <li>Pick the retailer before publishing the store.</li>
+                        <li>Use the same builder modules as the retailer panel.</li>
+                        <li>India selection now exposes all states and union territories.</li>
+                    </ul>
+                </div>
+            </div>
+        </aside>
+    </div>
+</div>
+
+<script>
+(() => {
+    const countrySearch = document.getElementById('countrySearch');
+    const countrySelect = document.getElementById('id_country_code');
+    const currencySelect = document.getElementById('id_currency_code');
+    const dataNode = document.getElementById('store-country-data');
+    const defaultNode = document.getElementById('store-country-defaults');
+    const countryName = document.getElementById('countryName');
+    const countryCodePreview = document.getElementById('countryCodePreview');
+    const countryCurrency = document.getElementById('countryCurrency');
+    const countryDialCode = document.getElementById('countryDialCode');
+    const summaryCountry = document.getElementById('summaryCountry');
+    const summaryCurrency = document.getElementById('summaryCurrency');
+    const summaryContact = document.getElementById('summaryContact');
+    const stateField = document.getElementById('id_state');
+    const cityField = document.getElementById('id_city');
+    const postalField = document.getElementById('id_postal_code');
+    const line1Input = document.getElementById('id_address_line1');
+    const line2Input = document.getElementById('id_address_line2');
+    if (!countrySelect || !dataNode) return;
+
+    const countryMeta = JSON.parse(dataNode.textContent || '{}');
+    const countryDefaults = JSON.parse(defaultNode?.textContent || '{}');
+    const originalOptions = Array.from(countrySelect.options).map((opt) => ({ value: opt.value, label: opt.textContent }));
+    [stateField, cityField, postalField, line1Input, line2Input].forEach((input) => {
+        input?.addEventListener('change', () => {
+            input.dataset.touched = '1';
+        });
+    });
+
+    function setFieldLabel(input, label) {
+        const wrapper = input?.closest('.ra-field');
+        const labelEl = wrapper?.querySelector('.ra-label');
+        if (labelEl && label) labelEl.textContent = label;
+    }
+
+    function setFieldVisible(input, visible) {
+        const wrapper = input?.closest('.ra-field');
+        if (!wrapper) return;
+        wrapper.style.display = visible ? '' : 'none';
+        if (!visible && input && input.dataset.touched !== '1') {
+            input.value = '';
+        }
+    }
+
+    function applyCountryFields(meta, force = false) {
+        const defaults = countryDefaults[meta?.code] || {};
+        const labels = defaults.labels || {
+            state: 'State / Province / Region',
+            city: 'City',
+            postal_code: 'Postal Code'
+        };
+        const visibility = defaults.visibility || { state: true, city: true, postal_code: true };
+        setFieldLabel(stateField, labels.state);
+        setFieldLabel(cityField, labels.city);
+        setFieldLabel(postalField, labels.postal_code);
+        setFieldVisible(stateField, visibility.state !== false);
+        setFieldVisible(cityField, visibility.city !== false);
+        setFieldVisible(postalField, visibility.postal_code !== false);
+        if (stateField) {
+            stateField.placeholder = `Type ${String(labels.state || 'region').toLowerCase()}`;
+            if (force && stateField.dataset.touched !== '1') stateField.value = '';
+        }
+        if (cityField) {
+            cityField.placeholder = `Type ${String(labels.city || 'city').toLowerCase()}`;
+            if (force && cityField.dataset.touched !== '1') cityField.value = '';
+        }
+        if (postalField) {
+            postalField.placeholder = `Type ${String(labels.postal_code || 'postal code').toLowerCase()}`;
+            if (force && postalField.dataset.touched !== '1') postalField.value = '';
+        }
+        if (line1Input && !line1Input.value) {
+            const pieces = [defaults.state || defaults.city || meta?.name || '', meta?.code || ''].filter(Boolean);
+            line1Input.placeholder = pieces.length ? `Address line 1 in ${pieces.join(', ')}` : 'Address line 1';
+        }
+        if (line2Input && !line2Input.value) line2Input.placeholder = 'Suite, floor, landmark, or additional instructions';
+    }
+
+    function renderOptions(query = '') {
+        const normalized = query.trim().toLowerCase();
+        const selectedValue = countrySelect.value;
+        countrySelect.innerHTML = '';
+        originalOptions.forEach((opt) => {
+            if (!opt.value) {
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = opt.label;
+                countrySelect.appendChild(option);
+                return;
+            }
+            const meta = countryMeta[opt.value] || {};
+            const haystack = [opt.label, opt.value, meta.name || '', meta.currency_code || '', meta.dial_code || ''].join(' ').toLowerCase();
+            if (!normalized || haystack.includes(normalized) || opt.value === selectedValue) {
+                const option = document.createElement('option');
+                option.value = opt.value;
+                option.textContent = opt.label;
+                countrySelect.appendChild(option);
+            }
+        });
+        if (selectedValue) countrySelect.value = selectedValue;
+    }
+
+    function updateSummary(forceDefaults = false) {
+        const meta = countryMeta[countrySelect.value] || null;
+        const contactEmail = document.getElementById('id_contact_email')?.value || '--';
+        if (!meta) {
+            if (countryName) countryName.textContent = 'Select a country';
+            if (countryCodePreview) countryCodePreview.textContent = '--';
+            if (countryCurrency) countryCurrency.textContent = '--';
+            if (countryDialCode) countryDialCode.textContent = '--';
+            if (summaryCountry) summaryCountry.textContent = '--';
+            if (summaryCurrency) summaryCurrency.textContent = '--';
+            if (summaryContact) summaryContact.textContent = contactEmail;
+            return;
+        }
+        if (countryName) countryName.textContent = meta.name || meta.code || '--';
+        if (countryCodePreview) countryCodePreview.textContent = meta.code || '--';
+        if (countryCurrency) countryCurrency.textContent = meta.currency_code || '--';
+        if (countryDialCode) countryDialCode.textContent = meta.dial_code || '--';
+        if (summaryCountry) summaryCountry.textContent = `${meta.name || meta.code || '--'} (${meta.code || '--'})`;
+        if (summaryCurrency) summaryCurrency.textContent = meta.currency_code || '--';
+        if (summaryContact) summaryContact.textContent = contactEmail;
+        if (currencySelect && meta.currency_code && !currencySelect.value) currencySelect.value = meta.currency_code;
+        applyCountryFields(meta, forceDefaults);
+    }
+
+    countrySearch?.addEventListener('input', (event) => renderOptions(event.target.value));
+    countrySelect.addEventListener('change', () => updateSummary(true));
+    document.getElementById('id_contact_email')?.addEventListener('input', updateSummary);
+    document.getElementById('id_retailer')?.addEventListener('change', (event) => {
+        const text = event.target.options[event.target.selectedIndex]?.textContent || 'Select retailer';
+        const summaryRetailer = document.getElementById('summaryRetailer');
+        if (summaryRetailer) summaryRetailer.textContent = text;
+    });
+    renderOptions('');
+    updateSummary(false);
+})();
+
+(() => {
+    const list = document.querySelector('[data-store-builder-list]');
+    const addButton = document.querySelector('[data-add-store-section]');
+    const template = document.getElementById('store-section-template');
+    const tileTemplate = document.getElementById('store-tile-template');
+    const payloadInput = document.getElementById('id_store_page_sections_payload');
+    const initialNode = document.getElementById('store-page-sections-initial');
+    const form = document.querySelector('.ra-store-form');
+    if (!list || !template || !payloadInput) return;
+
+    const templateSections = [
+        { type: 'image_banner', title: '', subtitle: '', cta_label: '', cta_url: '', image_url: '', image_size: 'standard', image_fit: 'cover', image_position: 'center' },
+        { type: 'hero', title: 'Bring home smarter living', subtitle: 'Explore featured appliances, seasonal deals, and bestsellers from this store.', cta_label: 'Shop now', cta_url: '#category-all', image_url: '' },
+        { type: 'tile_grid', title: 'Shop by category', subtitle: 'Create visual tiles just like a brand storefront.', tiles: [
+            { title: 'Refrigerators', subtitle: 'Freshness made simple', image_url: '', url: '#category-refrigerators' },
+            { title: 'Air Conditioners', subtitle: 'Cooling for every room', image_url: '', url: '#category-air-conditioners' },
+            { title: 'Washing Machines', subtitle: 'Care for every fabric', image_url: '', url: '#category-washing-machines' },
+        ] },
+        { type: 'promo_band', title: 'Featured offers', subtitle: 'Add bank offers, exchange benefits, or limited-time messaging here.', cta_label: 'View deals', cta_url: '/products/' },
+        { type: 'product_shelf', title: 'Bestsellers', subtitle: 'Add product slugs separated by commas to curate this shelf.', product_slugs: '' },
+    ];
+
+    function pickImageUrl(input) {
+        if (!input) return;
+        if (typeof window.openMediaLibrary !== 'function') {
+            console.warn('Media Library is not loaded on this page.');
+            return;
+        }
+        window.openMediaLibrary((asset) => {
+            const assetUrl = asset?.url || asset?.file_url || asset?.file || asset?.absolute_url || asset?.src || asset?.thumbnail_url || '';
+            input.value = assetUrl;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            syncPayload();
+        });
+    }
+
+    function addTile(sectionEl, data = {}) {
+        const tile = tileTemplate.content.firstElementChild.cloneNode(true);
+        tile.querySelectorAll('[data-tile-field]').forEach((input) => {
+            const fallback = { image_size: 'standard', image_fit: 'cover', image_position: 'center' }[input.dataset.tileField] || '';
+            input.value = data[input.dataset.tileField] || fallback;
+            input.addEventListener('input', syncPayload);
+            input.addEventListener('change', syncPayload);
+        });
+        tile.querySelector('[data-pick-tile-image]')?.addEventListener('click', () => {
+            pickImageUrl(tile.querySelector('[data-tile-field="image_url"]'));
+        });
+        tile.querySelector('[data-remove-tile]')?.addEventListener('click', () => {
+            tile.remove();
+            syncPayload();
+        });
+        sectionEl.querySelector('[data-tile-list]').appendChild(tile);
+    }
+
+    function refreshSectionImagePreview(section, fieldName) {
+        const input = section.querySelector(`[data-field="${fieldName}"]`);
+        const field = input?.closest('.ra-field');
+        if (!input || !field) return;
+        let preview = field.querySelector('[data-section-image-preview]');
+        if (!preview) {
+            preview = document.createElement('img');
+            preview.dataset.sectionImagePreview = 'true';
+            preview.alt = 'Selected image preview';
+            preview.style.cssText = 'display:block; width:100%; max-height:110px; margin-top:8px; object-fit:contain; border:1px solid #e5e7eb; border-radius:8px; background:#f8fafc;';
+            field.appendChild(preview);
+        }
+        preview.hidden = !input.value.trim();
+        preview.src = input.value.trim();
+    }
+
+    function addSection(data = {}) {
+        const section = template.content.firstElementChild.cloneNode(true);
+        section.dataset.deletedAt = data.deleted_at || '';
+        section.querySelectorAll('[data-field]').forEach((input) => {
+            const fallback = {
+                type: 'hero',
+                image_size: 'standard',
+                image_fit: 'cover',
+                image_position: 'center'
+            }[input.dataset.field] || '';
+            input.value = data[input.dataset.field] || fallback;
+            input.addEventListener('input', syncPayload);
+            input.addEventListener('change', () => {
+                updateLabels();
+                syncPayload();
+            });
+            if (input.dataset.field === 'image_url' || input.dataset.field === 'image_url_2') {
+                input.addEventListener('input', () => refreshSectionImagePreview(section, input.dataset.field));
+            }
+        });
+        if (data.image_url_2) {
+            const typeInput = section.querySelector('[data-field="type"]');
+            if (typeInput) typeInput.value = 'image_pair';
+        }
+        refreshSectionImagePreview(section, 'image_url');
+        refreshSectionImagePreview(section, 'image_url_2');
+        section.querySelector('[data-pick-section-image]')?.addEventListener('click', () => {
+            pickImageUrl(section.querySelector('[data-field="image_url"]'));
+        });
+        section.querySelector('[data-clear-section-image]')?.addEventListener('click', () => {
+            const input = section.querySelector('[data-field="image_url"]');
+            if (input) { input.value = ''; input.dispatchEvent(new Event('input', { bubbles: true })); }
+        });
+        section.querySelector('[data-pick-section-image-2]')?.addEventListener('click', () => {
+            pickImageUrl(section.querySelector('[data-field="image_url_2"]'));
+            const typeInput = section.querySelector('[data-field="type"]');
+            if (typeInput) { typeInput.value = 'image_pair'; updateLabels(); syncPayload(); }
+        });
+        section.querySelector('[data-clear-section-image-2]')?.addEventListener('click', () => {
+            const input = section.querySelector('[data-field="image_url_2"]');
+            if (input) { input.value = ''; input.dispatchEvent(new Event('input', { bubbles: true })); }
+        });
+        section.querySelector('[data-remove-section]')?.addEventListener('click', () => {
+            softDeleteSection(section);
+        });
+        section.querySelector('[data-restore-section]')?.addEventListener('click', () => {
+            restoreSection(section);
+        });
+        section.querySelector('[data-delete-section]')?.addEventListener('click', () => {
+            permanentDeleteSection(section);
+        });
+        section.querySelector('[data-select-section]')?.addEventListener('change', syncPayload);
+        section.querySelector('[data-add-tile]')?.addEventListener('click', () => {
+            addTile(section);
+            updateLabels();
+            syncPayload();
+        });
+        (Array.isArray(data.tiles) ? data.tiles : []).forEach((tile) => addTile(section, tile));
+        list.appendChild(section);
+        updateLabels();
+        syncPayload();
+    }
+
+    function stampDeletedAt() {
+        return new Date().toISOString();
+    }
+
+    function softDeleteSection(section) {
+        section.dataset.deletedAt = section.dataset.deletedAt || stampDeletedAt();
+        section.querySelector('[data-select-section]').checked = false;
+        updateLabels();
+        syncPayload();
+    }
+
+    function restoreSection(section) {
+        section.dataset.deletedAt = '';
+        section.querySelector('[data-select-section]').checked = false;
+        updateLabels();
+        syncPayload();
+    }
+
+    function permanentDeleteSection(section) {
+        section.remove();
+        updateLabels();
+        syncPayload();
+    }
+
+    function selectedSections() {
+        return Array.from(list.querySelectorAll('[data-store-section]')).filter((section) => {
+            return section.querySelector('[data-select-section]')?.checked;
+        });
+    }
+
+    function collectSections() {
+        return Array.from(list.querySelectorAll('[data-store-section]')).map((section, index) => {
+            const data = { sort_order: index, deleted_at: section.dataset.deletedAt || '' };
+            section.querySelectorAll('[data-field]').forEach((input) => {
+                data[input.dataset.field] = input.value.trim();
+            });
+            data.tiles = Array.from(section.querySelectorAll('[data-store-tile]')).map((tile) => {
+                const tileData = {};
+                tile.querySelectorAll('[data-tile-field]').forEach((input) => {
+                    tileData[input.dataset.tileField] = input.value.trim();
+                });
+                return tileData;
+            }).filter((tile) => tile.title || tile.image_url);
+            return data;
+        }).filter((section) => section.deleted_at || section.title || section.subtitle || section.image_url || section.image_url_2 || section.category_slug || section.product_slugs || section.tiles.length);
+    }
+
+    function updateLabels() {
+        let activeIndex = 0;
+        list.querySelectorAll('[data-store-section]').forEach((section) => {
+            const type = section.querySelector('[data-field="type"]')?.value || 'hero';
+            const label = section.querySelector('[data-section-label]');
+            const deletedAt = section.dataset.deletedAt || '';
+            section.classList.toggle('is-deleted', Boolean(deletedAt));
+            if (!deletedAt) activeIndex += 1;
+            if (label) label.textContent = `${deletedAt ? 'Removed' : activeIndex + '.'} ${type.replace('_', ' ')}`;
+            const status = section.querySelector('[data-section-status]');
+            if (status) status.textContent = deletedAt ? `Removed ${new Date(deletedAt).toLocaleString()}` : 'Shown on the public store page in this order.';
+        });
+    }
+
+    function syncPayload() {
+        payloadInput.value = JSON.stringify(collectSections());
+    }
+
+    addButton?.addEventListener('click', () => addSection());
+    document.querySelector('[data-add-image-banner]')?.addEventListener('click', () => {
+        list.classList.remove('show-trash');
+        addSection({
+            type: 'image_banner',
+            title: '',
+            subtitle: '',
+            cta_label: '',
+            cta_url: '',
+            image_url: '',
+            image_size: 'actual',
+            image_fit: 'contain',
+            image_position: 'center'
+        });
+    });
+    document.querySelector('[data-add-image-pair]')?.addEventListener('click', () => {
+        list.classList.remove('show-trash');
+        addSection({ type: 'image_pair', image_size: 'actual', image_fit: 'contain', image_position: 'center' });
+    });
+    document.querySelector('[data-builder-show-active]')?.addEventListener('click', () => {
+        list.classList.remove('show-trash');
+        list.querySelectorAll('[data-select-section]').forEach((input) => input.checked = false);
+    });
+    document.querySelector('[data-builder-show-trash]')?.addEventListener('click', () => {
+        list.classList.add('show-trash');
+        list.querySelectorAll('[data-select-section]').forEach((input) => input.checked = false);
+    });
+    document.querySelector('[data-soft-delete-selected]')?.addEventListener('click', () => {
+        selectedSections().forEach((section) => {
+            if (!section.dataset.deletedAt) softDeleteSection(section);
+        });
+        updateLabels();
+        syncPayload();
+    });
+    document.querySelector('[data-restore-selected]')?.addEventListener('click', () => {
+        selectedSections().forEach(restoreSection);
+        updateLabels();
+        syncPayload();
+    });
+    document.querySelector('[data-permanent-delete-selected]')?.addEventListener('click', () => {
+        selectedSections().forEach(permanentDeleteSection);
+        updateLabels();
+        syncPayload();
+    });
+    document.querySelector('[data-template="haier"]')?.addEventListener('click', () => {
+        list.innerHTML = '';
+        list.classList.remove('show-trash');
+        templateSections.forEach((section) => addSection(section));
+    });
+    let initialSections = [];
+    try {
+        initialSections = JSON.parse(initialNode?.textContent || '[]');
+    } catch (error) {
+        initialSections = [];
+    }
+    if (initialSections.length) {
+        initialSections.forEach((section) => addSection(section));
+    } else {
+        addSection(templateSections[0]);
+    }
+    form?.addEventListener('submit', syncPayload);
+})();
+
+function selectStoreFileFromLibrary(fieldName) {
+    if (typeof window.openMediaLibrary !== 'function') {
+        console.warn('Media Library is not loaded on this page.');
+        return;
+    }
+    window.openMediaLibrary(asset => {
+        const assetUrl = asset?.url || asset?.file_url || asset?.file || asset?.absolute_url || asset?.src || asset?.thumbnail_url || '';
+        const libInput = document.getElementById('id_' + fieldName + '_library_id');
+        if (libInput) libInput.value = asset.id;
+        const zone = document.getElementById(fieldName + '-upload-zone');
+        const preview = zone ? zone.querySelector('.file-preview-wrap') : null;
+        if (preview) {
+            preview.innerHTML = `<img src="${assetUrl}" alt="${fieldName}" style="max-height:90px; border-radius:8px; object-fit:contain; border:2px solid var(--primary); padding:4px; background:rgba(255,255,255,.02);">`;
+        }
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,7 @@
+{% extends "retailer/base.html" %}
+{% block content %}
+<div class="ra-page-head"><h1>Orders</h1><p>Manage customer orders, statuses, invoices and delivery labels.</p></div>
+<div class="ra-card"><div class="ra-table-wrap"><table class="ra-table"><thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+{% for order in orders %}<tr><td><strong>{{ order.number }}</strong><br><small>{{ order.created_at|date:"d M Y H:i" }}</small></td><td>{{ order.customer.email }}</td><td>{{ order.total_amount }} {{ order.currency_code }}</td><td><form method="post" action="{% url 'retailers:order-status' order.pk %}">{% csrf_token %}<select name="status" onchange="this.form.submit()">{% for value,label in order.STATUS_CHOICES %}<option value="{{ value }}" {% if order.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></form></td><td><form method="post" class="inline" action="{% url 'retailers:order-invoice' order.pk %}">{% csrf_token %}<button type="submit">Invoice</button></form> <form method="post" class="inline" action="{% url 'retailers:order-label' order.pk %}">{% csrf_token %}<button type="submit">Print label</button></form></td></tr>{% empty %}<tr><td colspan="5">No orders yet.</td></tr>{% endfor %}
+</tbody></table></div></div>
+{% endblock %}

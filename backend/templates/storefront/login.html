@@ -1,0 +1,49 @@
+{% extends "storefront/base.html" %}
+{% load static %}
+
+{% block content %}
+<section class="page-head">
+  <div class="container">
+    <h1>Login</h1>
+    <div class="breadcrumb">
+        <a href="{% url 'storefront:home' %}">Home</a>
+        <span>/</span>
+        <span>Login</span>
+    </div>
+  </div>
+</section>
+<section class="page-shell" style="max-width: 400px; margin: 40px auto;">
+    <h2 style="margin-bottom: 20px; font-size: 24px; font-weight: 600;">Login to your account</h2>
+    <form method="post" class="storefront-form">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+            <div style="color: var(--danger); margin-bottom: 15px; font-size: 13px;">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+        
+        <div style="margin-bottom: 15px;">
+            <label for="{{ form.username.id_for_label }}" style="display: block; margin-bottom: 5px; font-size: 13px; font-weight: 500;">Email address or Username</label>
+            <input type="text" name="{{ form.username.html_name }}" id="{{ form.username.id_for_label }}" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius);">
+            {% if form.username.errors %}
+                <div style="color: var(--danger); font-size: 12px; margin-top: 5px;">{{ form.username.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <label for="{{ form.password.id_for_label }}" style="display: block; margin-bottom: 5px; font-size: 13px; font-weight: 500;">Password</label>
+            <input type="password" name="{{ form.password.html_name }}" id="{{ form.password.id_for_label }}" required style="width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: var(--radius);">
+            {% if form.password.errors %}
+                <div style="color: var(--danger); font-size: 12px; margin-top: 5px;">{{ form.password.errors }}</div>
+            {% endif %}
+        </div>
+        
+        <button type="submit" class="button" style="width: 100%; padding: 12px;">Login</button>
+    </form>
+    
+    <div style="margin-top: 20px; text-align: center; font-size: 14px; color: var(--muted);">
+        Don't have an account? <a href="{% url 'storefront:register' %}" style="color: var(--primary); text-decoration: none; font-weight: 500;">Register here</a>
+    </div>
+</section>
+{% endblock %}
+{% block extra_scripts %}<script src="{% static 'common/password-toggle.js' %}"></script>{% endblock %}

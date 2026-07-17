@@ -1,0 +1,870 @@
+{% load static %}
+{% load currency_tags %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ page_title|default:"CommerceOS Marketplace" }}</title>
+    <link rel="stylesheet" href="{% static 'storefront/storefront.css' %}?v=20260716-comments1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    {% if global_mega_menu_settings %}
+    <link href="https://fonts.googleapis.com/css2?family={{ global_mega_menu_settings.font_family|urlencode }}:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        .mega-menu-wrapper {
+            font-family: '{{ global_mega_menu_settings.font_family }}', sans-serif !important;
+            background-color: {{ global_mega_menu_settings.background_color }} !important;
+            border-top: 3px solid {{ global_mega_menu_settings.hover_color }} !important;
+        }
+        .mega-menu-list > li > a {
+            color: {{ global_mega_menu_settings.text_color }} !important;
+            font-size: {{ global_mega_menu_settings.font_size_menu }}px !important;
+        }
+        .mega-menu-list > li > a:hover {
+            color: {{ global_mega_menu_settings.hover_color }} !important;
+        }
+        .mega-menu-column h4 {
+            color: {{ global_mega_menu_settings.heading_color }} !important;
+            font-size: {{ global_mega_menu_settings.font_size_heading }}px !important;
+        }
+        .mega-promo a.btn {
+            background-color: {{ global_mega_menu_settings.hover_color }} !important;
+        }
+        .mega-promo span {
+            color: {{ global_mega_menu_settings.hover_color }} !important;
+        }
+    </style>
+    {% endif %}
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="storefront-body">
+    <div class="page-loader" id="page-loader" aria-hidden="true">
+        <div class="icon-container"><i class="loader"></i></div>
+    </div>
+
+    <header class="site-header">
+        <div class="header-shell">
+            <a href="{% url 'storefront:home' %}" class="logo-mark">
+                {% if global_site_logo and global_site_logo.logo_image %}
+                    <img src="{{ global_site_logo.logo_image.url }}" alt="{{ global_site_logo.alt_text|default:'Nuboxed' }}" class="site-logo-image">
+                {% else %}
+                    <img src="{% static 'storefront/images/logo.webp' %}" alt="Nuboxed" class="site-logo-image">
+                {% endif %}
+            </a>
+
+            <div class="live-search-container header-search">
+                <form action="{% url 'storefront:products' %}" method="get" class="search-shell">
+                    <input type="search" name="q" id="live-search-input" placeholder="Search product here...">
+                    <button type="submit" aria-label="Search"><i class="fa-solid fa-magnifying-glass"></i></button>
+                </form>
+                <div id="live-search-results"></div>
+            </div>
+            <a href="javascript:void(0)" onclick="document.getElementById('locationModal').style.display='flex'" class="header-support location-picker-btn" style="padding: 5px 8px; border: 1px solid transparent; border-radius: 2px; transition: all 0.2s; margin-left: auto; color: #000;">
+                <div style="display: flex; align-items: flex-end; gap: 4px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 2px;"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                    <div style="display: flex; flex-direction: column; align-items: flex-start; line-height: 1.1;">
+                        <span style="font-size: 11px; color: #000; font-weight: 400; text-transform: none; white-space: nowrap; display: block;">Delivering to <span id="loc-city" style="display: inline;"></span> <span id="loc-pin" style="display: inline;"></span></span>
+                        <strong style="font-size: 14px; font-weight: 700; color: #000; white-space: nowrap; display: block;">Update location</strong>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="nav-shell">
+            <nav class="main-nav" id="main-nav">
+                <a href="{% url 'storefront:home' %}">Home</a>
+                {% for menu_item in global_menu_items %}
+                    {% if menu_item.title|lower == "store" or menu_item.title|lower == "stores" %}
+                        <div class="nav-dropdown mega-dropdown-sm">
+                            <a href="{{ menu_item.url }}" class="nav-button">{{ menu_item.title }} <i class="fa-solid fa-chevron-down"></i></a>
+                            <div class="mega-menu-wrapper sm">
+                                <div class="mega-menu-column">
+                                    <h4>Our Stores</h4>
+                                    <ul class="mega-menu-list">
+                                    {% for store in nav_store_links %}
+                                        <li><a href="{% url 'storefront:store-detail' slug=store.slug %}">{{ store.name }}</a></li>
+                                    {% empty %}
+                                        <li><span>No stores yet</span></li>
+                                    {% endfor %}
+                                    </ul>
+                                </div>
+                                <div class="mega-menu-column mega-promo">
+                                    <span>{{ global_mega_menu_settings.promo_subtitle|default:"SPECIAL OFFER" }}</span>
+                                    <h3>{{ global_mega_menu_settings.promo_title|default:"Visit Our Stores" }}</h3>
+                                    <p>{{ global_mega_menu_settings.promo_description|default:"Find the best deals at a store near you." }}</p>
+                                    <a href="{% url 'storefront:stores' %}" class="btn">{{ global_mega_menu_settings.promo_button_text|default:"VIEW ALL" }}</a>
+                                </div>
+                            </div>
+                        </div>
+                    {% elif menu_item.title|lower == "products" or menu_item.title|lower == "product" %}
+                        <div class="nav-dropdown mega-dropdown">
+                            <a href="{{ menu_item.url }}" class="nav-button">{{ menu_item.title }} <i class="fa-solid fa-chevron-down"></i></a>
+                            <div class="mega-menu-wrapper">
+                                {% for device in nav_device_categories %}
+                                    <div class="mega-menu-column">
+                                        <h4>{{ device.name }}</h4>
+                                        <ul class="mega-menu-list">
+                                        {% for brand in device.children.all %}
+                                            <li>
+                                                <a href="{% url 'storefront:category' slug=brand.slug %}">{{ brand.name }}</a>
+                                                {% if brand.children.all %}
+                                                    <ul class="mega-menu-sublist">
+                                                    {% for model in brand.children.all %}
+                                                        <li><a href="{% url 'storefront:category' slug=model.slug %}">{{ model.name }}</a></li>
+                                                    {% endfor %}
+                                                    </ul>
+                                                {% endif %}
+                                                {% if brand.nav_brands %}
+                                                    <ul class="mega-menu-sublist mega-menu-brand-list">
+                                                    {% for linked_brand in brand.nav_brands %}
+                                                        <li><a href="{% url 'storefront:products' %}?brand_id={{ linked_brand.id }}">{{ linked_brand.name }}</a></li>
+                                                    {% endfor %}
+                                                    </ul>
+                                                {% endif %}
+                                            </li>
+                                        {% endfor %}
+                                        </ul>
+                                    </div>
+                                {% empty %}
+                                    <div class="mega-menu-column">
+                                        <h4>Products</h4>
+                                        <ul class="mega-menu-list">
+                                            <li><a href="{% url 'storefront:products' %}">All Products</a></li>
+                                        </ul>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% else %}
+                        {% if menu_item.children.all %}
+                            <div class="nav-dropdown mega-dropdown-sm">
+                                <a href="{{ menu_item.url }}" class="nav-button">{{ menu_item.title }} <i class="fa-solid fa-chevron-down"></i></a>
+                                <div class="mega-menu-wrapper sm">
+                                    <div class="mega-menu-column">
+                                        <ul class="mega-menu-list">
+                                            {% for child in menu_item.children.all %}
+                                                <li><a href="{{ child.url }}">{{ child.title }}</a></li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <a href="{{ menu_item.url }}">{{ menu_item.title }}</a>
+                        {% endif %}
+                    {% endif %}
+                {% empty %}
+                    <div class="nav-dropdown mega-dropdown-sm">
+                        <a href="{% url 'storefront:stores' %}" class="nav-button">Store <i class="fa-solid fa-chevron-down"></i></a>
+                        <div class="mega-menu-wrapper sm">
+                            <div class="mega-menu-column">
+                                <h4>Our Stores</h4>
+                                <ul class="mega-menu-list">
+                                {% for store in nav_store_links %}
+                                    <li><a href="{% url 'storefront:store-detail' slug=store.slug %}">{{ store.name }}</a></li>
+                                {% empty %}
+                                    <li><span>No stores yet</span></li>
+                                {% endfor %}
+                                </ul>
+                            </div>
+                            <div class="mega-menu-column mega-promo">
+                                <span>{{ global_mega_menu_settings.promo_subtitle|default:"SPECIAL OFFER" }}</span>
+                                <h3>{{ global_mega_menu_settings.promo_title|default:"Visit Our Stores" }}</h3>
+                                <p>{{ global_mega_menu_settings.promo_description|default:"Find the best deals at a store near you." }}</p>
+                                <a href="{% url 'storefront:stores' %}" class="btn">{{ global_mega_menu_settings.promo_button_text|default:"VIEW ALL" }}</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="nav-dropdown mega-dropdown">
+                        <a href="{% url 'storefront:products' %}" class="nav-button">Products <i class="fa-solid fa-chevron-down"></i></a>
+                        <div class="mega-menu-wrapper">
+                            {% for device in nav_device_categories %}
+                                <div class="mega-menu-column">
+                                    <h4>{{ device.name }}</h4>
+                                    <ul class="mega-menu-list">
+                                    {% for brand in device.children.all %}
+                                        <li>
+                                            <a href="{% url 'storefront:category' slug=brand.slug %}">{{ brand.name }}</a>
+                                            {% if brand.children.all %}
+                                                <ul class="mega-menu-sublist">
+                                                {% for model in brand.children.all %}
+                                                    <li><a href="{% url 'storefront:category' slug=model.slug %}">{{ model.name }}</a></li>
+                                                {% endfor %}
+                                                </ul>
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                    </ul>
+                                </div>
+                            {% empty %}
+                                <div class="mega-menu-column">
+                                    <h4>Products</h4>
+                                    <ul class="mega-menu-list">
+                                        <li><a href="{% url 'storefront:products' %}">All Products</a></li>
+                                    </ul>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <a href="{% url 'storefront:products' %}">Top Deals</a>
+                    <a href="{% url 'storefront:contact' %}">Contact</a>
+                {% endfor %}
+            </nav>
+            <div class="header-actions" style="display: flex; gap: 20px; align-items: center; margin-left: auto; justify-content: flex-end; color: #fff;">
+                <a href="{% if user.is_authenticated %}{% url 'storefront:customer-dashboard' %}{% else %}{% url 'storefront:login' %}{% endif %}" class="header-support icon-stack" style="color: #fff;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 2px;"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
+                    <span style="color: #fff;">Returns & Orders</span>
+                </a>
+                <div class="nav-dropdown">
+                    <a href="{% if user.is_authenticated and not user.is_staff and not user.is_superuser %}{% url 'storefront:customer-dashboard' %}{% else %}{% url 'storefront:login' %}{% endif %}" class="header-support icon-stack" style="color: #fff;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 2px;"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        <span style="color: #fff;">Account <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline; margin-left: 2px;"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
+                    </a>
+                    <div class="dropdown-panel amazon-account-dropdown">
+                        <div class="dropdown-signin-header">
+                            <a href="{% url 'storefront:login' %}" class="btn-signin-yellow">Sign in</a>
+                            <p class="new-customer-text">New customer? <a href="{% url 'storefront:register' %}">Start here.</a></p>
+                        </div>
+                        <div class="dropdown-columns" style="display: block;">
+                            <div class="dropdown-col account-col" style="padding-left: 0;">
+                                <h3>Your Account</h3>
+                                <ul class="dropdown-list amazon-list" style="list-style: none; padding: 0; margin: 0;">
+                                    <li><a href="{% if user.is_authenticated %}{% url 'storefront:customer-dashboard' %}{% else %}{% url 'storefront:login' %}{% endif %}">Your Account</a></li>
+                                    <li><a href="{% if user.is_authenticated %}{% url 'storefront:customer-dashboard' %}{% else %}{% url 'storefront:login' %}{% endif %}">Your Orders</a></li>
+                                    <li><a href="{% url 'storefront:wishlist' %}">Your Wish List</a></li>
+                                    {% if user.is_authenticated and not user.is_staff and not user.is_superuser %}
+                                    <li>
+                                        <form action="{% url 'storefront:logout' %}" method="post" style="display:inline; margin:0; padding:0;">
+                                            {% csrf_token %}
+                                            <button type="submit" style="background: transparent; border: 0; padding: 0; cursor: pointer; font: inherit; text-align: left; color: #111;">Logout</button>
+                                        </form>
+                                    </li>
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <a href="{% url 'storefront:compare' %}" class="header-support icon-stack" style="color: #fff;">
+                    <div class="cart-icon" style="position: relative;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 2px;"><path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/></svg>
+                        <b>{{ nav_compare_count|default:"0" }}</b>
+                    </div>
+                    <span style="color: #fff;">Compare</span>
+                </a>
+                <a href="{% url 'storefront:wishlist' %}" class="header-support icon-stack" style="color: #fff;">
+                    <div style="position: relative;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 2px;"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+                        <b>{{ nav_wishlist_count|default:"0" }}</b>
+                    </div>
+                    <span style="color: #fff;">Wishlist</span>
+                </a>
+                <a href="{% url 'storefront:cart' %}" class="header-support cart-total icon-stack" data-cart-drawer-toggle style="color: #fff;">
+                    <div style="position: relative;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 2px;"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+                        <b>{{ nav_cart_count|default:"0" }}</b>
+                    </div>
+                    <span style="color: #fff;">My Cart</span>
+                </a>
+            </div>
+            <button class="mobile-nav-toggle" type="button" data-toggle-nav><i class="fa-solid fa-bars"></i> Menu</button>
+        </div>
+    </header>
+
+    <div class="cart-drawer-overlay" data-cart-drawer-close></div>
+    <aside class="cart-drawer" id="cart-drawer" aria-hidden="true">
+        <div class="cart-drawer-head">
+            <h3>Shopping Cart</h3>
+            <button type="button" data-cart-drawer-close aria-label="Close cart"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="cart-drawer-body">
+            {% for item in nav_cart_items %}
+                <article class="cart-drawer-item" data-cart-drawer-item>
+                    <a href="{% url 'catalog:product-detail' slug=item.product.slug %}" class="cart-drawer-media">
+                        {% if item.product.primary_image %}
+                            <img src="{{ item.product.primary_image.url }}" alt="{{ item.product.name }}">
+                        {% else %}
+                            <i class="fa-solid fa-image"></i>
+                        {% endif %}
+                    </a>
+                    <div class="cart-drawer-copy">
+                        <a href="{% url 'catalog:product-detail' slug=item.product.slug %}" class="cart-drawer-title">{{ item.product.name }}</a>
+                        {% if item.variant %}
+                            <span class="cart-drawer-meta">{{ item.variant.name }}</span>
+                        {% endif %}
+                        <div class="cart-drawer-row">
+                            <form method="post" action="{% url 'storefront:cart-update' product_id=item.product.id %}" class="cart-drawer-qty" data-cart-drawer-qty-form>
+                                {% csrf_token %}
+                                <button type="button" class="drawer-qty-btn" data-cart-qty-action="decrease" aria-label="Decrease quantity"><i class="fa-solid fa-minus"></i></button>
+                                <input type="number" class="drawer-qty-input" name="quantity" value="{{ item.quantity }}" min="1" max="99" inputmode="numeric" aria-label="Quantity" readonly>
+                                <button type="button" class="drawer-qty-btn" data-cart-qty-action="increase" aria-label="Increase quantity"><i class="fa-solid fa-plus"></i></button>
+                            </form>
+                            <span class="cart-drawer-price">{{ item.discount_price|format_currency:item.product.store.currency_code }}</span>
+                        </div>
+                    </div>
+                    <form method="post" action="{% url 'storefront:cart-remove' product_id=item.product.id %}" class="drawer-remove-form">
+                        {% csrf_token %}
+                        <button type="submit" aria-label="Remove"><i class="fa-solid fa-trash-can"></i></button>
+                    </form>
+                </article>
+            {% empty %}
+                <div class="cart-drawer-empty">
+                    <i class="fa-solid fa-cart-shopping"></i>
+                    <p>No items in your cart. Go on, fill it up with something you love!</p>
+                    <a href="{% url 'storefront:products' %}" class="primary-link">Start Shopping Now</a>
+                </div>
+            {% endfor %}
+        </div>
+        <div class="cart-drawer-footer">
+            <div><span>{{ nav_cart_count }} items</span><strong>${{ nav_cart_total|default:"0.00" }}</strong></div>
+            <a href="{% url 'storefront:cart' %}" class="primary-link">View Cart</a>
+            <a href="{% url 'storefront:checkout' %}" class="button-compact ghost">Checkout</a>
+        </div>
+    </aside>
+
+    {% if messages %}
+        <div id="server-message-stack" hidden aria-live="polite">
+            {% for message in messages %}
+                <span data-server-message data-message-tags="{{ message.tags }}">{{ message }}</span>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        <div class="footer-grid">
+            <div>
+                <h4>Nuboxed</h4>
+                <p>Curated electronics, verified retailers, transparent delivery, and smarter product discovery.</p>
+                {% if global_social_links %}
+                    <div class="footer-social-links">
+                        {% for social_link in global_social_links %}
+                            <a href="{{ social_link.url }}" target="_blank" rel="noopener noreferrer" aria-label="{{ social_link.platform }}">
+                                <i class="{{ social_link.icon_class }}"></i>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <div>
+                <h4>Explore</h4>
+                                {% for menu_item in global_menu_items %}
+                    {% if menu_item.title|lower == "store" or menu_item.title|lower == "stores" %}
+                        <div class="nav-dropdown mega-dropdown-sm">
+                            <a href="{{ menu_item.url }}" class="nav-button">{{ menu_item.title }} <i class="fa-solid fa-chevron-down"></i></a>
+                            <div class="mega-menu-wrapper sm">
+                                <div class="mega-menu-column">
+                                    <h4>Our Stores</h4>
+                                    <ul class="mega-menu-list">
+                                    {% for store in nav_store_links %}
+                                        <li><a href="{% url 'storefront:store-detail' slug=store.slug %}">{{ store.name }}</a></li>
+                                    {% empty %}
+                                        <li><span>No stores yet</span></li>
+                                    {% endfor %}
+                                    </ul>
+                                </div>
+                                <div class="mega-menu-column mega-promo">
+                                    <span>{{ global_mega_menu_settings.promo_subtitle|default:"SPECIAL OFFER" }}</span>
+                                    <h3>{{ global_mega_menu_settings.promo_title|default:"Visit Our Stores" }}</h3>
+                                    <p>{{ global_mega_menu_settings.promo_description|default:"Find the best deals at a store near you." }}</p>
+                                    <a href="{% url 'storefront:stores' %}" class="btn">{{ global_mega_menu_settings.promo_button_text|default:"VIEW ALL" }}</a>
+                                </div>
+                            </div>
+                        </div>
+                    {% elif menu_item.title|lower == "products" or menu_item.title|lower == "product" %}
+                        <div class="nav-dropdown mega-dropdown">
+                            <a href="{{ menu_item.url }}" class="nav-button">{{ menu_item.title }} <i class="fa-solid fa-chevron-down"></i></a>
+                            <div class="mega-menu-wrapper">
+                                {% for device in nav_device_categories %}
+                                    <div class="mega-menu-column">
+                                        <h4>{{ device.name }}</h4>
+                                        <ul class="mega-menu-list">
+                                        {% for brand in device.children.all %}
+                                            <li>
+                                                <a href="{% url 'storefront:category' slug=brand.slug %}">{{ brand.name }}</a>
+                                                {% if brand.children.all %}
+                                                    <ul class="mega-menu-sublist">
+                                                    {% for model in brand.children.all %}
+                                                        <li><a href="{% url 'storefront:category' slug=model.slug %}">{{ model.name }}</a></li>
+                                                    {% endfor %}
+                                                    </ul>
+                                                {% endif %}
+                                            </li>
+                                        {% endfor %}
+                                        </ul>
+                                    </div>
+                                {% empty %}
+                                    <div class="mega-menu-column">
+                                        <h4>Products</h4>
+                                        <ul class="mega-menu-list">
+                                            <li><a href="{% url 'storefront:products' %}">All Products</a></li>
+                                        </ul>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% else %}
+                        {% if menu_item.children.all %}
+                            <div class="nav-dropdown mega-dropdown-sm">
+                                <a href="{{ menu_item.url }}" class="nav-button">{{ menu_item.title }} <i class="fa-solid fa-chevron-down"></i></a>
+                                <div class="mega-menu-wrapper sm">
+                                    <div class="mega-menu-column">
+                                        <ul class="mega-menu-list">
+                                            {% for child in menu_item.children.all %}
+                                                <li><a href="{{ child.url }}">{{ child.title }}</a></li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        {% else %}
+                            <a href="{{ menu_item.url }}">{{ menu_item.title }}</a>
+                        {% endif %}
+                    {% endif %}
+                {% empty %}
+                    <div class="nav-dropdown mega-dropdown-sm">
+                        <a href="{% url 'storefront:stores' %}" class="nav-button">Store <i class="fa-solid fa-chevron-down"></i></a>
+                        <div class="mega-menu-wrapper sm">
+                            <div class="mega-menu-column">
+                                <h4>Our Stores</h4>
+                                <ul class="mega-menu-list">
+                                {% for store in nav_store_links %}
+                                    <li><a href="{% url 'storefront:store-detail' slug=store.slug %}">{{ store.name }}</a></li>
+                                {% empty %}
+                                    <li><span>No stores yet</span></li>
+                                {% endfor %}
+                                </ul>
+                            </div>
+                            <div class="mega-menu-column mega-promo">
+                                <span>{{ global_mega_menu_settings.promo_subtitle|default:"SPECIAL OFFER" }}</span>
+                                <h3>{{ global_mega_menu_settings.promo_title|default:"Visit Our Stores" }}</h3>
+                                <p>{{ global_mega_menu_settings.promo_description|default:"Find the best deals at a store near you." }}</p>
+                                <a href="{% url 'storefront:stores' %}" class="btn">{{ global_mega_menu_settings.promo_button_text|default:"VIEW ALL" }}</a>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="nav-dropdown mega-dropdown">
+                        <a href="{% url 'storefront:products' %}" class="nav-button">Products <i class="fa-solid fa-chevron-down"></i></a>
+                        <div class="mega-menu-wrapper">
+                            {% for device in nav_device_categories %}
+                                <div class="mega-menu-column">
+                                    <h4>{{ device.name }}</h4>
+                                    <ul class="mega-menu-list">
+                                    {% for brand in device.children.all %}
+                                        <li>
+                                            <a href="{% url 'storefront:category' slug=brand.slug %}">{{ brand.name }}</a>
+                                            {% if brand.children.all %}
+                                                <ul class="mega-menu-sublist">
+                                                {% for model in brand.children.all %}
+                                                    <li><a href="{% url 'storefront:category' slug=model.slug %}">{{ model.name }}</a></li>
+                                                {% endfor %}
+                                                </ul>
+                                            {% endif %}
+                                        </li>
+                                    {% endfor %}
+                                    </ul>
+                                </div>
+                            {% empty %}
+                                <div class="mega-menu-column">
+                                    <h4>Products</h4>
+                                    <ul class="mega-menu-list">
+                                        <li><a href="{% url 'storefront:products' %}">All Products</a></li>
+                                    </ul>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <a href="{% url 'storefront:products' %}">Top Deals</a>
+                    <a href="{% url 'storefront:contact' %}">Contact</a>
+                {% endfor %}
+            </div>
+            <div>
+                <h4>Support</h4>
+                <a href="{% url 'storefront:contact' %}">Contact</a>
+                <a href="{% url 'storefront:cart' %}">Cart</a>
+                <a href="{% url 'storefront:checkout' %}">Checkout</a>
+            </div>
+        </div>
+    </footer>
+    <script src="{% static 'storefront/storefront.js' %}?v=20260715-2"></script>
+    {% block extra_scripts %}{% endblock %}
+
+
+
+<script>
+function flyToIcon(imgElement, targetSelector) {
+    let target = document.querySelector(targetSelector);
+    if(!target) return;
+    
+    let rect = imgElement ? imgElement.getBoundingClientRect() : target.getBoundingClientRect();
+    let targetRect = target.getBoundingClientRect();
+    let flyer = document.createElement("div");
+    
+    flyer.style.position = "fixed";
+    flyer.style.zIndex = "999999";
+    flyer.style.top = rect.top + "px";
+    flyer.style.left = rect.left + "px";
+    flyer.style.width = "40px";
+    flyer.style.height = "40px";
+    flyer.style.borderRadius = "50%";
+    flyer.style.backgroundColor = "var(--primary, #e04420)";
+    flyer.style.boxShadow = "0 4px 12px rgba(0,0,0,0.2)";
+    flyer.style.opacity = "0.9";
+    flyer.style.transition = "all 0.6s cubic-bezier(0.2, 1, 0.3, 1)";
+    flyer.style.pointerEvents = "none";
+
+    if (imgElement && imgElement.tagName === "IMG") {
+        flyer.style.backgroundImage = `url(${imgElement.src})`;
+        flyer.style.backgroundSize = "cover";
+        flyer.style.backgroundPosition = "center";
+    }
+    
+    document.body.appendChild(flyer);
+    
+    setTimeout(() => {
+        flyer.style.top = targetRect.top + "px";
+        flyer.style.left = targetRect.left + "px";
+        flyer.style.width = "10px";
+        flyer.style.height = "10px";
+        flyer.style.opacity = "0.2";
+    }, 50);
+    
+    setTimeout(() => {
+        flyer.remove();
+        target.style.transition = "transform 0.2s";
+        target.style.transform = "scale(1.4)";
+        setTimeout(() => target.style.transform = "scale(1)", 200);
+    }, 650);
+}
+
+document.addEventListener("submit", function(e) {
+    let form = e.target;
+    
+    if (form.classList.contains("ajax-wishlist-form") || 
+        form.classList.contains("ajax-compare-form") ||
+        form.classList.contains("ajax-compare-remove-form") ||
+        form.classList.contains("ajax-cart-form")) {
+        e.preventDefault();
+        
+        let url = form.getAttribute("action");
+        let btn = form.querySelector("button[type='submit']");
+        let formData = new FormData(form);
+        
+        let isWishlist = form.classList.contains("ajax-wishlist-form");
+        let isCompare = form.classList.contains("ajax-compare-form");
+        let isCompareRemove = form.classList.contains("ajax-compare-remove-form");
+        let isCart = form.classList.contains("ajax-cart-form");
+        
+        fetch(url, {
+            method: "POST",
+            body: formData,
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Find image to fly
+                let container = form.closest("td") || form.closest(".product-card") || form.closest(".product-media") || form.closest(".product-details-container");
+                let img = container ? container.querySelector("img") : null;
+                
+                if (isWishlist) {
+                    let icon = btn.querySelector("i.fa-heart");
+                    if (data.added) {
+                        btn.classList.add("selected");
+                        if(icon) {
+                            icon.classList.remove("fa-regular");
+                            icon.classList.add("fa-solid", "in-wishlist");
+                            icon.style.color = "#ef4444";
+                        }
+                        flyToIcon(img, ".header-support[href*='/wishlist/']");
+                    } else {
+                        btn.classList.remove("selected");
+                        if(icon) {
+                            icon.classList.remove("fa-solid", "in-wishlist");
+                            icon.classList.add("fa-regular");
+                            icon.style.removeProperty("color");
+                            // Remove inline color/border from btn too if it was forced
+                            btn.style.removeProperty("color");
+                            btn.style.removeProperty("border-color");
+                        }
+                    }
+                    document.querySelectorAll("a[href*='wishlist'] b, a[href*='wishlist'] .badge, a[href*='wishlist'] .count").forEach(b => b.innerText = data.wishlist_count);
+                }
+                
+                else if (isCompare) {
+                    let icon = btn.querySelector("i.fa-right-left");
+                    if (data.added) {
+                        btn.classList.add("selected");
+                        if(icon) {
+                            icon.classList.add("in-compare");
+                            icon.style.color = "var(--primary, #0f766e)";
+                        }
+                        flyToIcon(img, ".header-support[href*='/compare/']");
+                    } else {
+                        btn.classList.remove("selected");
+                        if(icon) {
+                            icon.classList.remove("in-compare");
+                            icon.style.removeProperty("color");
+                            btn.style.removeProperty("color");
+                            btn.style.removeProperty("border-color");
+                        }
+                    }
+                    document.querySelectorAll("a[href*='compare'] b, a[href*='compare'] .badge, a[href*='compare'] .count").forEach(b => b.innerText = data.compare_count);
+                    if (!data.added && data.message) {
+                        customAlert(data.message, {
+                            title: "Removed",
+                            icon: "fa-check",
+                            tone: "success"
+                        });
+                    }
+                }
+
+                else if (isCompareRemove) {
+                    document.querySelectorAll("a[href*='compare'] b, a[href*='compare'] .badge, a[href*='compare'] .count").forEach(b => b.innerText = data.compare_count);
+                    let cell = form.closest("td");
+                    if (cell) {
+                        cell.style.transition = "opacity 0.2s ease, transform 0.2s ease";
+                        cell.style.opacity = "0";
+                        cell.style.transform = "scale(0.96)";
+                        setTimeout(() => window.location.reload(), 1700);
+                    }
+                    customAlert(data.message || "Product removed from compare.", {
+                        title: "Removed",
+                        icon: "fa-check",
+                        tone: "success"
+                    });
+                }
+                
+                else if (isCart) {
+                    flyToIcon(img, ".header-support.cart-total");
+                    document.querySelectorAll("a[href*='cart'] b, a[href*='cart'] .badge, a[href*='cart'] .count").forEach(b => b.innerText = data.cart_count);
+                    if (typeof refreshCartDrawer === "function") {
+                        refreshCartDrawer();
+                    }
+                    // maybe show a quick checkmark on button
+                    let oldHtml = btn.innerHTML;
+                    btn.innerHTML = '<i class="fa-solid fa-check"></i> Added';
+                    btn.style.background = '#059669';
+                    btn.style.color = '#fff';
+                    setTimeout(() => {
+                        btn.innerHTML = oldHtml;
+                        btn.style.background = '';
+                        btn.style.color = '';
+                    }, 2000);
+                }
+            } else {
+                alert(data.message || "An error occurred.");
+            }
+        });
+    }
+});
+</script>
+<script src="{% static 'common/password-toggle.js' %}"></script>
+<!-- Custom Alert Modal -->
+<div id="custom-alert-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); z-index: 99999; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease;">
+    <div id="custom-alert-box" style="background: white; border-radius: 12px; padding: 24px; max-width: 400px; width: 90%; box-shadow: 0 10px 25px rgba(0,0,0,0.2); text-align: center; transform: scale(0.9); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+        <div id="custom-alert-icon-wrap" style="width: 50px; height: 50px; border-radius: 50%; background: #fff1ec; color: #e04420; display: flex; justify-content: center; align-items: center; font-size: 24px; margin: 0 auto 16px;">
+            <i id="custom-alert-icon" class="fa-solid fa-bell"></i>
+        </div>
+        <h3 id="custom-alert-title" style="margin: 0 0 12px; font-size: 18px; color: #1e293b; font-weight: 600;">Notification</h3>
+        <p id="custom-alert-message" style="margin: 0 0 20px; color: #475569; font-size: 15px; line-height: 1.5;"></p>
+        <button onclick="closeCustomAlert()" style="background: #e04420; color: white; border: none; padding: 10px 24px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#e04420'" onmouseout="this.style.background='#e04420'">OK</button>
+    </div>
+</div>
+<script>
+    let customAlertTimer = null;
+
+    function customAlert(msg, options = {}) {
+        const title = document.getElementById('custom-alert-title');
+        const iconWrap = document.getElementById('custom-alert-icon-wrap');
+        const icon = document.getElementById('custom-alert-icon');
+        document.getElementById('custom-alert-message').textContent = msg;
+        title.textContent = options.title || 'Notification';
+        icon.className = `fa-solid ${options.icon || 'fa-bell'}`;
+        if (options.tone === 'success') {
+            iconWrap.style.background = '#dcfce7';
+            iconWrap.style.color = '#16a34a';
+        } else {
+            iconWrap.style.background = '#fff1ec';
+            iconWrap.style.color = '#e04420';
+        }
+        const overlay = document.getElementById('custom-alert-overlay');
+        const box = document.getElementById('custom-alert-box');
+        overlay.style.display = 'flex';
+        // Trigger reflow
+        void overlay.offsetWidth;
+        overlay.style.opacity = '1';
+        box.style.transform = 'scale(1)';
+        clearTimeout(customAlertTimer);
+        customAlertTimer = setTimeout(closeCustomAlert, 2000);
+    }
+    
+    function closeCustomAlert() {
+        clearTimeout(customAlertTimer);
+        const overlay = document.getElementById('custom-alert-overlay');
+        const box = document.getElementById('custom-alert-box');
+        overlay.style.opacity = '0';
+        box.style.transform = 'scale(0.9)';
+        setTimeout(() => {
+            overlay.style.display = 'none';
+        }, 300);
+    }
+
+    // Override native alert globally
+    window.alert = customAlert;
+
+    // Show Django messages as a popup instead of placing them in the page body.
+    document.addEventListener('DOMContentLoaded', function () {
+        const messages = Array.from(document.querySelectorAll('[data-server-message]'));
+        if (!messages.length) return;
+        const text = messages.map(item => item.textContent.trim()).filter(Boolean).join('\n');
+        const tags = messages[0].dataset.messageTags || '';
+        customAlert(text, {
+            title: tags.includes('success') ? 'Success' : (tags.includes('error') ? 'Action failed' : 'Notification'),
+            icon: tags.includes('success') ? 'fa-check' : (tags.includes('error') ? 'fa-circle-exclamation' : 'fa-bell'),
+            tone: tags.includes('success') ? 'success' : 'default'
+        });
+    });
+</script>
+
+</body>
+
+
+</html>
+
+<!-- Location Picker Modal -->
+<div id="locationModal" class="location-modal-overlay" style="display:none;" onclick="if(event.target==this) this.style.display='none'">
+    <div class="location-modal-content">
+        <div class="location-modal-header">
+            <h3>Choose your location</h3>
+            <button type="button" class="location-modal-close" onclick="document.getElementById('locationModal').style.display='none'">&times;</button>
+        </div>
+        <div class="location-modal-body">
+            <p>Delivery options and delivery speeds may vary for different locations</p>
+            <button class="btn-live-location" onclick="useLiveLocation()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z"/><circle cx="12" cy="10" r="3"/></svg>
+                Use current location
+            </button>
+            <div class="location-divider"><span>or enter a pincode</span></div>
+            <div class="pincode-input-group">
+                <input type="text" id="pincode-input" placeholder="Enter Pincode" maxlength="6">
+                <button type="button" class="btn-apply-pincode" onclick="applyPincode()">Apply</button>
+            </div>
+            <div style="text-align: center; margin-top: 18px;">
+                <a href="javascript:void(0)" onclick="clearLocation()" style="color: #666; font-size: 13.5px; text-decoration: underline;">Clear current location</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function clearLocation() {
+        document.getElementById('loc-pin').innerText = "";
+        document.getElementById('loc-city').innerText = "";
+        document.getElementById('pincode-input').value = "";
+        fetch(`/set-location/?clear=true`).then(() => {
+            document.getElementById('locationModal').style.display = 'none';
+        });
+    }
+
+    function applyPincode() {
+        const pin = document.getElementById('pincode-input').value;
+        if(pin && pin.length >= 4) {
+            document.getElementById('loc-pin').innerText = pin;
+            document.getElementById('loc-city').innerText = "Loading...";
+            fetch(`https://api.postalpincode.in/pincode/${pin}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data[0].Status === "Success") {
+                        const city = data[0].PostOffice[0].Name || data[0].PostOffice[0].District;
+                        document.getElementById('loc-city').innerText = city + " ";
+                    } else {
+                        document.getElementById('loc-city').innerText = "";
+                    }
+                    document.getElementById('locationModal').style.display = 'none';
+                })
+                .catch(() => {
+                    document.getElementById('loc-city').innerText = "";
+                    document.getElementById('locationModal').style.display = 'none';
+                });
+            
+            // Send to server to save session (if needed)
+            fetch(`/set-location/?pincode=${pin}`);
+        } else {
+            alert('Please enter a valid pincode');
+        }
+    }
+    function useLiveLocation() {
+        if ("geolocation" in navigator) {
+            document.getElementById('loc-pin').innerText = "Locating...";
+            document.getElementById('loc-city').innerText = "";
+            navigator.geolocation.getCurrentPosition(function(position) {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data && data.address && data.address.postcode) {
+                            const pincode = data.address.postcode;
+                            document.getElementById('loc-pin').innerText = pincode;
+                            
+                            // Fetch proper local name using postalpincode API
+                            document.getElementById('loc-city').innerText = "Loading... ";
+                            fetch(`https://api.postalpincode.in/pincode/${pincode}`)
+                                .then(res => res.json())
+                                .then(pindata => {
+                                    if (pindata && pindata[0].Status === "Success") {
+                                        const city = pindata[0].PostOffice[0].Name || pindata[0].PostOffice[0].District;
+                                        document.getElementById('loc-city').innerText = city ? city + " " : "";
+                                    } else {
+                                        document.getElementById('loc-city').innerText = "";
+                                    }
+                                })
+                                .catch(() => {
+                                    document.getElementById('loc-city').innerText = "";
+                                });
+                                
+                            document.getElementById('locationModal').style.display = 'none';
+                            
+                            // Send to server to save session
+                            fetch(`/set-location/?pincode=${pincode}&latitude=${lat}&longitude=${lon}`);
+                        } else {
+                            document.getElementById('loc-pin').innerText = "Not found";
+                            alert("Could not determine pincode from location.");
+                        }
+                    })
+                    .catch(error => {
+                        document.getElementById('loc-pin').innerText = "Error";
+                        alert("Failed to fetch location data.");
+                    });
+            }, function(error) {
+                document.getElementById('loc-pin').innerText = "";
+                alert('Please allow location access or enter pincode manually.');
+            });
+        } else {
+            alert("Geolocation is not supported by your browser.");
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        {% if nav_delivery_location.pincode %}
+            const savedPin = "{{ nav_delivery_location.pincode }}";
+            document.getElementById('loc-pin').innerText = savedPin;
+            fetch(`https://api.postalpincode.in/pincode/${savedPin}`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data[0].Status === "Success") {
+                        const city = data[0].PostOffice[0].Name || data[0].PostOffice[0].District;
+                        if(city) {
+                            document.getElementById('loc-city').innerText = city + " ";
+                        }
+                    }
+                })
+                .catch(() => {});
+        {% endif %}
+    });
+</script>

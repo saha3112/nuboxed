@@ -1,0 +1,677 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Retailer Portal Registration | CommerceOS</title>
+    <!-- Google Fonts & Phosphor Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="{% static 'shared/icon-fallback.css' %}">
+    <style>
+        :root {
+            --primary: #e04420;
+            --primary-hover: #b9381c;
+            --success: #10b981;
+            --success-hover: #059669;
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --border: rgba(255, 255, 255, 0.08);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --input-bg: rgba(15, 23, 42, 0.6);
+            --danger: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            overflow-x: hidden;
+        }
+
+        .register-container {
+            width: 100%;
+            max-width: 600px;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 40px;
+            backdrop-filter: blur(16px);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo-area {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .logo-img {
+            max-height: 48px;
+            object-fit: contain;
+            margin-bottom: 12px;
+        }
+
+        .logo-fallback {
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(to right, #e04420, #ee6a43);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+
+        .title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 6px;
+            text-align: center;
+        }
+
+        .subtitle {
+            font-size: 13.5px;
+            color: var(--text-muted);
+            text-align: center;
+            line-height: 1.5;
+            margin-bottom: 28px;
+        }
+
+        /* Wizard Tabs */
+        .wizard-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 28px;
+            gap: 16px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-family: inherit;
+            font-size: 13.5px;
+            font-weight: 600;
+            padding: 12px 4px;
+            cursor: pointer;
+            text-align: center;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .form-section {
+            display: none;
+        }
+
+        .form-section.active {
+            display: block;
+            animation: sectionSlide 0.25s ease-out;
+        }
+
+        @keyframes sectionSlide {
+            from { opacity: 0; transform: translateX(10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .full-width {
+            grid-column: span 2;
+        }
+
+        .form-field {
+            margin-bottom: 16px;
+        }
+
+        .label {
+            display: block;
+            font-size: 12.5px;
+            font-weight: 500;
+            color: var(--text-main);
+            margin-bottom: 6px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-muted);
+            font-size: 16px;
+        }
+
+        .input-field {
+            width: 100%;
+            background: var(--input-bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 12px 10px 38px;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 13.5px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        /* Styling native file input */
+        input[type="file"].input-field {
+            padding-left: 12px;
+        }
+
+        select.input-field {
+            padding-left: 12px;
+            cursor: pointer;
+            appearance: none;
+        }
+
+        .input-field:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(224, 68, 32, 0.15);
+        }
+
+        .error-message {
+            color: var(--danger);
+            font-size: 11.5px;
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .non-field-errors {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 13px;
+            color: #fca5a5;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        /* Action Buttons */
+        .wizard-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-top: 32px;
+            border-top: 1px solid var(--border);
+            padding-top: 20px;
+        }
+
+        .btn {
+            border-radius: 10px;
+            padding: 12px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            border: none;
+            outline: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: var(--success-hover);
+        }
+
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+        }
+
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.04);
+            border-color: var(--text-muted);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .footer-links {
+            text-align: center;
+            margin-top: 24px;
+            font-size: 13.5px;
+            color: var(--text-muted);
+        }
+
+        .footer-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+
+        .footer-link:hover {
+            color: var(--primary-hover);
+            text-decoration: underline;
+        }
+
+        /* ─── Seller Document Cards ─── */
+        .reg-docs-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .reg-doc-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--input-bg);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .reg-doc-card:hover {
+            border-color: var(--primary);
+            background: rgba(224, 68, 32,0.06);
+        }
+        .reg-doc-card.selected {
+            border-color: var(--success);
+            background: rgba(16,185,129,0.06);
+        }
+        .reg-doc-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: rgba(224, 68, 32,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+        .reg-doc-card.selected .reg-doc-icon {
+            background: rgba(16,185,129,0.1);
+            color: var(--success);
+        }
+        .reg-doc-info { min-width: 0; }
+        .reg-doc-title {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 2px;
+        }
+        .reg-doc-file-name {
+            font-size: 10.5px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .reg-doc-card.selected .reg-doc-file-name {
+            color: var(--success);
+            font-weight: 500;
+        }
+        @media (max-width: 640px) {
+            .reg-docs-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <div class="logo-area">
+            {% if global_brand_settings.logo_big %}
+                <img class="logo-img" src="{{ global_brand_settings.logo_big.url }}" alt="{{ global_brand_settings.brand_name }}">
+            {% else %}
+                <div class="logo-fallback">{{ global_brand_settings.brand_name|default:"CommerceOS" }}</div>
+            {% endif %}
+            <h1 class="title">Create Merchant Account</h1>
+            <p class="subtitle">Join as a platform retailer to instantly set up and launch your digital store catalog.</p>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" id="register-form">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="non-field-errors">
+                {% for err in form.non_field_errors %}
+                <div><i class="ph ph-warning-circle"></i> {{ err }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Tabs Header -->
+            <div class="wizard-tabs">
+                <button type="button" class="tab-btn active" id="tab-1-btn" onclick="switchTab(1)">
+                    <i class="ph ph-user-circle"></i> 1. Credentials
+                </button>
+                <button type="button" class="tab-btn" id="tab-2-btn" onclick="switchTab(2)">
+                    <i class="ph ph-briefcase"></i> 2. Business Info (Optional)
+                </button>
+            </div>
+
+            <!-- TAB 1: REQUIRED CREDENTIALS -->
+            <div class="form-section active" id="section-1">
+                <div class="form-grid">
+                    <div class="form-field full-width">
+                        <label class="label" for="id_business_name">Business / Company Name</label>
+                        <div class="input-wrapper">
+                            <i class="ph ph-storefront input-icon"></i>
+                            <input type="text" name="business_name" id="id_business_name" class="input-field" placeholder="e.g. BlueSky Merchandise Ltd" required value="{{ form.business_name.value|default:'' }}">
+                        </div>
+                        {% if form.business_name.errors %}
+                        <div class="error-message"><i class="ph ph-warning-circle"></i> {{ form.business_name.errors.as_text }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-field">
+                        <label class="label" for="id_email">Business Email Address</label>
+                        <div class="input-wrapper">
+                            <i class="ph ph-envelope input-icon"></i>
+                            <input type="email" name="email" id="id_email" class="input-field" placeholder="you@business.com" required value="{{ form.email.value|default:'' }}">
+                        </div>
+                        {% if form.email.errors %}
+                        <div class="error-message"><i class="ph ph-warning-circle"></i> {{ form.email.errors.as_text }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-field">
+                        <label class="label" for="id_phone_number">Contact Phone Number</label>
+                        <div class="input-wrapper">
+                            <i class="ph ph-phone input-icon"></i>
+                            <input type="text" name="phone_number" id="id_phone_number" class="input-field" placeholder="+1 (555) 123-4567" required value="{{ form.phone_number.value|default:'' }}">
+                        </div>
+                        {% if form.phone_number.errors %}
+                        <div class="error-message"><i class="ph ph-warning-circle"></i> {{ form.phone_number.errors.as_text }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-field">
+                        <label class="label" for="id_password">Create Password</label>
+                        <div class="input-wrapper">
+                            <i class="ph ph-lock input-icon"></i>
+                            <input type="password" name="password" id="id_password" class="input-field" placeholder="••••••••" required>
+                        </div>
+                        {% if form.password.errors %}
+                        <div class="error-message"><i class="ph ph-warning-circle"></i> {{ form.password.errors.as_text }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-field">
+                        <label class="label" for="id_repeat_password">Confirm Password</label>
+                        <div class="input-wrapper">
+                            <i class="ph ph-lock input-icon"></i>
+                            <input type="password" name="repeat_password" id="id_repeat_password" class="input-field" placeholder="••••••••" required>
+                        </div>
+                        {% if form.repeat_password.errors %}
+                        <div class="error-message"><i class="ph ph-warning-circle"></i> {{ form.repeat_password.errors.as_text }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: OPTIONAL BUSINESS DETAILS -->
+            <div class="form-section" id="section-2">
+                <div class="form-grid">
+                    <div class="form-field">
+                        <label class="label" for="id_vat_number">GST / VAT / Tax ID (Optional)</label>
+                        <div class="input-wrapper">
+                            <i class="ph ph-file-text input-icon"></i>
+                            <input type="text" name="vat_number" id="id_vat_number" class="input-field" placeholder="e.g. GSTIN12345" value="{{ form.vat_number.value|default:'' }}">
+                        </div>
+                        {% if form.vat_number.errors %}
+                        <div class="error-message"><i class="ph ph-warning-circle"></i> {{ form.vat_number.errors.as_text }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-field">
+                        <label class="label" for="id_business_type">Type of Entity (Optional)</label>
+                        <select name="business_type" id="id_business_type" class="input-field">
+                            {% for val, label in form.fields.business_type.choices %}
+                            <option value="{{ val }}" {% if form.business_type.value == val %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if form.business_type.errors %}
+                        <div class="error-message"><i class="ph ph-warning-circle"></i> {{ form.business_type.errors.as_text }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-field full-width">
+                        <label class="label" for="id_business_address">Street Address (Optional)</label>
+                        <div class="input-wrapper">
+                            <i class="ph ph-map-pin input-icon"></i>
+                            <textarea name="business_address" id="id_business_address" class="input-field" rows="2" placeholder="123 Business Rd, Suite 100" style="padding-left: 38px; resize: vertical; min-height: 52px;">{{ form.business_address.value|default:'' }}</textarea>
+                        </div>
+                        {% if form.business_address.errors %}
+                        <div class="error-message"><i class="ph ph-warning-circle"></i> {{ form.business_address.errors.as_text }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Seller Documents Section -->
+                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
+                    <div style="margin-bottom: 16px;">
+                        <div style="font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 4px;">
+                            <i class="ph ph-files" style="margin-right: 4px;"></i> Seller Verification Documents
+                        </div>
+                        <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">
+                            Upload documents to speed up your seller verification. All documents are optional during registration — you can upload them later from your profile.
+                        </p>
+                    </div>
+                    <div class="reg-docs-grid">
+                        <!-- Business Registration Certificate -->
+                        <label class="reg-doc-card" for="id_business_document">
+                            <div class="reg-doc-icon"><i class="ph ph-certificate"></i></div>
+                            <div class="reg-doc-info">
+                                <div class="reg-doc-title">Business Registration</div>
+                                <div class="reg-doc-file-name" id="business_document-fname">No file selected</div>
+                            </div>
+                            <input type="file" name="business_document" id="id_business_document" accept=".pdf,.png,.jpg,.jpeg" style="display:none;" onchange="updateDocLabel(this, 'business_document-fname')">
+                        </label>
+
+                        <!-- GST Certificate -->
+                        <label class="reg-doc-card" for="id_gst_certificate">
+                            <div class="reg-doc-icon"><i class="ph ph-receipt"></i></div>
+                            <div class="reg-doc-info">
+                                <div class="reg-doc-title">GST Certificate</div>
+                                <div class="reg-doc-file-name" id="gst_certificate-fname">No file selected</div>
+                            </div>
+                            <input type="file" name="gst_certificate" id="id_gst_certificate" accept=".pdf,.png,.jpg,.jpeg" style="display:none;" onchange="updateDocLabel(this, 'gst_certificate-fname')">
+                        </label>
+
+                        <!-- PAN Card -->
+                        <label class="reg-doc-card" for="id_pan_card">
+                            <div class="reg-doc-icon"><i class="ph ph-identification-card"></i></div>
+                            <div class="reg-doc-info">
+                                <div class="reg-doc-title">PAN Card / Tax ID</div>
+                                <div class="reg-doc-file-name" id="pan_card-fname">No file selected</div>
+                            </div>
+                            <input type="file" name="pan_card" id="id_pan_card" accept=".pdf,.png,.jpg,.jpeg" style="display:none;" onchange="updateDocLabel(this, 'pan_card-fname')">
+                        </label>
+
+                        <!-- Cancelled Cheque -->
+                        <label class="reg-doc-card" for="id_cancelled_cheque">
+                            <div class="reg-doc-icon"><i class="ph ph-bank"></i></div>
+                            <div class="reg-doc-info">
+                                <div class="reg-doc-title">Cancelled Cheque</div>
+                                <div class="reg-doc-file-name" id="cancelled_cheque-fname">No file selected</div>
+                            </div>
+                            <input type="file" name="cancelled_cheque" id="id_cancelled_cheque" accept=".pdf,.png,.jpg,.jpeg" style="display:none;" onchange="updateDocLabel(this, 'cancelled_cheque-fname')">
+                        </label>
+
+                        <!-- Address Proof -->
+                        <label class="reg-doc-card" for="id_address_proof">
+                            <div class="reg-doc-icon"><i class="ph ph-map-pin-area"></i></div>
+                            <div class="reg-doc-info">
+                                <div class="reg-doc-title">Address Proof</div>
+                                <div class="reg-doc-file-name" id="address_proof-fname">No file selected</div>
+                            </div>
+                            <input type="file" name="address_proof" id="id_address_proof" accept=".pdf,.png,.jpg,.jpeg" style="display:none;" onchange="updateDocLabel(this, 'address_proof-fname')">
+                        </label>
+
+                        <!-- Signature -->
+                        <label class="reg-doc-card" for="id_signature">
+                            <div class="reg-doc-icon"><i class="ph ph-pen-nib"></i></div>
+                            <div class="reg-doc-info">
+                                <div class="reg-doc-title">Signature</div>
+                                <div class="reg-doc-file-name" id="signature-fname">No file selected</div>
+                            </div>
+                            <input type="file" name="signature" id="id_signature" accept=".pdf,.png,.jpg,.jpeg" style="display:none;" onchange="updateDocLabel(this, 'signature-fname')">
+                        </label>
+
+                        <!-- MSME Certificate -->
+                        <label class="reg-doc-card" for="id_msme_certificate">
+                            <div class="reg-doc-icon"><i class="ph ph-factory"></i></div>
+                            <div class="reg-doc-info">
+                                <div class="reg-doc-title">MSME / Udyam</div>
+                                <div class="reg-doc-file-name" id="msme_certificate-fname">No file selected</div>
+                            </div>
+                            <input type="file" name="msme_certificate" id="id_msme_certificate" accept=".pdf,.png,.jpg,.jpeg" style="display:none;" onchange="updateDocLabel(this, 'msme_certificate-fname')">
+                        </label>
+
+                        <!-- FSSAI License -->
+                        <label class="reg-doc-card" for="id_fssai_license">
+                            <div class="reg-doc-icon"><i class="ph ph-cookie"></i></div>
+                            <div class="reg-doc-info">
+                                <div class="reg-doc-title">FSSAI License</div>
+                                <div class="reg-doc-file-name" id="fssai_license-fname">No file selected</div>
+                            </div>
+                            <input type="file" name="fssai_license" id="id_fssai_license" accept=".pdf,.png,.jpg,.jpeg" style="display:none;" onchange="updateDocLabel(this, 'fssai_license-fname')">
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wizard Control Buttons -->
+            <div class="wizard-actions">
+                <button type="button" class="btn btn-outline" id="prev-btn" onclick="switchTab(1)" style="display: none;">
+                    <i class="ph ph-arrow-left"></i> Back
+                </button>
+                
+                <!-- This button always submits Step 1, letting them skip optional fields -->
+                <button type="submit" class="btn btn-outline" id="skip-btn" style="border-color: var(--primary); color: var(--primary); margin-right: auto;">
+                    <i class="ph ph-skip-forward"></i> Register & Skip Details
+                </button>
+                
+                <button type="button" class="btn btn-primary" id="next-btn" onclick="switchTab(2)">
+                    Next Step <i class="ph ph-arrow-right"></i>
+                </button>
+
+                <button type="submit" class="btn btn-success" id="submit-all-btn" style="display: none;">
+                    <i class="ph ph-check-square"></i> Submit & Register
+                </button>
+            </div>
+        </form>
+
+        <div class="footer-links">
+            Already have a merchant account? <a href="{% url 'retailers:login' %}" class="footer-link">Log In</a>
+        </div>
+    </div>
+
+    <script>
+        let currentTab = 1;
+
+        function switchTab(tabNum) {
+            currentTab = tabNum;
+            
+            // Toggle active sections
+            document.getElementById("section-1").classList.toggle("active", tabNum === 1);
+            document.getElementById("section-2").classList.toggle("active", tabNum === 2);
+            
+            // Toggle active tab header buttons
+            document.getElementById("tab-1-btn").classList.toggle("active", tabNum === 1);
+            document.getElementById("tab-2-btn").classList.toggle("active", tabNum === 2);
+            
+            // Toggle navigation button visibility
+            document.getElementById("prev-btn").style.display = tabNum === 2 ? "flex" : "none";
+            document.getElementById("next-btn").style.display = tabNum === 1 ? "flex" : "none";
+            document.getElementById("submit-all-btn").style.display = tabNum === 2 ? "flex" : "none";
+            
+            // Skip button is visible on both, but positioned differently
+            if (tabNum === 2) {
+                document.getElementById("skip-btn").style.marginRight = "0";
+            } else {
+                document.getElementById("skip-btn").style.marginRight = "auto";
+            }
+        }
+
+        // On form submit, make sure optional fields are cleared if skip was clicked
+        document.getElementById("skip-btn").addEventListener("click", () => {
+            // Remove required checks on step 1 elements if any are left
+            document.getElementById("id_business_name").required = true;
+            document.getElementById("id_email").required = true;
+            document.getElementById("id_phone_number").required = true;
+            document.getElementById("id_password").required = true;
+            document.getElementById("id_repeat_password").required = true;
+        });
+
+        // Update document card label when a file is selected
+        function updateDocLabel(input, labelId) {
+            const label = document.getElementById(labelId);
+            const card = input.closest('.reg-doc-card');
+            if (input.files && input.files.length > 0) {
+                label.textContent = input.files[0].name;
+                if (card) card.classList.add('selected');
+            } else {
+                label.textContent = 'No file selected';
+                if (card) card.classList.remove('selected');
+            }
+        }
+    </script>
+<script src="{% static 'common/password-toggle.js' %}"></script>
+</body>
+</html>

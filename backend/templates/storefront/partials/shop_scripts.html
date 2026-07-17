@@ -1,0 +1,128 @@
+<script>
+(function() {
+    // 1. Category Menu Accordions
+    document.querySelectorAll('.category-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const item = btn.closest('.category-item');
+            const open = item.classList.toggle('open');
+            btn.querySelector('b').textContent = open ? '−' : '+';
+        });
+    });
+    
+    // Set initial toggle icons
+    document.querySelectorAll('.category-item').forEach(item => {
+        const isOpen = item.classList.contains('open');
+        const b = item.querySelector('.category-toggle b');
+        if (b) {
+            b.textContent = isOpen ? '−' : '+';
+        }
+    });
+
+    // 2. Price Range Slider
+    const minPrice = document.getElementById('minPrice');
+    const maxPrice = document.getElementById('maxPrice');
+    const minPriceLabel = document.getElementById('minPriceLabel');
+    const maxPriceLabel = document.getElementById('maxPriceLabel');
+    const priceRange = document.getElementById('priceRange');
+
+    function updatePriceSlider(changed) {
+        if (!minPrice || !maxPrice) return;
+        let min = parseFloat(minPrice.value);
+        let max = parseFloat(maxPrice.value);
+        const minLimit = parseFloat(minPrice.min);
+        const maxLimit = parseFloat(minPrice.max);
+        const total = maxLimit - minLimit;
+        
+        // Maintain a small gap of 5 between sliders
+        const gap = 5;
+        if (max - min < gap) {
+            if (changed === 'min') {
+                min = max - gap;
+                minPrice.value = min;
+            } else {
+                max = min + gap;
+                maxPrice.value = max;
+            }
+        }
+        
+        if (total > 0) {
+            priceRange.style.left = ((min - minLimit) / total * 100) + '%';
+            priceRange.style.right = (100 - ((max - minLimit) / total * 100)) + '%';
+        }
+        minPriceLabel.textContent = '$' + min.toFixed(2);
+        maxPriceLabel.textContent = '$' + max.toFixed(2);
+    }
+
+    if (minPrice && maxPrice) {
+        minPrice.addEventListener('input', () => updatePriceSlider('min'));
+        maxPrice.addEventListener('input', () => updatePriceSlider('max'));
+        
+        // Submit form when user finishes dragging
+        minPrice.addEventListener('change', () => minPrice.form.submit());
+        maxPrice.addEventListener('change', () => maxPrice.form.submit());
+        
+        updatePriceSlider();
+    }
+
+    // 3. Grid / List View Toggle
+    const products = document.getElementById('products');
+    const gridBtn = document.getElementById('gridBtn');
+    const listBtn = document.getElementById('listBtn');
+
+    if (products && gridBtn && listBtn) {
+        const savedView = localStorage.getItem('nuboxed_view_mode') || 'grid';
+        if (savedView === 'list') {
+            products.classList.add('list-view');
+            listBtn.classList.add('active');
+            gridBtn.classList.remove('active');
+        } else {
+            products.classList.remove('list-view');
+            gridBtn.classList.add('active');
+            listBtn.classList.remove('active');
+        }
+
+        gridBtn.addEventListener('click', () => {
+            products.classList.remove('list-view');
+            gridBtn.classList.add('active');
+            listBtn.classList.remove('active');
+            localStorage.setItem('nuboxed_view_mode', 'grid');
+        });
+
+        listBtn.addEventListener('click', () => {
+            products.classList.add('list-view');
+            listBtn.classList.add('active');
+            gridBtn.classList.remove('active');
+            localStorage.setItem('nuboxed_view_mode', 'list');
+        });
+    }
+
+    // 4. Mobile Offcanvas Filter
+    const filterBtn = document.getElementById('filterBtn');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('overlay');
+
+    if (filterBtn && sidebar && overlay) {
+        function openFilter() {
+            sidebar.classList.add('open');
+            overlay.classList.add('open');
+        }
+        function closeFilter() {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
+        }
+        filterBtn.addEventListener('click', openFilter);
+        overlay.addEventListener('click', closeFilter);
+    }
+
+    // 5. Quick View Click Handler Fallback
+    document.addEventListener('click', (event) => {
+        const trigger = event.target.closest('.quick-view');
+        if (trigger) {
+            const card = trigger.closest('.product-card');
+            if (card && typeof openQuickView === 'function') {
+                openQuickView(card);
+            }
+        }
+    });
+})();
+</script>

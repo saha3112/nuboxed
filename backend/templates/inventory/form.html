@@ -1,0 +1,143 @@
+{% extends "retailer/base.html" %}
+
+{% block content %}
+<div class="ra-card" style="max-width: 800px;">
+    <div class="ra-card-header">
+        <span class="ra-card-title">{{ page_title }}</span>
+    </div>
+    <div class="ra-card-body">
+        <form method="post" enctype="multipart/form-data" class="ra-form">
+            {% csrf_token %}
+            {% if is_multi_delivery_location %}
+            {{ delivery_country_meta|json_script:"delivery-country-meta" }}
+            {{ delivery_country_defaults|json_script:"delivery-country-defaults" }}
+            {{ formset.management_form }}
+            <p style="color:var(--text-muted);font-size:13px;margin:0 0 16px;">Add multiple delivery locations in one submission. Use “Add another location” for more rows.</p>
+            <div id="delivery-location-rows">
+                {% for location_form in formset %}
+                <div class="ra-card" data-location-row style="margin-bottom:16px;border:1px solid var(--border);">
+                    <div class="ra-card-header"><span class="ra-card-title">Location {{ forloop.counter }}</span></div>
+                    <div class="ra-card-body">
+                        <div class="ra-form-grid">
+                            {% for field in location_form %}
+                            <div class="ra-field">
+                                <label class="ra-label">{{ field.label }}</label>
+                                {{ field }}
+                                {% if field.errors %}<div class="ra-field-error">{{ field.errors.as_text }}</div>{% endif %}
+                            </div>
+                            {% endfor %}
+                        </div>
+                        <div style="display:flex;align-items:center;gap:10px;margin-top:12px;">
+                            <button type="button" class="ra-btn ra-btn-outline ra-btn-sm" data-geocode-location><i class="ph ph-crosshair"></i> Find coordinates automatically</button>
+                            <span data-geocode-status style="font-size:12px;color:var(--text-muted);"></span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <button type="button" class="ra-btn ra-btn-outline ra-btn-sm" id="add-delivery-location-row"><i class="ph ph-plus"></i> Add another location</button>
+            <template id="empty-delivery-location-form">
+                <div class="ra-card" data-location-row style="margin-bottom:16px;border:1px solid var(--border);">
+                    <div class="ra-card-header"><span class="ra-card-title">Location __number__</span></div>
+                    <div class="ra-card-body"><div class="ra-form-grid">
+                        {% for field in formset.empty_form %}
+                        <div class="ra-field"><label class="ra-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="ra-field-error">{{ field.errors.as_text }}</div>{% endif %}</div>
+                        {% endfor %}
+                    </div><div style="display:flex;align-items:center;gap:10px;margin-top:12px;"><button type="button" class="ra-btn ra-btn-outline ra-btn-sm" data-geocode-location><i class="ph ph-crosshair"></i> Find coordinates automatically</button><span data-geocode-status style="font-size:12px;color:var(--text-muted);"></span></div></div>
+                </div>
+            </template>
+            {% else %}
+            <div class="ra-form-grid">
+                {% for field in form %}
+                <div class="ra-field">
+                    <label class="ra-label">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}
+                    <div class="ra-field-error">{{ field.errors.as_text }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            <button type="submit" class="ra-btn ra-btn-primary" style="margin-top: 8px;">
+                <i class="ph ph-floppy-disk"></i> {% if is_multi_delivery_location %}Save locations{% else %}Save{% endif %}
+            </button>
+        </form>
+    </div>
+</div>
+{% if is_multi_delivery_location %}
+<script>
+(() => {
+    const total = document.getElementById("id_locations-TOTAL_FORMS");
+    const rows = document.getElementById("delivery-location-rows");
+    const template = document.getElementById("empty-delivery-location-form");
+    const add = document.getElementById("add-delivery-location-row");
+    if (!total || !rows || !template || !add) return;
+    const countryMeta = JSON.parse(document.getElementById("delivery-country-meta")?.textContent || "{}");
+    const countryDefaults = JSON.parse(document.getElementById("delivery-country-defaults")?.textContent || "{}");
+
+    const findField = (row, suffix) => row.querySelector(`[name$="-${suffix}"]`);
+    const setVisible = (field, visible) => {
+        const wrapper = field?.closest(".ra-field");
+        if (wrapper) wrapper.style.display = visible ? "" : "none";
+    };
+    const setLabel = (field, label) => {
+        const labelEl = field?.closest(".ra-field")?.querySelector(".ra-label");
+        if (labelEl && label) labelEl.textContent = label;
+    };
+    const applyCountry = (row, clear = false) => {
+        const country = findField(row, "country_code");
+        const config = countryDefaults[country?.value] || {};
+        const labels = config.labels || {};
+        const visibility = config.visibility || {};
+        ["state", "city", "postal_code", "postal_code_prefix"].forEach((name) => {
+            const field = findField(row, name);
+            setLabel(field, labels[name]);
+            setVisible(field, visibility[name] !== false);
+            if (clear && field && !field.dataset.touched) field.value = "";
+        });
+    };
+    const geocode = async (row) => {
+        const country = findField(row, "country_code");
+        const values = ["name", "city", "state", "postal_code", "country_code"].map((name) => findField(row, name)?.value).filter(Boolean);
+        const status = row.querySelector("[data-geocode-status]");
+        const latitude = findField(row, "latitude");
+        const longitude = findField(row, "longitude");
+        if (values.length < 2) { if (status) status.textContent = "Enter a city or postal code first."; return; }
+        if (status) status.textContent = "Finding coordinates…";
+        try {
+            const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=${encodeURIComponent(country?.value || "")}&q=${encodeURIComponent(values.join(", "))}`);
+            const result = await response.json();
+            if (!result.length) { if (status) status.textContent = "Location not found. Enter coordinates manually."; return; }
+            latitude.value = result[0].lat;
+            longitude.value = result[0].lon;
+            latitude.dataset.auto = "1";
+            longitude.dataset.auto = "1";
+            if (status) status.textContent = "Coordinates filled automatically.";
+        } catch (error) {
+            if (status) status.textContent = "Could not find coordinates. You can enter them manually.";
+        }
+    };
+    const wireRow = (row) => {
+        const country = findField(row, "country_code");
+        if (!country || row.dataset.wired === "1") return;
+        row.dataset.wired = "1";
+        country.addEventListener("change", () => applyCountry(row, true));
+        row.querySelectorAll("input, select").forEach((field) => field.addEventListener("input", () => { field.dataset.touched = "1"; }));
+        row.querySelector("[data-geocode-location]")?.addEventListener("click", () => geocode(row));
+        applyCountry(row);
+    };
+    rows.querySelectorAll("[data-location-row]").forEach(wireRow);
+    add.addEventListener("click", () => {
+        const index = Number(total.value);
+        const html = template.innerHTML.replaceAll("__prefix__", index).replace("__number__", index + 1);
+        const wrapper = document.createElement("div");
+        wrapper.innerHTML = html;
+        rows.appendChild(wrapper.firstElementChild);
+        wireRow(rows.lastElementChild);
+        total.value = index + 1;
+    });
+})();
+</script>
+{% endif %}
+{% endblock %}

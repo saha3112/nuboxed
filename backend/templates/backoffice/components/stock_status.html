@@ -1,0 +1,328 @@
+{% comment %}
+Stock Status Display Component
+Usage: {% include "backoffice/components/stock_status.html" with product=product variant=variant %}
+{% endcomment %}
+
+{% if product %}
+    <div class="stock-status-widget">
+        <h4 class="widget-title">Stock Status</h4>
+
+        {% if variant %}
+            {% comment %}Variant-specific stock{% endcomment %}
+            {% with stock_items=variant.stock_items.all %}
+                {% if stock_items %}
+                    <div class="stock-summary">
+                        {% with total_stock=stock_items|dictsort:"on_hand_quantity"|first %}
+                            {% with total_reserved=stock_items|dictsort:"reserved_quantity"|first %}
+                                <div class="summary-row">
+                                    <span class="label">Total In Stock:</span>
+                                    <span class="value stock-on-hand">
+                                        {% if total_stock %}
+                                            <strong>{{ total_stock.on_hand_quantity|default:"0" }}</strong>
+                                        {% else %}
+                                            <strong>0</strong>
+                                        {% endif %}
+                                        units
+                                    </span>
+                                </div>
+                                <div class="summary-row">
+                                    <span class="label">Reserved:</span>
+                                    <span class="value stock-reserved">
+                                        {% if total_reserved %}
+                                            <strong>{{ total_reserved.reserved_quantity|default:"0" }}</strong>
+                                        {% else %}
+                                            <strong>0</strong>
+                                        {% endif %}
+                                        units
+                                    </span>
+                                </div>
+                            {% endwith %}
+                        {% endwith %}
+                    </div>
+
+                    <div class="warehouse-breakdown">
+                        <h5 class="breakdown-title">Warehouse Breakdown (Read-Only)</h5>
+                        <div class="warehouse-list">
+                            {% for stock_item in stock_items %}
+                                <div class="warehouse-row">
+                                    <div class="warehouse-info">
+                                        <div class="warehouse-name">{{ stock_item.warehouse.name }}</div>
+                                        <div class="warehouse-details">
+                                            <span class="detail-item">
+                                                <span class="detail-label">On Hand:</span>
+                                                <span class="detail-value">{{ stock_item.on_hand_quantity }}</span>
+                                            </span>
+                                            <span class="detail-separator">•</span>
+                                            <span class="detail-item">
+                                                <span class="detail-label">Reserved:</span>
+                                                <span class="detail-value">{{ stock_item.reserved_quantity }}</span>
+                                            </span>
+                                            <span class="detail-separator">•</span>
+                                            <span class="detail-item">
+                                                <span class="detail-label">Damaged:</span>
+                                                <span class="detail-value">{{ stock_item.damaged_quantity }}</span>
+                                            </span>
+                                            <span class="detail-separator">•</span>
+                                            <span class="detail-item">
+                                                <span class="detail-label">Available:</span>
+                                                <strong class="detail-value">{{ stock_item.available_quantity }}</strong>
+                                            </span>
+                                        </div>
+                                        {% if stock_item.is_low_stock %}
+                                            <div class="low-stock-indicator">
+                                                <i class="ph ph-warning"></i> Low stock alert
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="info-message">
+                        <i class="ph ph-info"></i>
+                        <span>Stock is managed through the warehouse system and updated automatically when orders are placed. For manual adjustments, contact inventory management.</span>
+                    </div>
+                {% else %}
+                    <div class="no-stock-message">
+                        <p>No stock items created for this variant yet. Stock will be tracked once inventory items are added.</p>
+                    </div>
+                {% endif %}
+            {% endwith %}
+        {% else %}
+            {% comment %}Product-level stock (all variants){% endcomment %}
+            {% with all_stock_items=product.stock_items.all %}
+                {% if all_stock_items %}
+                    <div class="stock-summary">
+                        {% with total_on_hand=product.stock_items.all|length %}
+                            <div class="summary-row">
+                                <span class="label">Total Units Tracked:</span>
+                                <span class="value stock-on-hand">
+                                    <strong>{{ total_on_hand }}</strong> warehouse locations
+                                </span>
+                            </div>
+                        {% endwith %}
+                    </div>
+
+                    <div class="warehouse-breakdown">
+                        <h5 class="breakdown-title">Stock Across Warehouses (Read-Only)</h5>
+                        <div class="warehouse-list">
+                            {% for stock_item in all_stock_items %}
+                                <div class="warehouse-row">
+                                    <div class="warehouse-info">
+                                        <div class="warehouse-name">{{ stock_item.warehouse.name }}</div>
+                                        <div class="warehouse-details">
+                                            <span class="detail-item">
+                                                <span class="detail-label">On Hand:</span>
+                                                <span class="detail-value">{{ stock_item.on_hand_quantity }}</span>
+                                            </span>
+                                            <span class="detail-separator">•</span>
+                                            <span class="detail-item">
+                                                <span class="detail-label">Reserved:</span>
+                                                <span class="detail-value">{{ stock_item.reserved_quantity }}</span>
+                                            </span>
+                                            <span class="detail-separator">•</span>
+                                            <span class="detail-item">
+                                                <span class="detail-label">Available:</span>
+                                                <strong class="detail-value">{{ stock_item.available_quantity }}</strong>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="info-message">
+                        <i class="ph ph-info"></i>
+                        <span>Stock information is read-only. Manage inventory through the Stock management system and warehouse controls.</span>
+                    </div>
+                {% else %}
+                    <div class="no-stock-message">
+                        <p>No stock tracking has been set up for this product. Create stock items in the Inventory section to track inventory.</p>
+                    </div>
+                {% endif %}
+            {% endwith %}
+        {% endif %}
+    </div>
+{% endif %}
+
+<style>
+    .stock-status-widget {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 20px;
+        margin-top: 24px;
+    }
+
+    .widget-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text-main);
+        margin: 0 0 16px 0;
+    }
+
+    .stock-summary {
+        display: grid;
+        gap: 12px;
+        margin-bottom: 20px;
+        padding: 16px;
+        background: var(--surface-soft);
+        border-radius: 8px;
+    }
+
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .summary-row .label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-main);
+    }
+
+    .summary-row .value {
+        font-size: 14px;
+        color: var(--text-main);
+    }
+
+    .summary-row .value strong {
+        font-size: 18px;
+        margin-right: 4px;
+    }
+
+    .stock-on-hand {
+        color: #22c55e;
+    }
+
+    .stock-reserved {
+        color: #f59e0b;
+    }
+
+    .warehouse-breakdown {
+        margin-bottom: 20px;
+    }
+
+    .breakdown-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--text-main);
+        margin: 0 0 12px 0;
+    }
+
+    .warehouse-list {
+        display: grid;
+        gap: 12px;
+    }
+
+    .warehouse-row {
+        background: var(--surface-soft);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 12px;
+    }
+
+    .warehouse-info {
+        display: grid;
+        gap: 8px;
+    }
+
+    .warehouse-name {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--text-main);
+    }
+
+    .warehouse-details {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        font-size: 12px;
+        color: var(--muted);
+    }
+
+    .detail-item {
+        display: inline-flex;
+        gap: 4px;
+    }
+
+    .detail-label {
+        color: var(--muted);
+        font-weight: 500;
+    }
+
+    .detail-value {
+        color: var(--text-main);
+        font-weight: 600;
+    }
+
+    .detail-separator {
+        color: var(--border);
+    }
+
+    .low-stock-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 8px;
+        padding: 6px 10px;
+        background: rgba(245, 158, 11, 0.1);
+        color: #f59e0b;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .low-stock-indicator i {
+        font-size: 14px;
+    }
+
+    .info-message {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px;
+        background: rgba(224, 68, 32, 0.05);
+        border-radius: 8px;
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.5;
+    }
+
+    .info-message i {
+        flex-shrink: 0;
+        margin-top: 2px;
+        color: var(--primary);
+    }
+
+    .no-stock-message {
+        padding: 20px;
+        text-align: center;
+        background: var(--surface-soft);
+        border-radius: 8px;
+        color: var(--muted);
+    }
+
+    .no-stock-message p {
+        margin: 0;
+        font-size: 14px;
+    }
+
+    /* Dark mode adjustments */
+    body.dark-mode .warehouse-row {
+        background: #172033;
+        border-color: #243041;
+    }
+
+    body.dark-mode .stock-summary {
+        background: #172033;
+        border-color: #243041;
+    }
+
+    body.dark-mode .info-message {
+        background: rgba(224, 68, 32, 0.08);
+    }
+</style>

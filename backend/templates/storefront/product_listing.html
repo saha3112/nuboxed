@@ -1,0 +1,87 @@
+{% extends "storefront/base.html" %}
+
+{% block content %}
+{% include "storefront/partials/reference_shop_styles.html" %}
+
+<section class="page-head shop-page-head">
+  <div class="container">
+    <h1>{{ page_title|default:"All Products" }}</h1>
+    <div class="breadcrumb">
+        <a href="{% url 'storefront:home' %}">Home</a>
+        <span>/</span>
+        <span>{% if retailer %}Retailer Shop{% else %}Shop{% endif %}</span>
+    </div>
+  </div>
+</section>
+
+{% if location_msg %}
+<div class="container" style="margin-top: 20px; margin-bottom: 0;">
+    <div style="background: #fff1ec; border: 1px solid #f1c3b5; padding: 15px 20px; border-radius: 8px; color: #b9381c; text-align: center; display: flex; justify-content: center; align-items: center; gap: 15px; font-weight: 500;">
+        <span><i class="fa-solid fa-location-dot"></i> {{ location_msg }}</span>
+        <a href="{{ location_url }}" style="background: #e04420; color: #fff; padding: 6px 16px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: 600; box-shadow: 0 2px 4px rgba(224,68,32,0.3); transition: background 0.2s;" onmouseover="this.style.background='#b9381c'" onmouseout="this.style.background='#e04420'">Show All Products</a>
+    </div>
+</div>
+{% endif %}
+
+<div class="overlay" id="overlay"></div>
+
+<div class="container page reference-shop-page">
+  <aside class="sidebar" id="sidebar">
+    {% include "storefront/partials/sidebar_filters.html" %}
+  </aside>
+
+  <main>
+
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <button class="mobile-filter-btn" id="filterBtn" type="button">☰ Filter</button>
+        <button class="view-btn active" id="gridBtn" title="Grid view" type="button"><i class="fa-solid fa-grip"></i></button>
+        <button class="view-btn" id="listBtn" title="List view" type="button"><i class="fa-solid fa-list"></i></button>
+        <span class="product-count">There are {{ products_count }} products.</span>
+      </div>
+      <form method="get" class="sort">
+        <label for="sortSelect">Sort by:</label>
+        <input type="hidden" name="q" value="{{ search_query }}">
+        <input type="hidden" name="category" value="{{ selected_category }}">
+        <input type="hidden" name="store" value="{{ selected_store }}">
+        {% if in_stock_only %}<input type="hidden" name="in_stock" value="1">{% endif %}
+        {% for id in selected_category_ids %}<input type="hidden" name="category_id" value="{{ id }}">{% endfor %}
+        {% for id in selected_brand_ids %}<input type="hidden" name="brand_id" value="{{ id }}">{% endfor %}
+        {% for id in selected_color_ids %}<input type="hidden" name="color_id" value="{{ id }}">{% endfor %}
+        <input type="hidden" name="min_price" value="{{ min_price }}">
+        <input type="hidden" name="max_price" value="{{ max_price }}">
+        <select id="sortSelect" name="sort" onchange="this.form.submit()">
+          <option value="relevance" {% if sort_by == "relevance" %}selected{% endif %}>Relevance</option>
+          <option value="price_asc" {% if sort_by == "price_asc" %}selected{% endif %}>Price, low to high</option>
+          <option value="price_desc" {% if sort_by == "price_desc" %}selected{% endif %}>Price, high to low</option>
+          <option value="newest" {% if sort_by == "newest" %}selected{% endif %}>Newest</option>
+        </select>
+      </form>
+    </div>
+
+    <section class="product-grid" id="products">
+      {% for product in products %}
+        {% include "storefront/partials/product_card.html" with product=product listing_card=True store_page=store_page %}
+      {% empty %}
+        <p>No products matched your filters.</p>
+      {% endfor %}
+    </section>
+    
+    {% if other_location_msg %}
+    <div style="margin-top: 2rem; padding: 20px; text-align: center; background: var(--bg-alt); border-radius: 8px;">
+        <p style="margin-bottom: 10px; color: var(--text);">No more products found in your current location.</p>
+        <a href="{{ other_location_url }}" class="btn" style="display: inline-block;">{{ other_location_msg }}</a>
+    </div>
+    {% endif %}
+
+    <div class="showing">{% if products_count %}Showing 1-{{ products_count }} of {{ products_count }} item(s){% else %}Showing 0 item(s){% endif %}</div>
+
+  </main>
+</div>
+
+{% include "storefront/partials/quickview_modal.html" %}
+{% endblock %}
+
+{% block extra_scripts %}
+{% include "storefront/partials/shop_scripts.html" %}
+{% endblock %}

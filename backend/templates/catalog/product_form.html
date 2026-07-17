@@ -1,0 +1,1414 @@
+{% extends "retailer/base.html" %}
+{% load currency_tags %}
+
+{% block content %}
+<style>
+    .ra-btn-media-library {
+        border-color: var(--primary) !important;
+        color: var(--primary) !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        gap: 8px !important;
+        font-weight: 600 !important;
+        background: transparent !important;
+        transition: all 0.2s ease !important;
+    }
+    .ra-btn-media-library:hover {
+        background: var(--primary) !important;
+        color: #fff !important;
+        border-color: var(--primary) !important;
+    }
+</style>
+<div class="ra-card ra-hero" style="margin-bottom:20px;">
+    <div class="ra-card-body ra-hero-body">
+        <div>
+            <div class="ra-hero-title">{{ page_title }}</div>
+            <div class="ra-hero-copy">Manage core details, variants, images, videos, and 360 media without leaving this page.</div>
+        </div>
+        {% if object %}
+        <span class="ra-badge info">SKU {{ object.sku }}</span>
+        {% endif %}
+    </div>
+</div>
+
+<div class="ra-split">
+
+    <!-- Product form -->
+    <div class="ra-card" style="border-radius:16px;">
+        <div class="ra-card-header">
+            <span class="ra-card-title">{{ page_title }}</span>
+        </div>
+        <div class="ra-card-body">
+            <form method="post" enctype="multipart/form-data" class="ra-form" id="retailer-product-form">
+                {% csrf_token %}
+                {{ form.phone_variant_id }}
+                {{ form.variants_payload }}
+                {{ form.price }}
+                {{ form.discount_price }}
+                {{ form.product_video_urls }}
+                <div id="retailer-remove-asset-inputs"></div>
+                <div class="ra-field">
+                    <label class="ra-label">Product Name</label>
+                    {{ form.name }}
+                    {% if form.name.errors %}
+                    <div class="ra-field-error">{{ form.name.errors.as_text }}</div>
+                    {% endif %}
+                </div>
+                {% if form.sale_mode %}<div class="ra-section" style="margin-top: 18px;">
+                    <div class="ra-section-title">Sale Countdown</div>
+                    <div class="ra-section-copy">Choose global/category rules or override them for this product manually.</div>
+                    <div class="ra-form-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
+                        <div class="ra-field"><label class="ra-label">Countdown mode</label>{{ form.sale_mode }}{% if form.sale_mode.errors %}<div class="ra-field-error">{{ form.sale_mode.errors.as_text }}</div>{% endif %}</div>
+                        {% if form.sale_title %}<div class="ra-field sale-manual-field"><label class="ra-label">Sale message</label>{{ form.sale_title }}{% if form.sale_title.errors %}<div class="ra-field-error">{{ form.sale_title.errors.as_text }}</div>{% endif %}</div>{% endif %}
+                        <div class="ra-field sale-manual-field"><label class="ra-label">Sale ends at</label>{{ form.sale_ends_at }}{% if form.sale_ends_at.errors %}<div class="ra-field-error">{{ form.sale_ends_at.errors.as_text }}</div>{% endif %}</div>
+                        {{ form.sale_override_enabled.as_hidden }}
+                    </div>
+                </div>{% endif %}
+                <script>
+                    (function () {
+                        const mode = document.getElementById('id_sale_mode');
+                        const fields = document.querySelectorAll('.sale-manual-field');
+                        function syncSaleMode() { fields.forEach((field) => { field.style.display = mode && mode.value === 'manual' ? '' : 'none'; }); }
+                        mode && mode.addEventListener('change', syncSaleMode); syncSaleMode();
+                    })();
+                </script>
+                {% for field in form %}
+                {% if field.name != "name" and field.name != "model_name" and field.name != "store" and field.name != "price" and field.name != "discount_price" and field.name != "sale_mode" and field.name != "sale_title" and field.name != "sale_ends_at" and field.name != "sale_override_enabled" and field.name != "product_images" and field.name != "product_videos" and field.name != "product_360_images" and field.name != "product_video_urls" and field.name != "remove_asset_ids" and field.name != "phone_variant_id" and field.name != "variants_payload" and field.name != "default_variant" and field.name != "tax_rate" and field.name != "product_type" and field.name != "weight" and field.name != "length" and field.name != "width" and field.name != "height" and field.name != "warranty" and field.name|slice:":4" != "attr_" %}
+                <div class="ra-field">
+                    <label class="ra-label">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}
+                    <div class="ra-field-error">{{ field.errors.as_text }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                {% endfor %}
+
+                <div class="ra-section" style="margin-top: 18px;">
+                    <div class="ra-section-title">Product Specs</div>
+                    <div class="ra-section-copy">Keep pricing, shipping, and catalog metadata compact and easier to scan.</div>
+                    <div class="ra-form-grid" style="grid-template-columns: repeat(2, minmax(0, 1fr));">
+                        <div class="ra-field">
+                            <label class="ra-label">Tax Rate (%)</label>
+                            {{ form.tax_rate }}
+                            {% if form.tax_rate.errors %}<div class="ra-field-error">{{ form.tax_rate.errors.as_text }}</div>{% endif %}
+                        </div>
+                        <div class="ra-field">
+                            <label class="ra-label">Product Type</label>
+                            {{ form.product_type }}
+                            {% if form.product_type.errors %}<div class="ra-field-error">{{ form.product_type.errors.as_text }}</div>{% endif %}
+                        </div>
+                        <div class="ra-field">
+                            <label class="ra-label">Weight (kg)</label>
+                            {{ form.weight }}
+                            {% if form.weight.errors %}<div class="ra-field-error">{{ form.weight.errors.as_text }}</div>{% endif %}
+                        </div>
+                        <div class="ra-field">
+                            <label class="ra-label">Warranty</label>
+                            {{ form.warranty }}
+                            {% if form.warranty.errors %}<div class="ra-field-error">{{ form.warranty.errors.as_text }}</div>{% endif %}
+                        </div>
+                    </div>
+                    <div class="ra-form-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr)); margin-top: 12px;">
+                        <div class="ra-field">
+                            <label class="ra-label">Length (cm)</label>
+                            {{ form.length }}
+                            {% if form.length.errors %}<div class="ra-field-error">{{ form.length.errors.as_text }}</div>{% endif %}
+                        </div>
+                        <div class="ra-field">
+                            <label class="ra-label">Width (cm)</label>
+                            {{ form.width }}
+                            {% if form.width.errors %}<div class="ra-field-error">{{ form.width.errors.as_text }}</div>{% endif %}
+                        </div>
+                        <div class="ra-field">
+                            <label class="ra-label">Height (cm)</label>
+                            {{ form.height }}
+                            {% if form.height.errors %}<div class="ra-field-error">{{ form.height.errors.as_text }}</div>{% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ra-section" style="margin-top: 18px;">
+                    <div class="ra-section-title">Device Variant (Optional)</div>
+                    <div class="ra-section-copy">Pick the device family and model first. Matching storage and color rows will be added below and can be edited per sellable variant.</div>
+                    <div class="ra-form-grid" style="grid-template-columns: 1fr 1fr;">
+                        <div class="ra-field">
+                            <label class="ra-label">Device Type</label>
+                            <select id="ret-phone-platform" class="ra-input">
+                                <option value="">Select device type</option>
+                            </select>
+                        </div>
+                        <div class="ra-field" id="ret-phone-brand-wrap" style="display:none;">
+                            <label class="ra-label">Brand (optional)</label>
+                            <select id="ret-phone-brand" class="ra-input">
+                                <option value="">Select brand</option>
+                            </select>
+                        </div>
+                        <div class="ra-field">
+                            <label class="ra-label">Model</label>
+                            <select id="ret-phone-model" class="ra-input">
+                                <option value="">Select model</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="ret-phone-badge" style="display:none; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: rgba(224, 68, 32,0.05); color: var(--primary); font-weight: 600;"></div>
+                    <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top: 12px;">
+                        <div style="font-size:12px; color:var(--text-muted);">Add sellable variants below. Quantity is tracked per variant.</div>
+                        <button type="button" id="ret-add-variant-btn" class="ra-btn ra-btn-outline" onclick="retAddVariantRow()">Add Variant</button>
+                    </div>
+                    <div id="ret-variant-manager" style="display:flex; flex-direction:column; gap:10px; margin-top:12px;"></div>
+                </div>
+
+                <style>
+                    .upload-zone {
+                        border: 2px dashed var(--border);
+                        border-radius: 16px;
+                        padding: 32px 24px;
+                        text-align: center;
+                        background: var(--body-bg);
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 8px;
+                        margin-top: 6px;
+                    }
+                    .upload-zone:hover, .upload-zone.dragover {
+                        border-color: var(--primary);
+                        background: rgba(224, 68, 32, 0.04);
+                    }
+                    .upload-zone-title {
+                        font-weight: 600;
+                        font-size: 14px;
+                        color: var(--text-main);
+                        margin: 0;
+                    }
+                    .upload-zone-subtitle {
+                        font-size: 12px;
+                        color: var(--text-muted);
+                        margin: 0 0 8px;
+                    }
+                    .staged-files-list {
+                        margin-top: 8px;
+                    }
+                    .ra-asset-grid {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                        gap: 16px;
+                        margin-top: 16px;
+                    }
+                    .ra-asset-card {
+                        border: 1px solid var(--border);
+                        border-radius: 12px;
+                        padding: 16px;
+                        background: var(--card-bg, #fff);
+                        box-shadow: 0 2px 12px rgba(0,0,0,0.03);
+                        transition: all 0.2s ease;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: space-between;
+                    }
+                    .ra-asset-card:hover {
+                        box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+                    }
+                    .ra-asset-head {
+                        display: flex;
+                        align-items: center;
+                        gap: 12px;
+                        margin-bottom: 12px;
+                    }
+                    .ra-asset-preview {
+                        width: 72px;
+                        height: 72px;
+                        object-fit: cover;
+                        border-radius: 8px;
+                        border: 1px solid var(--border);
+                        background: #f8fafc;
+                        display: grid;
+                        place-items: center;
+                        flex: 0 0 72px;
+                        overflow: hidden;
+                    }
+                    .ra-asset-preview img, .ra-asset-preview video {
+                        width: 100%;
+                        height: 100%;
+                        object-fit: cover;
+                    }
+                    .ra-asset-meta {
+                        flex: 1;
+                        min-width: 0;
+                    }
+                    .ra-asset-name {
+                        font-weight: 600;
+                        font-size: 13.5px;
+                        color: var(--text-main);
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                    }
+                    .ra-asset-copy {
+                        font-size: 11px;
+                        color: var(--text-muted);
+                        line-height: 1.4;
+                        margin-top: 2px;
+                    }
+                    .ra-media-thumb-btn {
+                        appearance: none;
+                        border: 0;
+                        padding: 0;
+                        background: transparent;
+                        cursor: zoom-in;
+                    }
+                    .ra-media-thumb {
+                        width: 62px;
+                        height: 62px;
+                        border-radius: 10px;
+                        overflow: hidden;
+                        border: 1px solid var(--border);
+                        display: grid;
+                        place-items: center;
+                        position: relative;
+                        background: #0f172a;
+                    }
+                    .ra-media-thumb img,
+                    .ra-media-thumb video {
+                        width: 100%;
+                        height: 100%;
+                        object-fit: cover;
+                    }
+                    .ra-media-thumb i {
+                        position: absolute;
+                        font-size: 20px;
+                        color: #fff;
+                        text-shadow: 0 1px 3px rgba(0,0,0,0.35);
+                    }
+                    .ra-media-thumb-image {
+                        background: #fff;
+                    }
+                    .ra-media-thumb-spin {
+                        background: #eff6ff;
+                    }
+                    .ra-media-thumb-video {
+                        background: #000;
+                    }
+                    .ra-media-thumb-link {
+                        background: #1e293b;
+                        color: #fff;
+                    }
+                </style>
+
+                <div class="ra-section">
+                    <div class="ra-section-title">Product Gallery and Media</div>
+                    <div class="ra-section-copy">
+                        Drag and drop files to upload product images, videos, or 360 degree rotation frames, or select them from your computer.
+                    </div>
+
+                    <!-- Images Upload Zone -->
+                    <div class="ra-field">
+                        <label class="ra-label">Product Gallery Images</label>
+                        <div style="display: flex; gap: 10px; align-items: center; margin-top: 6px;">
+                            <button type="button" class="ra-btn ra-btn-outline ra-btn-media-library" onclick="selectProductGalleryFromLibrary('images', 'product_images')">
+                                <i class="ph ph-image" style="font-size: 18px;"></i>
+                                Select from Media Library
+                            </button>
+                            <input type="file" name="product_images" id="id_product_images" multiple accept="image/*" style="display: none;" onchange="updateStagedList('images', this)">
+                            <input type="hidden" name="product_images_library_ids" id="id_product_images_library_ids" value="">
+                        </div>
+                        <div class="staged-files-list" id="staged-images-list" style="margin-top: 8px;"></div>
+                        {% if form.product_images.errors %}
+                        <div class="ra-field-error">{{ form.product_images.errors.as_text }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Videos Upload Zone -->
+                    <div class="ra-field">
+                        <label class="ra-label">Product Videos</label>
+                        <div style="display: flex; gap: 10px; align-items: center; margin-top: 6px;">
+                            <button type="button" class="ra-btn ra-btn-outline ra-btn-media-library" onclick="selectProductGalleryFromLibrary('videos', 'product_videos')">
+                                <i class="ph ph-video" style="font-size: 18px;"></i>
+                                Select from Media Library
+                            </button>
+                            <input type="file" name="product_videos" id="id_product_videos" multiple accept="video/*" style="display: none;" onchange="updateStagedList('videos', this)">
+                            <input type="hidden" name="product_videos_library_ids" id="id_product_videos_library_ids" value="">
+                        </div>
+                        <div class="staged-files-list" id="staged-videos-list" style="margin-top: 8px;"></div>
+                        {% if form.product_videos.errors %}
+                        <div class="ra-field-error">{{ form.product_videos.errors.as_text }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- 360 Rotation Images Upload Zone -->
+                    <div class="ra-field">
+                        <label class="ra-label">360° Interactive Rotation Images</label>
+                        <div style="display: flex; gap: 10px; align-items: center; margin-top: 6px;">
+                            <button type="button" class="ra-btn ra-btn-outline ra-btn-media-library" onclick="selectProductGalleryFromLibrary('spin', 'product_360_images')">
+                                <i class="ph ph-arrows-clockwise" style="font-size: 18px;"></i>
+                                Select from Media Library
+                            </button>
+                            <input type="file" name="product_360_images" id="id_product_360_images" multiple accept="image/*" style="display: none;" onchange="updateStagedList('spin', this)">
+                            <input type="hidden" name="product_360_images_library_ids" id="id_product_360_images_library_ids" value="">
+                        </div>
+                        <div class="staged-files-list" id="staged-spin-list" style="margin-top: 8px;"></div>
+                        {% if form.product_360_images.errors %}
+                        <div class="ra-field-error">{{ form.product_360_images.errors.as_text }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- External Video URLs -->
+                    <div class="ra-field">
+                        <label class="ra-label">External Video URLs</label>
+                        <div class="ra-section-copy" style="margin-bottom:10px;">Add YouTube, Vimeo, or direct video links. Each URL becomes a separate gallery video item.</div>
+                        <div id="retailer-video-rows" style="display:flex; flex-direction:column; gap:8px;"></div>
+                        <button type="button" class="ra-btn ra-btn-outline" onclick="addRetailerVideoUrlRow()" style="margin-top:12px; display:inline-flex; align-items:center; gap:7px; border-style:dashed;">
+                            <i class="ph ph-plus-circle"></i> Add Video URL
+                        </button>
+                        {% if form.product_video_urls.errors %}
+                        <div class="ra-field-error">{{ form.product_video_urls.errors.as_text }}</div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Current Gallery Manager -->
+                    {% if object and form.remove_asset_ids.queryset %}
+                    <div class="ra-field" style="margin-top: 24px;">
+                        <label class="ra-label">Current Media Items (Sort & Reorder)</label>
+                        <div class="ra-asset-grid" id="retailer-asset-manager">
+                            {% for asset in form.remove_asset_ids.queryset %}
+                            <div data-asset-card="{{ asset.pk }}" class="ra-asset-card">
+                                <div class="ra-asset-head">
+                                    {% if asset.file %}
+                                        {% if asset.media_type == "image" %}
+                                        <button type="button" class="ra-asset-preview ra-media-thumb-btn" data-media-lightbox="1" data-media-kind="image" data-media-src="{{ asset.file.url }}" data-media-title="{{ asset.title|default:'Asset' }}">
+                                            <img src="{{ asset.file.url }}" alt="{{ asset.title|default:'Asset' }}">
+                                        </button>
+                                        {% elif asset.media_type == "image_360" or asset.media_type == "360" %}
+                                        <button type="button" class="ra-asset-preview ra-media-thumb-btn" data-media-lightbox="1" data-media-kind="image" data-media-src="{{ asset.file.url }}" data-media-title="{{ asset.title|default:'Asset' }}">
+                                            <img src="{{ asset.file.url }}" alt="{{ asset.title|default:'Asset' }}" style="opacity: 0.4;">
+                                            <i class="ph ph-arrows-clockwise" style="position: absolute; font-size: 20px;"></i>
+                                        </button>
+                                        {% elif asset.media_type == "video" %}
+                                        <button type="button" class="ra-asset-preview ra-media-thumb-btn" data-media-lightbox="1" data-media-kind="video" data-media-src="{{ asset.file.url }}" data-media-title="{{ asset.title|default:'Asset' }}">
+                                            <video src="{{ asset.file.url }}" muted playsinline preload="metadata"></video>
+                                            <i class="ph-fill ph-play-circle" style="position: absolute; font-size: 22px; color: #fff;"></i>
+                                        </button>
+                                        {% endif %}
+                                    {% else %}
+                                        <button type="button" class="ra-asset-preview ra-media-thumb-btn" data-media-lightbox="1" data-media-kind="external" data-media-src="{{ asset.external_url }}" data-media-title="{{ asset.title|default:'External video' }}" style="position: relative; background: #1e293b; color: #fff; display: grid; place-items: center;">
+                                            <i class="ph-fill ph-play-circle" style="font-size: 24px; color: #f43f5e;"></i>
+                                        </button>
+                                    {% endif %}
+                                    <div class="ra-asset-meta">
+                                        <div class="ra-asset-name">{{ asset.title|default:asset.get_media_type_display }}</div>
+                                        <div class="ra-asset-copy">Specify order below. Items with lower order number show up first.</div>
+                                    </div>
+                                    <button type="button" data-asset-remove-id="{{ asset.pk }}" class="ra-btn ra-btn-soft-danger ra-btn-sm" style="margin-left:auto;">Remove</button>
+                                </div>
+                                <div class="ra-asset-controls" style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px; border-top: 1px solid var(--border); padding-top: 12px; gap: 16px;">
+                                    <label class="ra-inline-field" style="display: flex; align-items: center; gap: 8px;">
+                                        <span class="ra-inline-label" style="font-size: 12px; font-weight: 500;">Sort Order</span>
+                                        <input type="number" name="asset_sort_{{ asset.id }}" value="{{ asset.sort_order }}" min="0" style="width:72px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px;">
+                                    </label>
+                                    {% if asset.media_type == "image" %}
+                                    <label class="ra-inline-field" style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                        <input type="radio" name="primary_asset_id" value="{{ asset.id }}" {% if asset.is_primary %}checked{% endif %} style="cursor: pointer;">
+                                        <span style="font-size:12px; color:var(--text-main); font-weight: 500;">Front Feature Image</span>
+                                    </label>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="ra-form-actions-sticky" style="display:flex; gap:12px; flex-wrap:wrap; margin-top: 4px;">
+                    <button type="submit" name="save_action" value="stay" class="ra-btn ra-btn-primary">
+                        <i class="ph ph-floppy-disk"></i> Save & stay
+                    </button>
+                    <button type="submit" name="save_action" value="exit" class="ra-btn ra-btn-outline">
+                        <i class="ph ph-arrow-square-out"></i> Save & exit
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Variants & Assets (only shown when editing existing product) -->
+    {% if object %}
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+
+        <!-- Product Assets -->
+        <div class="ra-card" style="border-radius:16px;">
+            <div class="ra-card-header">
+                <span class="ra-card-title">Product Gallery, Video, 360</span>
+            </div>
+            <div class="ra-table-wrap">
+                <table class="ra-table">
+                    <thead>
+                        <tr>
+                            <th>Asset</th>
+                            <th>Preview</th>
+                            <th>Type</th>
+                            <th>Order</th>
+                            <th>Color Association</th>
+                            <th>Display</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for asset in product_assets %}
+                        <tr>
+                            <td>{{ asset.title|default:asset.file.name|default:"Product asset" }}</td>
+                            <td>
+                                {% if asset.file %}
+                                    <button type="button" class="ra-media-thumb-btn" data-media-lightbox="1" data-media-kind="{{ asset.media_type }}" data-media-src="{{ asset.file.url }}" data-media-title="{{ asset.title|default:asset.file.name|default:'Product asset' }}">
+                                        {% if asset.media_type == "video" %}
+                                            <span class="ra-media-thumb ra-media-thumb-video">
+                                                <video src="{{ asset.file.url }}" muted playsinline preload="metadata"></video>
+                                                <i class="ph-fill ph-play-circle"></i>
+                                            </span>
+                                        {% elif asset.media_type == "image_360" or asset.media_type == "360" %}
+                                            <span class="ra-media-thumb ra-media-thumb-spin">
+                                                <img src="{{ asset.file.url }}" alt="{{ asset.title|default:'Product asset' }}">
+                                                <i class="ph ph-arrows-clockwise"></i>
+                                            </span>
+                                        {% else %}
+                                            <span class="ra-media-thumb ra-media-thumb-image">
+                                                <img src="{{ asset.file.url }}" alt="{{ asset.title|default:'Product asset' }}">
+                                            </span>
+                                        {% endif %}
+                                    </button>
+                                {% elif asset.external_url %}
+                                    <button type="button" class="ra-media-thumb-btn" data-media-lightbox="1" data-media-kind="external" data-media-src="{{ asset.external_url }}" data-media-title="{{ asset.title|default:'External video' }}">
+                                        <span class="ra-media-thumb ra-media-thumb-link">
+                                            <i class="ph ph-link-simple-horizontal"></i>
+                                        </span>
+                                    </button>
+                                {% endif %}
+                            </td>
+                            <td>{{ asset.get_media_type_display }}</td>
+                            <td>
+                                <input type="number" name="asset_sort_{{ asset.id }}" value="{{ asset.sort_order }}" class="ra-input" style="width: 70px; padding: 4px 8px; font-size: 13px;">
+                            </td>
+                            <td>
+                                <select name="asset_color_{{ asset.id }}" class="ra-input" style="padding: 4px 8px; font-size: 13px; width: 140px;">
+                                    <option value="">— General / All —</option>
+                                    {% for color in object.quickview_colors %}
+                                        <option value="{{ color.name }}" {% if asset.color == color.name %}selected{% endif %}>{{ color.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                            <td>{% if asset.is_primary %}<span class="ra-badge success">Front First</span>{% else %}<span class="ra-badge neutral">Normal</span>{% endif %}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6" class="ra-table-empty">No gallery, video, or 360 assets yet.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+    {% endif %}
+
+</div>
+<script id="ret-phone-data" type="application/json">{{ phone_picker_payload|safe }}</script>
+<script id="ret-video-url-data" type="application/json">{{ external_video_rows_json|default:"[]"|safe }}</script><script>
+(function() {
+    const payloadNode = document.getElementById('ret-phone-data');
+    if (!payloadNode) return;
+    let data = {};
+    try {
+        data = JSON.parse(payloadNode.textContent || '{}');
+    } catch (error) {
+        data = {};
+    }
+
+    const platformSel = document.getElementById('ret-phone-platform');
+    const brandWrap = document.getElementById('ret-phone-brand-wrap');
+    const brandSel = document.getElementById('ret-phone-brand');
+    const modelSel = document.getElementById('ret-phone-model');
+    const badge = document.getElementById('ret-phone-badge');
+    const hidden = document.querySelector('input[name="phone_variant_id"]');
+    const nameField = document.querySelector('input[name="name"]');
+    const modelField = document.querySelector('input[name="model_name"]');
+    const variantManager = document.getElementById('ret-variant-manager');
+    const addVariantBtn = document.getElementById('ret-add-variant-btn');
+    let currentModelId = '';
+
+    const platforms = data.platforms || [];
+    const brands = data.brands || [];
+    function cleanModelLabel(model) {
+        let label = String(model.display_name || model.name || '').trim();
+        const brand = brands.find((item) => String(item.id) === String(model.brand_id || ''));
+        const brandLabel = String(brand ? brand.label || brand.name || '' : '').trim();
+        if (brandLabel) {
+            const repeated = `${brandLabel} ${brandLabel} `;
+            if (label.toLowerCase().startsWith(repeated.toLowerCase())) {
+                label = `${brandLabel} ${label.slice(repeated.length).trim()}`;
+            }
+        }
+        return label;
+    }
+
+    const models = (data.models || [])
+        .filter((item) => !String(item.name || item.display_name || '').includes(','))
+        .map((item) => ({ ...item, display_name: cleanModelLabel(item) }));
+    const variants = data.variants || [];
+    const globalStorages = data.storages || [];
+    const globalColors = data.colors || [];
+    const globalRams = data.rams || [];
+    const modelVariantMap = variants.reduce((acc, item) => {
+        const key = String(item.phone_model_id || '');
+        if (!key) return acc;
+        if (!acc[key]) acc[key] = [];
+        acc[key].push(item);
+        return acc;
+    }, {});
+
+    function fillOptions(select, items, placeholder, labelKey = 'label') {
+        const current = select.value;
+        select.innerHTML = `<option value="">${placeholder}</option>` + items.map((item) => {
+            const selected = String(item.id) === String(current) ? ' selected' : '';
+            return `<option value="${item.id}"${selected}>${item[labelKey]}</option>`;
+        }).join('');
+    }
+
+    function refreshBrandOptions(platformId) {
+        const items = brands.filter((item) => item.platform_id === platformId || item.platform_name === platformId);
+        fillOptions(brandSel, items, 'Select brand');
+        brandWrap.style.display = platformId ? 'block' : 'none';
+    }
+
+    function refreshModelOptions(platformId, brandId) {
+        const items = models.filter((item) => (item.platform_id === platformId || item.platform_name === platformId) && (!brandId || item.brand_id === brandId));
+        fillOptions(modelSel, items, 'Select model', 'display_name');
+    }
+
+    function modelVariants(modelId) {
+        return modelVariantMap[String(modelId || '')] || [];
+    }
+
+    function fallbackColorHex(colorName, existingHex = '') {
+        const normalizedHex = String(existingHex || '').trim();
+        if (normalizedHex && normalizedHex !== '#ffffff' && normalizedHex !== '#fff') return normalizedHex;
+        const key = String(colorName || '').trim().toLowerCase();
+        const palette = {
+            black: '#111827',
+            white: '#f8fafc',
+            silver: '#c0c0c0',
+            gray: '#6b7280',
+            grey: '#6b7280',
+            blue: '#b9381c',
+            red: '#ef4444',
+            green: '#16a34a',
+            yellow: '#facc15',
+            orange: '#f97316',
+            purple: '#8b5cf6',
+            pink: '#ec4899',
+            gold: '#d4af37',
+            rose: '#f43f5e',
+            teal: '#14b8a6',
+            navy: '#1e3a8a',
+        };
+        return palette[key] || normalizedHex || '#d1d5db';
+    }
+
+    function updateSelection(modelId) {
+        const selectedModel = models.find((item) => String(item.id) === String(modelId));
+        if (!selectedModel) {
+            currentModelId = '';
+            if (addVariantBtn) addVariantBtn.disabled = true;
+            if (hidden) hidden.value = '';
+            if (badge) badge.style.display = 'none';
+            return null;
+        }
+        currentModelId = String(selectedModel.id);
+        if (addVariantBtn) addVariantBtn.disabled = false;
+        const firstVariant = modelVariants(selectedModel.id)[0] || null;
+        if (hidden) hidden.value = firstVariant ? firstVariant.id : '';
+        if (modelField) modelField.value = selectedModel.display_name;
+        badge.textContent = firstVariant ? `${selectedModel.display_name} – ${firstVariant.label}` : selectedModel.display_name;
+        badge.style.display = 'block';
+        if (nameField && !nameField.value.trim()) {
+            nameField.value = selectedModel.display_name;
+        }
+        return { selectedModel, firstVariant };
+    }
+
+    function storageOptions(modelId) {
+        const list = modelVariants(modelId);
+        const seen = new Set();
+        const options = globalStorages.filter((item) => {
+            const value = String(item.id || item.label || '').trim();
+            if (!value || seen.has(value.toLowerCase())) return false;
+            seen.add(value.toLowerCase());
+            return true;
+        }).map((item) => ({ id: item.id || item.label, label: item.label || item.id }));
+        list.forEach((item) => {
+            const value = (item.storage || '').trim();
+            if (!value || seen.has(value.toLowerCase())) return;
+            seen.add(value.toLowerCase());
+            options.push({ id: item.storage, label: item.storage });
+        });
+        return options;
+    }
+
+    function ramOptions(modelId) {
+        const list = modelVariants(modelId);
+        const seen = new Set();
+        const options = globalRams.filter((item) => {
+            const value = String(item.id || item.label || '').trim();
+            if (!value || seen.has(value.toLowerCase())) return false;
+            seen.add(value.toLowerCase());
+            return true;
+        }).map((item) => ({ id: item.id || item.label, label: item.label || item.id }));
+        list.forEach((item) => {
+            const value = (item.ram || '').trim();
+            if (!value || seen.has(value.toLowerCase())) return;
+            seen.add(value.toLowerCase());
+            options.push({ id: item.ram, label: item.ram });
+        });
+        return options;
+    }
+
+    function colorOptions(modelId, storageValue) {
+        const list = modelVariants(modelId);
+        const seen = new Set();
+        const options = globalColors.filter((item) => {
+            const value = String(item.id || item.label || '').trim();
+            if (!value || seen.has(value.toLowerCase())) return false;
+            seen.add(value.toLowerCase());
+            return true;
+        }).map((item) => ({ id: item.id || item.label, label: item.label || item.id, color_hex: fallbackColorHex(item.label || item.id, item.color_hex) }));
+        list.forEach((item) => {
+            const key = `${item.color || ''}::${item.color_hex || ''}`;
+            const nameKey = String(item.color || '').trim().toLowerCase();
+            if (!item.color || seen.has(nameKey) || seen.has(key)) return;
+            seen.add(nameKey);
+            options.push({ id: item.color, label: item.color, color_hex: fallbackColorHex(item.color, item.color_hex) });
+        });
+        return options;
+    }
+
+    function syncAutoName(row) {
+        const nameInput = row.querySelector('[data-field="name"]');
+        const ramSel = row.querySelector('[data-field="ram"]');
+        const storageSel = row.querySelector('[data-field="storage"]');
+        const colorSel = row.querySelector('[data-field="color"]');
+        if (!nameInput) return;
+        if (nameInput.value.trim() && row.dataset.autoNamed !== '1') return;
+        const parts = [];
+        if (ramSel && ramSel.value) parts.push(ramSel.value);
+        if (storageSel && storageSel.value) parts.push(storageSel.value);
+        if (colorSel && colorSel.value) parts.push(colorSel.value);
+        nameInput.value = parts.join(' / ');
+        row.dataset.autoNamed = '1';
+    }
+
+    function refreshColorPreview(row) {
+        const colorSel = row.querySelector('[data-field="color"]');
+        const preview = row.querySelector('[data-color-preview]');
+        if (!colorSel || !preview) return;
+        const opt = colorSel.options[colorSel.selectedIndex];
+        preview.style.background = fallbackColorHex(opt ? opt.textContent : '', opt && opt.dataset.colorHex);
+    }
+
+    function populateRowOptions(row, modelId, values = {}) {
+        row.dataset.modelId = modelId || '';
+        const ramSel = row.querySelector('[data-field="ram"]');
+        const storageSel = row.querySelector('[data-field="storage"]');
+        const colorSel = row.querySelector('[data-field="color"]');
+        if (ramSel) {
+            ramSel.innerHTML = '<option value="">Select RAM</option>' + ramOptions(modelId).map((item) => {
+                const selected = String(item.id) === String(values.ram || ramSel.value || '') ? ' selected' : '';
+                return `<option value="${item.id}"${selected}>${item.label}</option>`;
+            }).join('');
+        }
+        if (storageSel) {
+            storageSel.innerHTML = '<option value="">Select storage</option>' + storageOptions(modelId).map((item) => {
+                const selected = String(item.id) === String(values.storage || storageSel.value || '') ? ' selected' : '';
+                return `<option value="${item.id}"${selected}>${item.label}</option>`;
+            }).join('');
+        }
+        if (colorSel) {
+            colorSel.innerHTML = '<option value="">Select color</option>' + colorOptions(modelId, values.storage || storageSel?.value || '').map((item) => {
+                const selected = String(item.id) === String(values.color || colorSel.value || '') ? ' selected' : '';
+                return `<option value="${item.id}" data-color-hex="${item.color_hex}"${selected}>${item.label}</option>`;
+            }).join('');
+        }
+        refreshColorPreview(row);
+        syncAutoName(row);
+    }
+
+    function seedVariantRow(modelId) {
+        if (!variantManager || typeof window.retAddVariantRow !== 'function' || !modelId) return;
+        const rows = variantManager.querySelectorAll('[data-variant-row]');
+        const firstVariant = modelVariants(modelId)[0] || null;
+        if (!rows.length) {
+            window.retAddVariantRow({
+                __seed: 'model',
+                model_id: modelId,
+                storage: firstVariant ? firstVariant.storage : '',
+                color: firstVariant ? firstVariant.color : '',
+            });
+            return;
+        }
+        if (rows[0] && !rows[0].querySelector('[data-field="name"]')?.value.trim()) {
+            populateRowOptions(rows[0], modelId, {
+                storage: firstVariant ? firstVariant.storage : '',
+                color: firstVariant ? firstVariant.color : '',
+            });
+            syncAutoName(rows[0]);
+        }
+    }
+
+    platformSel.innerHTML = '<option value="">Select device type</option>' + platforms.map((item) => `<option value="${item.id}">${item.label}</option>`).join('');
+
+    platformSel.addEventListener('change', () => {
+        const platformId = platformSel.value;
+        brandSel.innerHTML = '<option value="">Select brand</option>';
+        modelSel.innerHTML = '<option value="">Select model</option>';
+        if (!platformId) {
+            brandWrap.style.display = 'none';
+            if (badge) badge.style.display = 'none';
+            if (hidden) hidden.value = '';
+            return;
+        }
+        refreshBrandOptions(platformId);
+        refreshModelOptions(platformId, '');
+        if (variantManager) variantManager.querySelectorAll('[data-variant-row]').forEach((row) => populateRowOptions(row, '', {}));
+        if (hidden) hidden.value = '';
+    });
+
+    brandSel.addEventListener('change', () => {
+        refreshModelOptions(platformSel.value, brandSel.value);
+        if (hidden) hidden.value = '';
+    });
+
+    modelSel.addEventListener('change', () => {
+        const modelId = modelSel.value;
+        const details = updateSelection(modelId);
+        if (!modelId) {
+            if (badge) badge.style.display = 'none';
+            if (hidden) hidden.value = '';
+            return;
+        }
+        seedVariantRow(modelId);
+        if (variantManager) {
+            variantManager.querySelectorAll('[data-variant-row]').forEach((row) => {
+                populateRowOptions(row, modelId, {
+                    ram: row.querySelector('[data-field="ram"]')?.value || '',
+                    storage: row.querySelector('[data-field="storage"]')?.value || '',
+                    color: row.querySelector('[data-field="color"]')?.value || '',
+                });
+            });
+        }
+        const selectedModel = details ? details.selectedModel : models.find((item) => String(item.id) === String(modelId));
+        if (selectedModel) {
+            platformSel.value = selectedModel.platform_id;
+            refreshBrandOptions(selectedModel.platform_id);
+            if (selectedModel.brand_id) brandSel.value = selectedModel.brand_id;
+            refreshModelOptions(selectedModel.platform_id, selectedModel.brand_id);
+            modelSel.value = selectedModel.id;
+        }
+        if (typeof window.retVariantSyncRows === 'function') {
+            window.retVariantSyncRows();
+        }
+    });
+
+    // ------------------ Variant Manager section ------------------
+    const payloadInput = document.getElementById('id_variants_payload');
+    if (!payloadInput || !variantManager) return;
+
+    function parseRows() {
+        try {
+            const rows = JSON.parse(payloadInput.value || '[]');
+            return Array.isArray(rows) ? rows : [];
+        } catch (error) {
+            return [];
+        }
+    }
+
+    function syncRows() {
+        const rows = Array.from(variantManager.querySelectorAll('[data-variant-row]')).map((row) => ({
+            id: row.dataset.variantId || '',
+            model_id: row.dataset.modelId || '',
+            name: row.querySelector('[data-field="name"]').value.trim(),
+            sku: row.querySelector('[data-field="sku"]').value.trim(),
+            barcode: row.querySelector('[data-field="barcode"]').value.trim(),
+            price: row.querySelector('[data-field="price"]').value.trim(),
+            discount_price: row.querySelector('[data-field="discount_price"]').value.trim(),
+            quantity: row.querySelector('[data-field="quantity"]').value.trim(),
+            ram: row.querySelector('[data-field="ram"]') ? row.querySelector('[data-field="ram"]').value.trim() : '',
+            storage: row.querySelector('[data-field="storage"]').value.trim(),
+            color: row.querySelector('[data-field="color"]').value.trim(),
+        })).filter((row) => row.name);
+        payloadInput.value = JSON.stringify(rows);
+        const priceInput = document.querySelector('input[name="price"]');
+        const discountInput = document.querySelector('input[name="discount_price"]');
+        const firstRow = variantManager.querySelector('[data-variant-row]');
+        if (firstRow && priceInput) {
+            const rowPrice = firstRow.querySelector('[data-field="price"]');
+            if (rowPrice && rowPrice.value.trim()) {
+                priceInput.value = rowPrice.value.trim();
+            }
+        }
+        if (discountInput) {
+            const rowDiscount = firstRow ? firstRow.querySelector('[data-field="discount_price"]') : null;
+            discountInput.value = rowDiscount && rowDiscount.value.trim() ? rowDiscount.value.trim() : '';
+        }
+    }
+    window.retVariantSyncRows = syncRows;
+
+    function optionHtml(items, selected, placeholder, valueKey, labelKey, extraKey) {
+        const current = String(selected || '');
+        return `<option value="">${placeholder}</option>` + items.map((item) => {
+            const value = item[valueKey] || '';
+            const label = item[labelKey] || '';
+            const extra = extraKey ? ` data-${extraKey}="${item[extraKey] || ''}"` : '';
+            const isSelected = String(value) === current ? ' selected' : '';
+            return `<option value="${value}"${extra}${isSelected}>${label}</option>`;
+        }).join('');
+    }
+
+    function makeRow(data = {}) {
+        const row = document.createElement('div');
+        row.setAttribute('data-variant-row', '1');
+        row.dataset.variantId = data.id || '';
+        row.dataset.modelId = data.model_id || '';
+        row.dataset.autoNamed = data.name ? '0' : '1';
+        row.style.cssText = 'border:1px solid var(--border); border-radius:12px; padding:12px; background:var(--surface-soft); display:grid; gap:10px;';
+        row.innerHTML = `
+            <div style="display:grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap:10px; align-items:end;">
+                <div>
+                    <label style="font-size:11px; font-weight:600; color:var(--muted);">Variant Name</label>
+                    <input data-field="name" type="text" class="ra-input" placeholder="e.g. 8GB / 128GB / Black" value="${(data.name || '').replace(/"/g, '&quot;')}">
+                </div>
+                <div>
+                    <label style="font-size:11px; font-weight:600; color:var(--muted);">SKU</label>
+                    <input data-field="sku" type="text" class="ra-input" placeholder="Optional SKU" value="${(data.sku || '').replace(/"/g, '&quot;')}">
+                </div>
+                <div>
+                    <label style="font-size:11px; font-weight:600; color:var(--muted);">Barcode</label>
+                    <input data-field="barcode" type="text" class="ra-input" placeholder="Optional barcode" value="${(data.barcode || '').replace(/"/g, '&quot;')}">
+                </div>
+                <div>
+                    <label style="font-size:11px; font-weight:600; color:var(--muted);">RAM</label>
+                    <select data-field="ram" class="ra-input"></select>
+                </div>
+                <div>
+                    <label style="font-size:11px; font-weight:600; color:var(--muted);">Storage</label>
+                    <select data-field="storage" class="ra-input"></select>
+                </div>
+                <div>
+                    <label style="font-size:11px; font-weight:600; color:var(--muted);">Color</label>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <select data-field="color" class="ra-input"></select>
+                        <span data-color-preview style="width:22px; height:22px; border-radius:999px; border:1px solid var(--border); background:${fallbackColorHex(data.color || '', data.color_hex || '')}; flex-shrink:0;"></span>
+                    </div>
+                </div>
+            </div>
+            <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap:10px; align-items:end;">
+                <div>
+                    <label style="font-size:11px; font-weight:600; color:var(--muted);">Price</label>
+                    <input data-field="price" type="number" step="0.01" class="ra-input" placeholder="0.00" value="${data.price || ''}">
+                </div>
+                <div>
+                    <label style="font-size:11px; font-weight:600; color:var(--muted);">Sale Price</label>
+                    <input data-field="discount_price" type="number" step="0.01" class="ra-input" placeholder="Optional" value="${data.discount_price || ''}">
+                </div>
+                <div>
+                    <label style="font-size:11px; font-weight:600; color:var(--muted);">Quantity</label>
+                    <input data-field="quantity" type="number" min="0" step="1" class="ra-input" placeholder="0" value="${data.quantity || ''}">
+                </div>
+                <button type="button" class="ra-btn ra-btn-soft-danger" title="Remove variant" aria-label="Remove variant">Remove</button>
+            </div>
+        `;
+        row.querySelector('button').addEventListener('click', () => {
+            row.remove();
+            syncRows();
+        });
+        const ramSel = row.querySelector('[data-field="ram"]');
+        const storageSel = row.querySelector('[data-field="storage"]');
+        const colorSel = row.querySelector('[data-field="color"]');
+        const nameInput = row.querySelector('[data-field="name"]');
+        if (ramSel) {
+            ramSel.addEventListener('change', () => {
+                populateRowOptions(row, row.dataset.modelId, {
+                    ram: ramSel.value,
+                    storage: storageSel ? storageSel.value : '',
+                    color: colorSel ? colorSel.value : '',
+                });
+                syncRows();
+            });
+        }
+        if (storageSel) {
+            storageSel.addEventListener('change', () => {
+                populateRowOptions(row, row.dataset.modelId, {
+                    ram: ramSel ? ramSel.value : '',
+                    storage: storageSel.value,
+                    color: colorSel ? colorSel.value : '',
+                });
+                syncRows();
+            });
+        }
+        if (colorSel) {
+            colorSel.addEventListener('change', () => {
+                refreshColorPreview(row);
+                syncAutoName(row);
+                syncRows();
+            });
+        }
+        if (nameInput) {
+            nameInput.addEventListener('input', () => {
+                row.dataset.autoNamed = nameInput.value.trim() ? '0' : '1';
+                syncRows();
+            });
+        }
+        row.querySelectorAll('input[data-field="sku"], input[data-field="barcode"], input[data-field="price"], input[data-field="discount_price"], input[data-field="quantity"]').forEach((input) => input.addEventListener('input', syncRows));
+        populateRowOptions(row, data.model_id || '', data);
+        return row;
+    }
+
+    window.retAddVariantRow = function(data = {}) {
+        const activeModelId = data.model_id || currentModelId || modelSel.value || variantManager.querySelector('[data-variant-row]')?.dataset.modelId || '';
+        data.model_id = activeModelId || '';
+        if (!data.id && !data.name && !data.sku && !data.barcode && !data.price && !data.discount_price && !data.quantity && !data.ram && !data.storage && !data.color) {
+            data = {
+                model_id: activeModelId || '',
+                name: '',
+                sku: '',
+                barcode: '',
+                price: '',
+                discount_price: '',
+                quantity: '',
+                ram: '',
+                storage: '',
+                color: '',
+                color_hex: '#d1d5db',
+            };
+        }
+        variantManager.appendChild(makeRow(data));
+        syncRows();
+    };
+
+    const initialRows = parseRows();
+    if (initialRows.length) {
+        initialRows.forEach((row) => window.retAddVariantRow(row));
+    }
+
+    const form = variantManager.closest('form');
+    if (form) {
+        form.addEventListener('submit', syncRows);
+    }
+
+    const selectedVariantId = '{{ selected_phone_variant_id|default:"" }}';
+    if (selectedVariantId) {
+        const selectedVariant = variants.find((item) => String(item.id) === String(selectedVariantId));
+        if (selectedVariant) {
+            const selectedModel = models.find((item) => String(item.id) === String(selectedVariant.phone_model_id));
+            const selectedBrand = selectedModel ? brands.find((item) => String(item.id) === String(selectedModel.brand_id)) : null;
+            if (selectedModel) {
+                platformSel.value = selectedModel.platform_id;
+                refreshBrandOptions(selectedModel.platform_id);
+                if (selectedBrand) brandSel.value = selectedBrand.id;
+                refreshModelOptions(selectedModel.platform_id, selectedBrand ? selectedBrand.id : '');
+                modelSel.value = selectedModel.id;
+                updateSelection(selectedModel.id);
+                seedVariantRow(selectedModel.id);
+            }
+        }
+    } else if (modelSel && modelSel.value) {
+        modelSel.dispatchEvent(new Event('change'));
+    }
+})();
+</script>
+<script>
+// Handle Drag & Drop events on upload zones
+function handleDrop(e, inputId) {
+    const input = document.getElementById('id_' + inputId);
+    if (!input) return;
+    
+    const dt = new DataTransfer();
+    if (input.files) {
+        for (let i = 0; i < input.files.length; i++) {
+            dt.items.add(input.files[i]);
+        }
+    }
+    
+    const files = e.dataTransfer.files;
+    for (let i = 0; i < files.length; i++) {
+        dt.items.add(files[i]);
+    }
+    
+    input.files = dt.files;
+    const prefix = inputId.replace('product_', '').replace('_images', '').replace('videos', 'videos').replace('360_images', 'spin');
+    updateStagedList(prefix, input);
+}
+
+// Generate beautiful previews of files added for upload
+function updateStagedList(prefix, input) {
+    const container = document.getElementById('staged-' + prefix + '-list');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    if (!input.files || input.files.length === 0) return;
+    
+    const wrapper = document.createElement('div');
+    wrapper.style.display = 'flex';
+    wrapper.style.flexWrap = 'wrap';
+    wrapper.style.gap = '8px';
+    wrapper.style.marginTop = '12px';
+    
+    for (let i = 0; i < input.files.length; i++) {
+        const file = input.files[i];
+        const index = i;
+        
+        const card = document.createElement('div');
+        card.style.display = 'flex';
+        card.style.alignItems = 'center';
+        card.style.gap = '8px';
+        card.style.background = 'var(--card-bg)';
+        card.style.border = '1px solid var(--border)';
+        card.style.borderRadius = '8px';
+        card.style.padding = '6px 12px';
+        card.style.fontSize = '12px';
+        card.style.color = 'var(--text-main)';
+        card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
+        
+        if (prefix === 'images' || prefix === 'spin') {
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            img.style.width = '36px';
+            img.style.height = '36px';
+            img.style.objectFit = 'cover';
+            img.style.borderRadius = '4px';
+            img.style.border = '1px solid var(--border)';
+            card.appendChild(img);
+        } else {
+            const icon = document.createElement('i');
+            icon.className = (prefix === 'videos') ? 'ph ph-video' : 'ph ph-image';
+            icon.style.color = 'var(--primary)';
+            icon.style.fontSize = '20px';
+            card.appendChild(icon);
+        }
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = file.name;
+        nameSpan.style.maxWidth = '180px';
+        nameSpan.style.overflow = 'hidden';
+        nameSpan.style.textOverflow = 'ellipsis';
+        nameSpan.style.whiteSpace = 'nowrap';
+        card.appendChild(nameSpan);
+        
+        const sizeSpan = document.createElement('span');
+        sizeSpan.textContent = '(' + (file.size / 1024).toFixed(1) + ' KB)';
+        sizeSpan.style.color = 'var(--text-muted)';
+        card.appendChild(sizeSpan);
+        
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.style.background = 'none';
+        delBtn.style.border = 'none';
+        delBtn.style.color = 'var(--danger)';
+        delBtn.style.cursor = 'pointer';
+        delBtn.style.padding = '0';
+        delBtn.style.display = 'flex';
+        delBtn.style.alignItems = 'center';
+        delBtn.innerHTML = '<i class="ph ph-x" style="font-size:14px;"></i>';
+        delBtn.onclick = (event) => {
+            event.stopPropagation();
+            const dt = new DataTransfer();
+            for (let j = 0; j < input.files.length; j++) {
+                if (j !== index) {
+                    dt.items.add(input.files[j]);
+                }
+            }
+            input.files = dt.files;
+            updateStagedList(prefix, input);
+        };
+        card.appendChild(delBtn);
+        
+        wrapper.appendChild(card);
+    }
+    container.appendChild(wrapper);
+}
+// Local tracking of staged media library asset IDs
+const stagedLibraryAssets = {
+    images: [],
+    videos: [],
+    spin: []
+};
+
+function selectProductGalleryFromLibrary(prefix, inputId) {
+    if (typeof window.openMediaLibrary !== 'function') {
+        window.appAlert ? window.appAlert('Media Library is not loaded on this page.', { title: 'Media Library', tone: 'warning' }) : console.warn('Media Library is not loaded on this page.');
+        return;
+    }
+    window.openMediaLibrary(asset => {
+        // Prevent duplicate selection
+        if (stagedLibraryAssets[prefix].includes(asset.id)) return;
+        
+        stagedLibraryAssets[prefix].push(asset.id);
+        
+        // Update hidden input field value
+        const hiddenInputId = 'id_' + inputId + '_library_ids';
+        let hiddenInput = document.getElementById(hiddenInputId);
+        if (!hiddenInput) {
+            hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = inputId + '_library_ids';
+            hiddenInput.id = hiddenInputId;
+            const fileInput = document.getElementById('id_' + inputId);
+            const form = fileInput ? fileInput.closest('form') : document.querySelector('form');
+            if (form) {
+                form.appendChild(hiddenInput);
+            }
+        }
+        hiddenInput.value = stagedLibraryAssets[prefix].join(',');
+        
+        // Render staged thumbnail card in the list
+        renderStagedLibraryCard(prefix, asset, hiddenInputId);
+    });
+}
+
+function renderStagedLibraryCard(prefix, asset, hiddenInputId) {
+    const container = document.getElementById('staged-' + prefix + '-list');
+    if (!container) return;
+    
+    // Find wrapper or create
+    let wrapper = container.querySelector('.staged-library-wrapper');
+    if (!wrapper) {
+        wrapper = document.createElement('div');
+        wrapper.className = 'staged-library-wrapper';
+        wrapper.style.display = 'flex';
+        wrapper.style.flexWrap = 'wrap';
+        wrapper.style.gap = '8px';
+        wrapper.style.marginTop = '8px';
+        container.appendChild(wrapper);
+    }
+    
+    const card = document.createElement('div');
+    card.style.display = 'flex';
+    card.style.alignItems = 'center';
+    card.style.gap = '8px';
+    card.style.background = 'rgba(224, 68, 32, 0.04)';
+    card.style.border = '1px solid var(--primary)';
+    card.style.borderRadius = '8px';
+    card.style.padding = '6px 12px';
+    card.style.fontSize = '12px';
+    card.style.color = 'var(--text-main)';
+    card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
+    
+    if ((prefix === 'images' || prefix === 'spin') && asset.url) {
+        const img = document.createElement('img');
+        img.src = asset.url;
+        img.style.width = '36px';
+        img.style.height = '36px';
+        img.style.objectFit = 'cover';
+        img.style.borderRadius = '4px';
+        img.style.border = '1px solid var(--border)';
+        card.appendChild(img);
+    } else {
+        const icon = document.createElement('i');
+        icon.className = (prefix === 'videos') ? 'ph ph-video' : 'ph ph-image';
+        icon.style.color = 'var(--primary)';
+        icon.style.fontSize = '20px';
+        card.appendChild(icon);
+    }
+    
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = asset.filename + ' (Library)';
+    nameSpan.style.maxWidth = '180px';
+    nameSpan.style.overflow = 'hidden';
+    nameSpan.style.textOverflow = 'ellipsis';
+    nameSpan.style.whiteSpace = 'nowrap';
+    card.appendChild(nameSpan);
+    
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.style.background = 'none';
+    delBtn.style.border = 'none';
+    delBtn.style.color = 'var(--danger)';
+    delBtn.style.cursor = 'pointer';
+    delBtn.style.padding = '0';
+    delBtn.style.display = 'flex';
+    delBtn.style.alignItems = 'center';
+    delBtn.innerHTML = '<i class="ph ph-x" style="font-size:14px;"></i>';
+    delBtn.onclick = (event) => {
+        event.stopPropagation();
+        stagedLibraryAssets[prefix] = stagedLibraryAssets[prefix].filter(id => id !== asset.id);
+        const hiddenInput = document.getElementById(hiddenInputId);
+        if (hiddenInput) {
+            hiddenInput.value = stagedLibraryAssets[prefix].join(',');
+        }
+        card.remove();
+    };
+    card.appendChild(delBtn);
+    
+    wrapper.appendChild(card);
+}
+
+const retailerVideoHidden = document.querySelector('input[name="product_video_urls"]');
+const retailerVideoRows = document.getElementById('retailer-video-rows');
+
+function syncRetailerVideoUrls() {
+    if (!retailerVideoRows || !retailerVideoHidden) return;
+    const urls = Array.from(retailerVideoRows.querySelectorAll('input[data-video-url]'))
+        .map((input) => input.value.trim())
+        .filter(Boolean);
+    retailerVideoHidden.value = urls.join('\n');
+}
+
+function escapeVideoAttr(value) {
+    return String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function makeRetailerVideoRow(value = '', assetId = '') {
+    const row = document.createElement('div');
+    row.className = 'video-url-row';
+    row.style.cssText = 'display:flex; align-items:center; gap:8px;';
+    row.innerHTML = `
+        <div style="width: 32px; height: 32px; border-radius: 8px; background: var(--surface-soft); border: 1px solid var(--border); display: grid; place-items: center; flex-shrink: 0; color: var(--primary);">
+            <i class="ph ph-link" style="font-size: 14px;"></i>
+        </div>
+        <input type="hidden" name="video_url_asset_id[]" value="${escapeVideoAttr(assetId)}">
+        <input type="text" name="video_url_list[]" data-video-url placeholder="https://youtube.com/watch?v=... or https://vimeo.com/..." value="${escapeVideoAttr(value)}"
+            style="flex: 1; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-main); font-size: 13px; min-width: 0;">
+        <button type="button" style="width: 32px; height: 32px; border: 1px solid rgba(239,68,68,0.2); background: rgba(239,68,68,0.05); color: #ef4444; border-radius: 8px; cursor: pointer; display: grid; place-items: center; flex-shrink: 0; font-size: 14px;">
+            <i class="ph ph-x"></i>
+        </button>
+    `;
+    const input = row.querySelector('[data-video-url]');
+    const removeBtn = row.querySelector('button');
+    input.addEventListener('input', syncRetailerVideoUrls);
+    removeBtn.addEventListener('click', () => {
+        row.remove();
+        syncRetailerVideoUrls();
+    });
+    return row;
+}
+
+window.addRetailerVideoUrlRow = function(value = '', assetId = '') {
+    if (!retailerVideoRows) return;
+    retailerVideoRows.appendChild(makeRetailerVideoRow(value, assetId));
+    syncRetailerVideoUrls();
+};
+
+if (retailerVideoRows) {
+    const videoDataNode = document.getElementById('ret-video-url-data');
+    let initialRows = [];
+    try {
+        initialRows = JSON.parse(videoDataNode?.textContent || '[]');
+    } catch (error) {
+        initialRows = [];
+    }
+    if (initialRows.length) {
+        initialRows.forEach((row) => window.addRetailerVideoUrlRow(row.url || '', row.id || ''));
+    } else if ((retailerVideoHidden?.value || '').trim()) {
+        retailerVideoHidden.value.split('\n').map((item) => item.trim()).filter(Boolean).forEach((value) => window.addRetailerVideoUrlRow(value));
+    } else {
+        window.addRetailerVideoUrlRow('');
+    }
+}
+
+// Bind upload drag-over styles
+document.querySelectorAll('.upload-zone').forEach(zone => {
+    zone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        zone.classList.add('dragover');
+    });
+    zone.addEventListener('dragleave', () => {
+        zone.classList.remove('dragover');
+    });
+    zone.addEventListener('drop', (e) => {
+        zone.classList.remove('dragover');
+    });
+});
+
+// Current gallery asset manager (deleting existing items)
+(() => {
+    const manager = document.getElementById("retailer-asset-manager");
+    const removeInputs = document.getElementById("retailer-remove-asset-inputs");
+    if (!manager || !removeInputs) return;
+
+    manager.querySelectorAll("[data-asset-remove-id]").forEach((button) => {
+        button.addEventListener("click", () => {
+            const assetId = button.dataset.assetRemoveId;
+            const card = manager.querySelector(`[data-asset-card="${assetId}"]`);
+            if (!assetId || !card) return;
+
+            const existing = removeInputs.querySelector(`input[value="${assetId}"]`);
+            if (existing) {
+                existing.remove();
+                card.style.opacity = "1";
+                card.style.pointerEvents = "auto";
+                button.textContent = "Remove";
+                button.classList.remove('ra-btn-outline');
+                button.classList.add('ra-btn-soft-danger');
+            } else {
+                const hidden = document.createElement("input");
+                hidden.type = "hidden";
+                hidden.name = "remove_asset_ids";
+                hidden.value = assetId;
+                removeInputs.appendChild(hidden);
+                card.style.opacity = "0.4";
+                button.textContent = "Keep Asset";
+                button.classList.remove('ra-btn-soft-danger');
+                button.classList.add('ra-btn-outline');
+            }
+        });
+    });
+})();
+
+const retailerMediaLightbox = document.createElement('div');
+retailerMediaLightbox.id = 'retailer-media-lightbox';
+retailerMediaLightbox.style.cssText = 'display:none; position:fixed; inset:0; background:rgba(2,6,23,0.86); z-index:10000; align-items:center; justify-content:center; padding:24px;';
+retailerMediaLightbox.innerHTML = `
+    <div style="position:relative; width:min(960px, 96vw); max-height:92vh; background:var(--surface); border-radius:18px; overflow:hidden; border:1px solid var(--border); box-shadow:0 24px 80px rgba(0,0,0,0.35);">
+        <button type="button" data-close-retailer-lightbox style="position:absolute; top:12px; right:12px; width:36px; height:36px; border-radius:999px; border:1px solid var(--border); background:var(--surface); color:var(--text-main); z-index:2;">×</button>
+        <div data-retailer-media-body style="display:grid; place-items:center; min-height:320px; background:#0f172a;"></div>
+        <div data-retailer-media-title style="padding:14px 18px; font-size:13px; color:var(--muted); background:var(--surface); border-top:1px solid var(--border);"></div>
+    </div>
+`;
+document.body.appendChild(retailerMediaLightbox);
+
+function closeRetailerLightbox() {
+    retailerMediaLightbox.style.display = 'none';
+    retailerMediaLightbox.querySelector('[data-retailer-media-body]').innerHTML = '';
+    retailerMediaLightbox.querySelector('[data-retailer-media-title]').textContent = '';
+}
+
+retailerMediaLightbox.addEventListener('click', (event) => {
+    if (event.target === retailerMediaLightbox || event.target.hasAttribute('data-close-retailer-lightbox')) {
+        closeRetailerLightbox();
+    }
+});
+
+document.querySelectorAll('[data-media-lightbox="1"]').forEach((button) => {
+    button.addEventListener('click', () => {
+        const src = button.dataset.mediaSrc || '';
+        const kind = button.dataset.mediaKind || 'image';
+        const title = button.dataset.mediaTitle || 'Media preview';
+        const body = retailerMediaLightbox.querySelector('[data-retailer-media-body]');
+        const titleNode = retailerMediaLightbox.querySelector('[data-retailer-media-title]');
+        titleNode.textContent = title;
+        if (kind === 'video') {
+            body.innerHTML = `<video src="${src}" controls autoplay playsinline style="max-width:100%; max-height:78vh; background:#000;"></video>`;
+        } else if (kind === 'external') {
+            body.innerHTML = `<iframe src="${src}" style="width:100%; height:78vh; border:0; background:#000;" allowfullscreen></iframe>`;
+        } else {
+            body.innerHTML = `<img src="${src}" alt="${title}" style="max-width:100%; max-height:78vh; object-fit:contain; background:#0f172a;">`;
+        }
+        retailerMediaLightbox.style.display = 'flex';
+    });
+});
+</script>
+    </div>
+{% endblock %}

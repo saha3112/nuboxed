@@ -1,0 +1,31 @@
+{% extends "retailer/base.html" %}
+
+{% block content %}
+<div class="ra-page-header">
+    <div><div class="ra-eyebrow">Storefront controls</div><h1>Sale Countdown</h1><p>Set a retailer-wide default or a category-specific countdown. Product overrides are managed from the product form.</p></div>
+</div>
+<div class="ra-grid-2" style="align-items:start;">
+    <section class="ra-card">
+        <div class="ra-card-header"><span class="ra-card-title">Add countdown rule</span></div>
+        <div class="ra-card-body">
+            <form method="post" class="ra-form">{% csrf_token %}
+                {% for field in form %}<div class="ra-field"><label class="ra-label">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{{ field.errors }}</div>{% endfor %}
+                <button class="ra-btn ra-btn-primary" type="submit">Save setting</button>
+            </form>
+        </div>
+    </section>
+    <section class="ra-card">
+        <div class="ra-card-header"><span class="ra-card-title">Your retailer rules</span></div>
+        <div class="ra-card-body">
+            {% for setting in sale_settings %}
+            <div style="padding:14px 0;border-bottom:1px solid var(--border);">
+                <strong>{% if setting.category %}{{ setting.category.name }}{% else %}All categories{% endif %}</strong>
+                <div style="color:var(--muted);margin:5px 0;">{{ setting.message }} · {% if setting.ends_at %}{{ setting.ends_at|date:"M j, Y, P" }}{% else %}No end time{% endif %}</div>
+                <a class="ra-btn ra-btn-secondary" href="{% url 'retailers:sale-countdown-edit' pk=setting.pk %}">Edit</a>
+                <form method="post" action="{% url 'retailers:sale-countdown-disable' pk=setting.pk %}" style="display:inline;">{% csrf_token %}<button class="ra-btn ra-btn-secondary" type="submit">Disable</button></form>
+            </div>
+            {% empty %}<p>No retailer-specific countdown rules yet.</p>{% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

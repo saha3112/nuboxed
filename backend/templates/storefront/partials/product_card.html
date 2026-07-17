@@ -1,0 +1,119 @@
+{% load currency_tags %}
+{% if product.slug %}
+{% if store_page %}
+    {% url 'catalog:product-detail' slug=product.slug as product_card_url %}
+{% else %}
+    {% url 'storefront:stores' as product_card_url %}
+{% endif %}
+<article class="product-card"
+    data-product-id="{{ product.id }}"
+    data-qv-name="{{ product.model_name|default:product.name|escape }}"
+    data-qv-brand="{{ product.brand.name|default:'Brand'|escape }}"
+    data-qv-category="{{ product.category.name|default:'Category'|escape }}"
+    data-qv-price="{{ product.discount_price|default:product.price }}"
+    data-qv-old-price="{% if product.discount_price %}{{ product.price }}{% endif %}"
+    data-qv-currency="{{ product.store.currency_code }}"
+    data-qv-save="{{ product.discount_percentage }}"
+    data-qv-description="{{ product.short_description|default:product.description|striptags|truncatewords:26|escape }}"
+    data-qv-stock="{{ product.storefront_stock_label }}"
+    data-qv-stock-class="{{ product.storefront_stock_tone }}"
+    data-qv-ram-labels="{{ product.quickview_rams|join:'|'|escape }}"
+    data-qv-storage-labels="{{ product.quickview_variant_labels|join:'|'|escape }}"
+    data-qv-images="{{ product.quickview_image_urls|join:'|'|escape }}"
+    data-qv-image-colors="{{ product.quickview_image_colors|join:'|'|escape }}"
+    data-qv-colors="{{ product.quickview_color_data|join:'|'|escape }}"
+    data-qv-variants="{{ product.variants_json|escape }}"
+>
+    {% if product.discount_percentage %}
+        <span class="discount">-{{ product.discount_percentage }}%</span>
+    {% endif %}
+    <div class="product-media">
+        <a href="{{ product_card_url }}" style="display:contents; color:inherit; text-decoration:none;">
+            {% if product.primary_image %}
+                <img src="{{ product.primary_image.url }}" alt="{{ product.name }}">
+            {% else %}
+                <div class="phone p2" aria-hidden="true"></div>
+            {% endif %}
+        </a>
+        {% if store_page %}<div class="card-actions">
+            <button class="quick-view" type="button" data-open-quickview="{{ product.id }}" title="Quick view" aria-label="Quick view">
+                <i class="fa-regular fa-eye"></i>
+            </button>
+            {% with pid=product.id|stringformat:"s" %}
+            <form method="post" action="{% url 'storefront:cart-add' product_id=product.id %}" class="ajax-cart-form">
+                {% csrf_token %}
+                <input type="hidden" name="quantity" value="1">
+                <button class="add-cart" type="submit" title="Add to cart" aria-label="Add to cart">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px;"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
+                </button>
+            </form>
+            <form method="post" action="{% url 'storefront:wishlist-add' product_id=product.id %}" class="ajax-wishlist-form">
+                {% csrf_token %}
+                <button type="submit" title="Wishlist" aria-label="Wishlist" class="wishlist-btn {% if pid in wishlist %}selected{% endif %}">
+                    <i class="{% if pid in wishlist %}fa-solid in-wishlist{% else %}fa-regular{% endif %} fa-heart" {% if pid in wishlist %}style="color: #ef4444;"{% endif %}></i>
+                </button>
+            </form>
+            <form method="post" action="{% url 'storefront:compare-add' product_id=product.id %}" class="ajax-compare-form">
+                {% csrf_token %}
+                <button type="submit" title="Compare" aria-label="Compare" class="compare-btn {% if pid in compare_list %}selected{% endif %}">
+                    <i class="fa-solid fa-right-left {% if pid in compare_list %}in-compare{% endif %}" {% if pid in compare_list %}style="color: var(--primary, #0f766e);"{% endif %}></i>
+                </button>
+            </form>
+            {% endwith %}
+        </div>{% endif %}
+    </div>
+    <div class="card-body">
+        {% if product.brand %}<div class="product-brand">{{ product.brand.name }}</div>{% endif %}
+        <div class="seller">{{ product.store.name|default:"Store" }}</div>
+        <div class="product-name">
+            <a href="{{ product_card_url }}" style="color:inherit; text-decoration:none;">
+                {% if listing_card %}
+                    {{ product.model_name|default:product.name|upper }}
+                {% else %}
+                    {{ product.model_name|default:product.name }}
+                {% endif %}
+            </a>
+        </div>
+        <div class="rating">★★★★★ <span class="review-num">(5)</span></div>
+        {% if product.quickview_rams or product.quickview_variant_labels or product.quickview_colors %}
+        <div class="variant-chips-container" style="margin: 6px 0 0; display: flex; flex-direction: column; gap: 5px;">
+            {% if product.quickview_rams %}
+            <div class="variant-spec-row">
+                <span class="variant-spec-label">RAM</span>
+                <div class="variant-chips" style="margin: 0;">
+                {% for label in product.quickview_rams|slice:":6" %}
+                <span class="variant-chip">{{ label }}</span>
+                {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            {% if product.quickview_variant_labels %}
+            <div class="variant-spec-row">
+                <span class="variant-spec-label">Storage</span>
+                <div class="variant-chips" style="margin: 0;">
+                {% for label in product.quickview_variant_labels|slice:":6" %}
+                <span class="variant-chip">{{ label }}</span>
+                {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+            {% if product.quickview_colors %}
+            <div class="color-chips" style="display: flex; gap: 5px; align-items: center;">
+                {% for c in product.quickview_colors|slice:":5" %}
+                <span class="color-dot-chip" title="{{ c.name }}" data-image-url="{{ c.image_url }}" onclick="changeCardImage(this)" style="width: 10px; height: 10px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.15); display: inline-block; box-shadow: inset 0 1px 2px rgba(0,0,0,0.1); background: {{ c.hex }}; cursor: pointer;"></span>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        <div class="price">
+            {% if product.discount_price %}
+                <span class="old">{{ product.price|format_currency:product.store.currency_code }}</span>
+                <span class="currency-symbol">{{ product.store.currency_code|currency_symbol }}</span><span class="price-amount">{{ product.discount_price|currency_amount }}</span>
+            {% else %}
+                <span class="currency-symbol">{{ product.store.currency_code|currency_symbol }}</span><span class="price-amount">{{ product.price|currency_amount }}</span>
+            {% endif %}
+        </div>
+    </div>
+</article>
+{% endif %}

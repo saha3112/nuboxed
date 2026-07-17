@@ -1,0 +1,41 @@
+from django.urls import path
+
+from .views import (
+    CourierCredentialListCreateView,
+    CourierPartnerListCreateView,
+    CourierPerformanceReportListView,
+    CourierRuleListCreateView,
+    CourierServiceabilityRuleListCreateView,
+    CourierWebhookView,
+    CountryServiceabilityListCreateView,
+    FulfillmentRecordListView,
+    PickupScheduleCreateView,
+    ReturnPickupCreateView,
+    ServiceabilityCheckView,
+    ShipmentCreateView,
+    ShipmentDetailView,
+    ShipmentEventListView,
+    ShipmentLabelView,
+    ShipmentListView,
+    TrackingSnapshotView,
+)
+
+urlpatterns = [
+    path("courier-partners/", CourierPartnerListCreateView.as_view(), name="shipments-courier-partners"),
+    path("credentials/", CourierCredentialListCreateView.as_view(), name="shipments-credentials"),
+    path("country-serviceability/", CountryServiceabilityListCreateView.as_view(), name="shipments-country-serviceability"),
+    path("serviceability-rules/", CourierServiceabilityRuleListCreateView.as_view(), name="shipments-serviceability-rules"),
+    path("courier-rules/", CourierRuleListCreateView.as_view(), name="shipments-courier-rules"),
+    path("fulfillments/", FulfillmentRecordListView.as_view(), name="shipments-fulfillments"),
+    path("shipments/", ShipmentListView.as_view(), name="shipments-list"),
+    path("shipments/create/", ShipmentCreateView.as_view(), name="shipments-create"),
+    path("shipments/<uuid:shipment_id>/", ShipmentDetailView.as_view(), name="shipments-detail"),
+    path("shipments/<uuid:shipment_id>/label/", ShipmentLabelView.as_view(), name="shipments-label"),
+    path("shipments/<uuid:shipment_id>/tracking/", TrackingSnapshotView.as_view(), name="shipments-tracking"),
+    path("shipments/events/", ShipmentEventListView.as_view(), name="shipments-events"),
+    path("shipments/pickups/", PickupScheduleCreateView.as_view(), name="shipments-pickups"),
+    path("shipments/returns/", ReturnPickupCreateView.as_view(), name="shipments-returns"),
+    path("serviceability/check/", ServiceabilityCheckView.as_view(), name="shipments-serviceability-check"),
+    path("webhook/delivery/", CourierWebhookView.as_view(), name="shipments-webhook-delivery"),
+    path("reports/performance/", CourierPerformanceReportListView.as_view(), name="shipments-performance-report"),
+]

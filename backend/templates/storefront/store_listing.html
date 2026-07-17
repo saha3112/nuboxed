@@ -1,0 +1,37 @@
+{% extends "storefront/base.html" %}
+
+{% block content %}
+<section class="page-head">
+  <div class="container">
+    <h1>{{ storefront_page_texts.stores.title|default:"Store Directory" }}</h1>
+    <div class="breadcrumb">
+        <a href="{% url 'storefront:home' %}">Home</a>
+        <span>/</span>
+        <span>{{ storefront_page_texts.stores.breadcrumb_label|default:"Stores" }}</span>
+    </div>
+  </div>
+</section>
+<section class="store-search-section">
+    <form method="get" class="store-directory-search">
+        <input type="search" name="q" value="{{ search_query }}" placeholder="Search stores by name, city, or country">
+        <button type="submit" class="button-compact">Search</button>
+    </form>
+</section>
+<div class="page-shell store-directory-shell">
+    <section class="store-grid">
+        {% for store in stores %}
+            {% include "storefront/partials/store_card.html" with store=store %}
+        {% empty %}
+            <p>No stores matched your search.</p>
+        {% endfor %}
+    </section>
+</div>
+
+{% if other_location_msg %}
+<div class="container" style="margin-top: 2rem; padding: 20px; text-align: center; background: var(--bg-alt); border-radius: 8px;">
+    <p style="margin-bottom: 10px; color: var(--text);">{{ storefront_location_messages.no_stores_message|default:"No more stores found in your current location." }}</p>
+    <a href="{{ other_location_url }}" class="button-compact" style="display: inline-block; padding: 10px 20px; text-decoration: none; background: var(--primary); color: #fff; border-radius: 4px;">{{ other_location_msg }}</a>
+</div>
+{% endif %}
+
+{% endblock %}

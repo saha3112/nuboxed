@@ -1,0 +1,650 @@
+{% extends "storefront/base.html" %}
+
+{% block content %}
+{# Keep the store Quick View visually identical to the Shop listing Quick View. #}
+{% include "storefront/partials/reference_shop_styles.html" %}
+<section class="page-head">
+  <div class="container">
+    <h1>{{ store.name }}</h1>
+    <div class="breadcrumb">
+        <a href="{% url 'storefront:home' %}">Home</a>
+        <span>/</span>
+        <a href="{% url 'storefront:stores' %}">Stores</a>
+        <span>/</span>
+        <span>{{ store.name }}</span>
+    </div>
+  </div>
+</section>
+<section class="store-hero store-hero-modern" id="top">
+    {% if store.banner %}
+        <div class="store-hero-banner-wrap">
+            <img src="{{ store.banner.url }}" alt="{{ store.name }}" class="store-hero-banner">
+        </div>
+    {% endif %}
+    <div class="store-hero-copy">
+        <div class="storefront-store-head">
+            {% if store.logo %}
+                <img src="{{ store.logo.url }}" alt="{{ store.name }}" class="storefront-store-logo">
+            {% endif %}
+            <div>
+                <div class="store-title-row">
+                    <div class="store-title-copy">
+                        <p class="eyebrow">Retailer Store</p>
+                        <h1>{{ store.name }}</h1>
+                    </div>
+                    <div class="store-title-actions">
+                        <div class="contact-strip store-contact-inline">
+                        {% if store.contact_email %}
+                            <a href="mailto:{{ store.contact_email }}" class="store-contact-link icon-only" aria-label="Email {{ store.contact_email }}" title="{{ store.contact_email }}"><i class="fa-solid fa-envelope"></i></a>
+                        {% endif %}
+                        {% if store.contact_phone %}
+                            <a href="tel:{{ store.contact_phone }}" class="store-contact-link icon-only" aria-label="Call {{ store.contact_phone }}" title="{{ store.contact_phone }}"><i class="fa-solid fa-phone"></i></a>
+                        {% endif %}
+                        {% if store.contact_whatsapp %}
+                            <a href="https://wa.me/{{ store.contact_whatsapp|cut:'+'|cut:' '|cut:'-'|cut:'('|cut:')' }}" target="_blank" rel="noopener" class="store-contact-link icon-only whatsapp" aria-label="WhatsApp {{ store.contact_whatsapp }}" title="{{ store.contact_whatsapp }}"><i class="fa-brands fa-whatsapp"></i></a>
+                        {% endif %}
+                        {% if store.website_url %}
+                            <a href="{{ store.website_url }}" target="_blank" rel="noopener" class="store-contact-link icon-only" aria-label="Website" title="Website"><i class="fa-solid fa-globe"></i></a>
+                        {% endif %}
+                        {% if store.facebook_url %}
+                            <a href="{{ store.facebook_url }}" target="_blank" rel="noopener" class="store-contact-link icon-only" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
+                        {% endif %}
+                        {% if store.instagram_url %}
+                            <a href="{{ store.instagram_url }}" target="_blank" rel="noopener" class="store-contact-link icon-only" aria-label="Instagram"><i class="fa-brands fa-instagram"></i></a>
+                        {% endif %}
+                        {% if store.linkedin_url %}
+                            <a href="{{ store.linkedin_url }}" target="_blank" rel="noopener" class="store-contact-link icon-only" aria-label="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
+                        {% endif %}
+                        {% if store.x_url %}
+                            <a href="{{ store.x_url }}" target="_blank" rel="noopener" class="store-contact-link icon-only" aria-label="X"><i class="fa-brands fa-x-twitter"></i></a>
+                        {% endif %}
+                        {% if store.youtube_url %}
+                            <a href="{{ store.youtube_url }}" target="_blank" rel="noopener" class="store-contact-link icon-only" aria-label="YouTube"><i class="fa-brands fa-youtube"></i></a>
+                        {% endif %}
+                        </div>
+                        <div class="store-rating-summary" data-store-rating-summary>
+                            <span class="store-rating-stars" data-store-rating-stars>
+                                {% if store.rating >= 4.5 %}★★★★★{% elif store.rating >= 3.5 %}★★★★☆{% elif store.rating >= 2.5 %}★★★☆☆{% elif store.rating >= 1.5 %}★★☆☆☆{% elif store.rating > 0 %}★☆☆☆☆{% else %}☆☆☆☆☆{% endif %}
+                            </span>
+                            <strong data-store-rating-value>{{ store.rating|floatformat:1 }}</strong>
+                            <span data-store-rating-count>({{ store_rating_count }} rating{{ store_rating_count|pluralize }})</span>
+                        </div>
+                        <div class="store-rating-actions">
+                            <button type="button" class="store-rate-trigger" data-store-rating-open><i class="fa-solid fa-star"></i> Rate this store</button>
+                            <button type="button" class="store-comments-trigger" data-store-comments-open data-comments-url="{% url 'storefront:store-rating-list' slug=store.slug %}"><i class="fa-regular fa-comments"></i> View comments <span>({{ store_rating_count }})</span></button>
+                            {% if store_map_query %}<button type="button" class="store-location-trigger" data-store-map-open><i class="fa-solid fa-location-dot"></i> View location</button>{% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% if store.store_page_tagline %}<p class="store-page-tagline">{{ store.store_page_tagline }}</p>{% endif %}
+                {% if store.description %}<p>{{ store.description }}</p>{% endif %}
+                <div class="store-rating-modal" data-store-rating-modal aria-hidden="true">
+                    <div class="store-rating-dialog" role="dialog" aria-modal="true" aria-labelledby="store-rating-title">
+                        <button type="button" class="store-rating-close" data-store-rating-close aria-label="Close rating form">&times;</button>
+                        <div class="store-rating-form-head">
+                            <strong id="store-rating-title">Rate {{ store.name }}</strong>
+                            <span>Share your shopping experience</span>
+                        </div>
+                <form class="store-rating-form" data-store-rating-form data-submit-url="{% url 'storefront:store-rating-submit' slug=store.slug %}">
+                    {% csrf_token %}
+                    <div class="store-rating-inputs">
+                        <div class="store-rating-picker" aria-label="Store rating">
+                            <input type="radio" id="store-star5" name="rating" value="5" checked><label for="store-star5">★</label>
+                            <input type="radio" id="store-star4" name="rating" value="4"><label for="store-star4">★</label>
+                            <input type="radio" id="store-star3" name="rating" value="3"><label for="store-star3">★</label>
+                            <input type="radio" id="store-star2" name="rating" value="2"><label for="store-star2">★</label>
+                            <input type="radio" id="store-star1" name="rating" value="1"><label for="store-star1">★</label>
+                        </div>
+                        <input type="text" name="name" placeholder="Your name" maxlength="120" required>
+                        <textarea name="comment" placeholder="Tell us about your experience" maxlength="1000" rows="4"></textarea>
+                        <button type="submit">Submit rating</button>
+                    </div>
+                    <div class="store-rating-message" data-store-rating-message></div>
+                </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% if store.store_page_announcement %}
+<section class="section-shell store-announcement">
+    <i class="fa-solid fa-bullhorn"></i>
+    <span>{{ store.store_page_announcement }}</span>
+</section>
+{% endif %}
+<div class="store-comments-modal" data-store-comments-modal aria-hidden="true">
+    <div class="store-comments-dialog" role="dialog" aria-modal="true" aria-labelledby="store-comments-title">
+        <div class="store-comments-head">
+            <div><p class="eyebrow">What customers say</p><h2 id="store-comments-title">Store comments <span>({{ store_rating_count }})</span></h2></div>
+            <button type="button" class="store-comments-close" data-store-comments-close aria-label="Close comments">&times;</button>
+        </div>
+        <div class="store-comments-status" data-store-comments-status>Loading comments...</div>
+        <div class="store-comments-list" data-store-comments-list></div>
+        <div class="store-comments-pagination" data-store-comments-pagination aria-label="Comments pagination"></div>
+    </div>
+</div>
+{% if store_map_query %}
+<div class="store-map-modal" data-store-map-modal aria-hidden="true">
+    <div class="store-map-dialog" role="dialog" aria-modal="true" aria-labelledby="store-map-title">
+        <div class="store-map-head">
+            <div><p class="eyebrow">Store location</p><h2 id="store-map-title">{{ store.name }}</h2></div>
+            <button type="button" class="store-map-close" data-store-map-close aria-label="Close map">&times;</button>
+        </div>
+        <div class="store-map-address">
+            <i class="fa-solid fa-location-dot"></i>
+            <div class="store-map-address-copy">
+                <strong>Store address</strong>
+                <span>{{ store_map_query }}</span>
+            </div>
+        </div>
+        <div class="store-map-frame-wrap"><iframe src="{{ store_map_embed_url }}" title="{{ store.name }} location on Google Maps" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></div>
+        <div class="store-map-actions"><a href="{{ store_map_url }}" target="_blank" rel="noopener" class="store-map-external"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open in Google Maps</a></div>
+    </div>
+</div>
+{% endif %}
+<section class="section-shell store-menu-shell" data-store-menu-shell>
+    <div class="store-menu-bar">
+        <a href="#top" class="store-menu-identity">
+            {% if store.logo %}
+                <img src="{{ store.logo.url }}" alt="{{ store.name }}">
+            {% else %}
+                <span class="store-menu-logo-fallback">{{ store.name|first|upper }}</span>
+            {% endif %}
+            <span>
+                <strong>{{ store.name }}</strong>
+                <small>{{ store.retailer.display_name|default:store.retailer.legal_name|default:"Retailer Store" }}</small>
+            </span>
+        </a>
+        <div class="store-menu-meta">
+            <p class="eyebrow">Store Menu</p>
+            <strong>Browse by category</strong>
+        </div>
+        <button type="button" class="store-menu-toggle" data-store-menu-toggle>
+            <i class="fa-solid fa-list"></i>
+            Categories
+        </button>
+        <div class="store-menu-chips">
+            {% for item in store_categories %}
+                {% if item.children %}
+                    {% for child in item.children %}
+                        <div class="store-menu-category">
+                            <a href="{% url 'storefront:retailer-shop' slug=store.slug %}?category={{ child.category.slug }}" class="store-menu-chip">{{ child.category.name }}</a>
+                            {% if child.brands %}
+                                <div class="store-menu-subchips">
+                                    <div class="store-menu-brand-list">
+                                        {% for brand in child.brands %}
+                                            <a href="{% url 'storefront:retailer-shop' slug=store.slug %}?brand_id={{ brand.brand__id }}" class="store-menu-brand-row">{{ brand.brand__name }}</a>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="store-menu-category">
+                        <a href="{% url 'storefront:retailer-shop' slug=store.slug %}?category={{ item.category.slug }}" class="store-menu-chip">{{ item.category.name }}</a>
+                        {% if item.brands %}
+                            <div class="store-menu-subchips">
+                                <div class="store-menu-brand-list">
+                                    {% for brand in item.brands %}
+                                        <a href="{% url 'storefront:retailer-shop' slug=store.slug %}?brand_id={{ brand.brand__id }}" class="store-menu-brand-row">{{ brand.brand__name }}</a>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% empty %}
+                <span class="store-menu-chip muted">No category sections</span>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="store-menu-drawer" data-store-menu-drawer aria-hidden="true">
+        <div class="store-menu-drawer-panel">
+            <div class="store-menu-drawer-head">
+                <strong>Categories</strong>
+                <button type="button" class="store-menu-drawer-close" data-store-menu-close>Close</button>
+            </div>
+            <div class="store-menu-drawer-list">
+                {% for item in store_categories %}
+                    <div class="store-menu-drawer-group">
+                        <a href="{% url 'storefront:retailer-shop' slug=store.slug %}?category={{ item.category.slug }}" class="store-menu-drawer-link" data-store-menu-link>{{ item.category.name }} <span>{{ item.count }}</span></a>
+                        {% for child in item.children %}
+                            <a href="{% url 'storefront:retailer-shop' slug=store.slug %}?category={{ child.category.slug }}" class="store-menu-drawer-link child" data-store-menu-link>{{ child.category.name }} <span>{{ child.count }}</span></a>
+                        {% endfor %}
+                    </div>
+                {% empty %}
+                    <span class="store-menu-drawer-empty">No category sections yet.</span>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+{% if store_page_sections %}
+<section class="section-shell store-page-modules">
+    {% for section in store_page_sections %}
+        {% if section.type == "image_pair" or section.image_url_2 %}
+            <article class="store-module store-module-image-pair{% if section.image_size == 'actual' or section.image_height == '100%' %} store-image-natural-height{% endif %}" {% if section.image_height %}style="--store-pair-height: {{ section.image_height }};"{% endif %}>
+                {% if section.image_url %}<img src="{{ section.image_url }}" alt="{{ section.title|default:store.name }}" style="object-fit: {{ section.image_object_fit|default:'contain' }}; object-position: {{ section.image_position|default:'center' }};">{% endif %}
+                {% if section.image_url_2 %}<img src="{{ section.image_url_2 }}" alt="{{ section.title|default:store.name }}" style="object-fit: {{ section.image_object_fit|default:'contain' }}; object-position: {{ section.image_position|default:'center' }};">{% endif %}
+            </article>
+        {% elif section.type == "image_banner" %}
+            <article class="store-module store-module-image-banner store-image-size-{{ section.image_size|default:'standard' }}{% if section.image_size == 'actual' or section.image_height == '100%' %} store-image-natural-height{% endif %}" {% if section.image_width or section.image_height %}style="{% if section.image_width %}max-width: {{ section.image_width }}; margin-left:auto; margin-right:auto;{% endif %} {% if section.image_height %}--store-banner-height: {{ section.image_height }};{% endif %}"{% endif %}>
+                {% if section.image_url %}
+                    {% if section.cta_url %}<a href="{{ section.cta_url }}" aria-label="{{ section.title|default:store.name }}">{% endif %}
+                    <img src="{{ section.image_url }}" alt="{{ section.title|default:store.name }}" style="object-fit: {{ section.image_object_fit|default:'cover' }}; object-position: {{ section.image_position|default:'center' }};">
+                    {% if section.cta_url %}</a>{% endif %}
+                {% endif %}
+            </article>
+        {% elif section.type == "hero" %}
+            <article class="store-module store-module-hero store-image-size-{{ section.image_size|default:'standard' }}{% if section.image_size == 'actual' or section.image_height == '100%' %} store-image-natural-height{% endif %}{% if section.image_url %} has-store-image{% endif %}{% if not section.title and not section.subtitle and not section.cta_label %} is-image-only{% endif %}" {% if section.image_width or section.image_height %}style="{% if section.image_width %}max-width: {{ section.image_width }}; margin-left:auto; margin-right:auto;{% endif %} {% if section.image_height %}--store-module-height: {{ section.image_height }};{% endif %}"{% endif %}>
+                {% if section.image_url %}
+                    <img src="{{ section.image_url }}" alt="{{ section.title|default:store.name }}" class="store-module-image" style="object-fit: {{ section.image_object_fit|default:'cover' }}; object-position: {{ section.image_position|default:'center' }};">
+                {% endif %}
+                {% if section.title or section.subtitle or section.cta_label %}
+                    <div>
+                        {% if section.title %}<h2>{{ section.title }}</h2>{% endif %}
+                        {% if section.subtitle %}<p>{{ section.subtitle }}</p>{% endif %}
+                        {% if section.cta_label and section.cta_url %}<a href="{{ section.cta_url }}" class="primary-link">{{ section.cta_label }}</a>{% endif %}
+                    </div>
+                {% endif %}
+            </article>
+        {% elif section.type == "tile_grid" %}
+            <article class="store-module">
+                <div class="section-head">
+                    <div>
+                        <p class="eyebrow">{{ store.name }}</p>
+                        <h2>{{ section.title }}</h2>
+                        {% if section.subtitle %}<p>{{ section.subtitle }}</p>{% endif %}
+                    </div>
+                </div>
+                <div class="store-tile-grid">
+                    {% for tile in section.tiles %}
+                        <a href="{{ tile.url|default:'#' }}" class="store-tile store-image-size-{{ tile.image_size|default:'standard' }}{% if tile.image_url %} has-store-image{% endif %}" {% if tile.image_width or tile.image_height %}style="{% if tile.image_width %}max-width: {{ tile.image_width }};{% endif %} {% if tile.image_height %}--store-tile-height: {{ tile.image_height }};{% endif %}"{% endif %}>
+                            {% if tile.image_url %}
+                                <img src="{{ tile.image_url }}" alt="{{ tile.title|default:store.name }}" class="store-tile-image" style="object-fit: {{ tile.image_object_fit|default:'cover' }}; object-position: {{ tile.image_position|default:'center' }};">
+                            {% endif %}
+                            <span>{{ tile.subtitle }}</span>
+                            <strong>{{ tile.title }}</strong>
+                        </a>
+                    {% endfor %}
+                </div>
+            </article>
+        {% elif section.type == "promo_band" %}
+            <article class="store-module store-module-promo">
+                <div>
+                    <h2>{{ section.title }}</h2>
+                    {% if section.subtitle %}<p>{{ section.subtitle }}</p>{% endif %}
+                </div>
+                {% if section.cta_label and section.cta_url %}<a href="{{ section.cta_url }}" class="button-compact">{{ section.cta_label }}</a>{% endif %}
+            </article>
+        {% elif section.type == "product_shelf" %}
+            <article class="store-module">
+                <div class="section-head">
+                    <div>
+                        <p class="eyebrow">{{ store.name }}</p>
+                        <h2>{{ section.title|default:"Featured products" }}</h2>
+                        {% if section.subtitle %}<p>{{ section.subtitle }}</p>{% endif %}
+                    </div>
+                </div>
+                {% if section.products %}
+                    <div class="product-grid">
+                        {% for product in section.products %}
+                            {% include "storefront/partials/product_card.html" with product=product store_page=True %}
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="store-module-empty">No products selected for this shelf yet.</p>
+                {% endif %}
+            </article>
+        {% elif section.type == "category_feature" %}
+            <article class="store-module">
+                <div class="section-head">
+                    <div>
+                        <p class="eyebrow">{{ store.name }}</p>
+                        {% if section.title %}
+                            <h2>{{ section.title }}</h2>
+                        {% elif section.category %}
+                            <h2>{{ section.category.name }}</h2>
+                        {% else %}
+                            <h2>Featured category</h2>
+                        {% endif %}
+                        {% if section.subtitle %}<p>{{ section.subtitle }}</p>{% endif %}
+                    </div>
+                    {% if section.category %}<a href="#category-{{ section.category.slug }}" class="button-compact">View category</a>{% endif %}
+                </div>
+                {% if section.products %}
+                    <div class="product-grid">
+                        {% for product in section.products %}
+                            {% include "storefront/partials/product_card.html" with product=product store_page=True %}
+                        {% endfor %}
+                    </div>
+                {% elif not section.category %}
+                    <p class="store-module-empty">Choose a category slug to show products here.</p>
+                {% endif %}
+            </article>
+        {% endif %}
+    {% endfor %}
+</section>
+{% endif %}
+<section class="section-shell">
+    {% if store_category_groups %}
+        {% for group in store_category_groups %}
+            <div class="store-category-block" id="{{ group.id }}">
+                <div class="section-head">
+                    <div>
+                        <p class="eyebrow">{{ store.name }}</p>
+                        <h2>{{ group.category.name }}</h2>
+                    </div>
+                    <a href="#top" class="button-compact">Top</a>
+                </div>
+                {% if group.children %}
+                    <div class="store-device-tabs" data-store-device-tabs>
+                        <div class="store-device-tab-list" role="tablist" aria-label="Device types">
+                            {% for child in group.children %}
+                                <button type="button" class="store-device-tab{% if forloop.first %} is-active{% endif %}" data-store-device-tab="{{ child.id }}" role="tab" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}">
+                                    {{ child.category.name }} <span>{{ child.count }}</span>
+                                </button>
+                            {% endfor %}
+                        </div>
+                        {% for child in group.children %}
+                            <section class="store-subcategory-block store-device-panel{% if forloop.first %} is-active{% endif %}" id="{{ child.id }}" data-store-device-panel="{{ child.id }}" role="tabpanel">
+                                <div class="store-subcategory-head">
+                                    <h3>{{ child.category.name }}</h3>
+                                    <span>{{ child.count }} products</span>
+                                </div>
+                                {% if child.brand_tabs %}
+                                    <div class="store-product-tabs" data-store-product-tabs>
+                                        <div class="store-product-tab-list" role="tablist" aria-label="Brands">
+                                            {% for brand in child.brand_tabs %}
+                                                <button type="button" class="store-product-tab{% if forloop.first %} is-active{% endif %}" data-store-brand-tab="{{ brand.id }}" role="tab">{{ brand.name }}</button>
+                                            {% endfor %}
+                                        </div>
+                                        {% for brand in child.brand_tabs %}
+                                            <div class="store-brand-panel{% if forloop.first %} is-active{% endif %}" data-store-brand-panel="{{ brand.id }}" role="tabpanel">
+                                                {% if brand.models %}
+                                                    <div class="store-model-tab-list" role="tablist" aria-label="Models">
+                                                        <button type="button" class="store-model-tab is-active" data-store-model-tab="all-{{ brand.id }}">All models</button>
+                                                        {% for model in brand.models %}<button type="button" class="store-model-tab" data-store-model-tab="{{ model.id }}">{{ model.name }}</button>{% endfor %}
+                                                    </div>
+                                                {% endif %}
+                                                <div class="product-grid store-brand-products" data-store-model-panel="all-{{ brand.id }}">
+                                                    {% for product in brand.products %}{% include "storefront/partials/product_card.html" with product=product store_page=True %}{% endfor %}
+                                                </div>
+                                                {% for model in brand.models %}
+                                                    <div class="product-grid store-brand-products" data-store-model-panel="{{ model.id }}" hidden>
+                                                        {% for product in model.products %}{% include "storefront/partials/product_card.html" with product=product store_page=True %}{% endfor %}
+                                                    </div>
+                                                {% endfor %}
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="product-grid">
+                                        {% for product in child.products %}
+                                            {% include "storefront/partials/product_card.html" with product=product store_page=True %}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </section>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="product-grid">
+                        {% for product in group.products %}
+                            {% include "storefront/partials/product_card.html" with product=product store_page=True %}
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    {% else %}
+        <div class="section-head">
+            <div>
+                <p class="eyebrow">Store Products</p>
+                <h2>Products from {{ store.name }}</h2>
+            </div>
+        </div>
+        <div class="product-grid">
+            {% for product in products %}
+                {% include "storefront/partials/product_card.html" with product=product listing_card=True store_page=True %}
+            {% empty %}
+                <p>No approved products yet for this store.</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+</section>
+
+{% include "storefront/partials/quickview_modal.html" %}
+
+<script>
+(() => {
+    const stickyMenu = document.querySelector('[data-store-menu-shell]');
+    const shell = document.querySelector('[data-store-menu-drawer]');
+    const toggle = document.querySelector('[data-store-menu-toggle]');
+    const closeBtn = document.querySelector('[data-store-menu-close]');
+    const links = document.querySelectorAll('[data-store-menu-link]');
+    const closeMenu = () => {
+        if (!shell) return;
+        shell.classList.remove('open');
+        shell.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('store-menu-open');
+    };
+    const openMenu = () => {
+        if (!shell) return;
+        shell.classList.add('open');
+        shell.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('store-menu-open');
+    };
+    toggle?.addEventListener('click', openMenu);
+    closeBtn?.addEventListener('click', closeMenu);
+    shell?.addEventListener('click', (event) => {
+        if (event.target === shell) closeMenu();
+    });
+    links.forEach((link) => link.addEventListener('click', closeMenu));
+
+    const updateStickyState = () => {
+        if (!stickyMenu) return;
+        const top = stickyMenu.getBoundingClientRect().top;
+        stickyMenu.classList.toggle('is-stuck', top <= 1 && window.scrollY > 20);
+    };
+    updateStickyState();
+    window.addEventListener('scroll', updateStickyState, { passive: true });
+    window.addEventListener('resize', updateStickyState);
+
+    const ratingForm = document.querySelector('[data-store-rating-form]');
+    const ratingMessage = document.querySelector('[data-store-rating-message]');
+    const ratingValue = document.querySelector('[data-store-rating-value]');
+    const ratingCount = document.querySelector('[data-store-rating-count]');
+    const ratingStars = document.querySelector('[data-store-rating-stars]');
+    const ratingModal = document.querySelector('[data-store-rating-modal]');
+    const openRating = document.querySelector('[data-store-rating-open]');
+    const closeRating = document.querySelector('[data-store-rating-close]');
+    const setRatingModal = (open) => {
+        ratingModal?.classList.toggle('open', open);
+        ratingModal?.setAttribute('aria-hidden', open ? 'false' : 'true');
+        document.body.classList.toggle('store-rating-open', open);
+        if (open) ratingForm?.querySelector('input[name="name"]')?.focus();
+    };
+    openRating?.addEventListener('click', () => setRatingModal(true));
+    closeRating?.addEventListener('click', () => setRatingModal(false));
+    ratingModal?.addEventListener('click', (event) => {
+        if (event.target === ratingModal) setRatingModal(false);
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && ratingModal?.classList.contains('open')) setRatingModal(false);
+    });
+    const renderStars = (value) => {
+        const rating = Number(value) || 0;
+        if (rating >= 4.5) return '★★★★★';
+        if (rating >= 3.5) return '★★★★☆';
+        if (rating >= 2.5) return '★★★☆☆';
+        if (rating >= 1.5) return '★★☆☆☆';
+        if (rating > 0) return '★☆☆☆☆';
+        return '☆☆☆☆☆';
+    };
+    const commentsModal = document.querySelector('[data-store-comments-modal]');
+    const commentsOpen = document.querySelector('[data-store-comments-open]');
+    const commentsClose = document.querySelector('[data-store-comments-close]');
+    const commentsList = document.querySelector('[data-store-comments-list]');
+    const commentsStatus = document.querySelector('[data-store-comments-status]');
+    const commentsPagination = document.querySelector('[data-store-comments-pagination]');
+    let commentsRequest = null;
+
+    const renderComments = (items) => {
+        commentsList.innerHTML = '';
+        if (!items.length) {
+            commentsStatus.textContent = 'No published comments yet.';
+            return;
+        }
+        commentsStatus.textContent = '';
+        items.forEach((item) => {
+            const article = document.createElement('article');
+            article.className = 'store-comment-item';
+            article.innerHTML = `<div class="store-comment-meta"><strong></strong><span class="store-rating-stars"></span><small></small></div><div><h3>Customer feedback</h3><p></p></div>`;
+            article.querySelector('strong').textContent = item.name;
+            article.querySelector('.store-rating-stars').textContent = renderStars(item.rating);
+            article.querySelector('small').textContent = item.date;
+            article.querySelector('p').textContent = item.comment;
+            commentsList.appendChild(article);
+        });
+    };
+
+    const renderCommentsPagination = (pagination) => {
+        commentsPagination.innerHTML = '';
+        if (!pagination || pagination.pages < 2) return;
+        const addPageButton = (label, page, disabled = false, active = false) => {
+            const button = document.createElement('button');
+            button.type = 'button';
+            button.textContent = label;
+            button.disabled = disabled;
+            button.classList.toggle('active', active);
+            button.setAttribute('aria-label', label === '‹' ? 'Previous page' : label === '›' ? 'Next page' : `Page ${page}`);
+            if (!disabled) button.addEventListener('click', () => loadComments(page));
+            commentsPagination.appendChild(button);
+        };
+        addPageButton('‹', pagination.page - 1, pagination.page === 1);
+        for (let page = 1; page <= pagination.pages; page += 1) addPageButton(String(page), page, false, page === pagination.page);
+        addPageButton('›', pagination.page + 1, pagination.page === pagination.pages);
+    };
+
+    const loadComments = async (page = 1) => {
+        if (commentsRequest) commentsRequest.abort();
+        commentsRequest = new AbortController();
+        commentsStatus.textContent = 'Loading comments...';
+        commentsList.innerHTML = '';
+        try {
+            const response = await fetch(`${commentsOpen.dataset.commentsUrl}?page=${page}`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                signal: commentsRequest.signal,
+            });
+            if (!response.ok) throw new Error('Comments could not be loaded.');
+            const data = await response.json();
+            renderComments(data.results || []);
+            renderCommentsPagination(data.pagination);
+        } catch (error) {
+            if (error.name === 'AbortError') return;
+            commentsStatus.textContent = 'Comments could not be loaded. Please try again.';
+        }
+    };
+
+    const setCommentsOpen = (open) => {
+        commentsModal?.classList.toggle('open', open);
+        commentsModal?.setAttribute('aria-hidden', open ? 'false' : 'true');
+        document.body.classList.toggle('store-comments-open', open);
+        if (open) loadComments(1);
+    };
+    commentsOpen?.addEventListener('click', () => setCommentsOpen(true));
+    commentsClose?.addEventListener('click', () => setCommentsOpen(false));
+    commentsModal?.addEventListener('click', (event) => { if (event.target === commentsModal) setCommentsOpen(false); });
+    const mapModal = document.querySelector('[data-store-map-modal]');
+    const mapOpen = document.querySelector('[data-store-map-open]');
+    const mapClose = document.querySelector('[data-store-map-close]');
+    const setMapOpen = (open) => {
+        mapModal?.classList.toggle('open', open);
+        mapModal?.setAttribute('aria-hidden', open ? 'false' : 'true');
+        document.body.classList.toggle('store-map-open', open);
+    };
+    mapOpen?.addEventListener('click', () => setMapOpen(true));
+    mapClose?.addEventListener('click', () => setMapOpen(false));
+    mapModal?.addEventListener('click', (event) => { if (event.target === mapModal) setMapOpen(false); });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && commentsModal?.classList.contains('open')) setCommentsOpen(false);
+        if (event.key === 'Escape' && mapModal?.classList.contains('open')) setMapOpen(false);
+    });
+    ratingForm?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const submitButton = ratingForm.querySelector('button[type="submit"]');
+        submitButton.disabled = true;
+        const formData = new FormData(ratingForm);
+        try {
+            const response = await fetch(ratingForm.dataset.submitUrl, {
+                method: 'POST',
+                body: formData,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            });
+            const data = await response.json();
+            if (!response.ok || data.status !== 'success') {
+                throw new Error(data.message || 'Rating could not be saved.');
+            }
+            if (ratingValue) ratingValue.textContent = Number(data.rating).toFixed(1);
+            if (ratingStars) ratingStars.textContent = renderStars(data.rating);
+            if (ratingCount) ratingCount.textContent = `(${data.count} rating${Number(data.count) === 1 ? '' : 's'})`;
+            if (ratingMessage) {
+                ratingMessage.classList.remove('error');
+                ratingMessage.textContent = data.message;
+                ratingMessage.classList.add('show');
+            }
+            ratingForm.reset();
+            ratingForm.querySelector('#store-star5').checked = true;
+            window.setTimeout(() => setRatingModal(false), 1200);
+        } catch (error) {
+            ratingMessage?.classList.remove('error');
+            if (ratingMessage) {
+                ratingMessage.textContent = error.message;
+                ratingMessage.classList.add('show', 'error');
+            }
+        } finally {
+            submitButton.disabled = false;
+        }
+    });
+})();
+</script>
+<script>
+(() => {
+    document.querySelectorAll('[data-store-device-tabs]').forEach((tabs) => {
+        const buttons = tabs.querySelectorAll('[data-store-device-tab]');
+        const panels = tabs.querySelectorAll('[data-store-device-panel]');
+        buttons.forEach((button) => button.addEventListener('click', () => {
+            const id = button.dataset.storeDeviceTab;
+            buttons.forEach((item) => {
+                const active = item === button;
+                item.classList.toggle('is-active', active);
+                item.setAttribute('aria-selected', active ? 'true' : 'false');
+            });
+            panels.forEach((panel) => panel.classList.toggle('is-active', panel.dataset.storeDevicePanel === id));
+        }));
+    });
+
+    document.querySelectorAll('[data-store-product-tabs]').forEach((tabs) => {
+        const brandTabs = tabs.querySelectorAll('[data-store-brand-tab]');
+        const brandPanels = tabs.querySelectorAll('[data-store-brand-panel]');
+        brandTabs.forEach((button) => button.addEventListener('click', () => {
+            const id = button.dataset.storeBrandTab;
+            brandTabs.forEach((item) => item.classList.toggle('is-active', item === button));
+            brandPanels.forEach((panel) => panel.classList.toggle('is-active', panel.dataset.storeBrandPanel === id));
+        }));
+        tabs.querySelectorAll('[data-store-brand-panel]').forEach((panel) => {
+            const modelTabs = panel.querySelectorAll('[data-store-model-tab]');
+            const modelPanels = panel.querySelectorAll('[data-store-model-panel]');
+            modelTabs.forEach((button) => button.addEventListener('click', () => {
+                const id = button.dataset.storeModelTab;
+                modelTabs.forEach((item) => item.classList.toggle('is-active', item === button));
+                modelPanels.forEach((modelPanel) => { modelPanel.hidden = modelPanel.dataset.storeModelPanel !== id; });
+            }));
+        });
+    });
+})();
+</script>
+{% endblock %}

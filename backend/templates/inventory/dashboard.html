@@ -1,0 +1,213 @@
+{% extends "retailer/base.html" %}
+
+{% block content %}
+
+<!-- Stats -->
+<div class="ra-stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+    <div class="ra-stat">
+        <div class="ra-stat-icon blue"><i class="ph ph-warehouse"></i></div>
+        <div class="ra-stat-value">{{ warehouses|length }}</div>
+        <div class="ra-stat-label">Warehouses</div>
+    </div>
+    <div class="ra-stat">
+        <div class="ra-stat-icon green"><i class="ph ph-package"></i></div>
+        <div class="ra-stat-value">{{ stock_items|length }}</div>
+        <div class="ra-stat-label">Stock Items</div>
+    </div>
+    <div class="ra-stat">
+        <div class="ra-stat-icon red"><i class="ph ph-warning-circle"></i></div>
+        <div class="ra-stat-value">{{ low_stock_alerts|length }}</div>
+        <div class="ra-stat-label">Low Stock Alerts</div>
+    </div>
+</div>
+
+<!-- Product Stock Table -->
+<div class="ra-card" style="margin-bottom: 20px;">
+    <div class="ra-card-header">
+        <span class="ra-card-title">Product Stock</span>
+        <span style="font-size: 12px; color: var(--text-muted);">Current stock levels</span>
+    </div>
+    <div class="ra-table-wrap">
+        <table class="ra-table">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Store</th>
+                    <th>Warehouse</th>
+                    <th>On Hand</th>
+                    <th>Reserved</th>
+                    <th>Available</th>
+                    <th>Alert</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stock in stock_items %}
+                <tr>
+                    <td>{{ stock.product.name }}{% if stock.variant %} · <span style="color: var(--text-muted);">{{ stock.variant.name }}</span>{% endif %}</td>
+                    <td>
+                        {% if stock.product.store %}
+                            {{ stock.product.store.name }}
+                        {% elif stock.warehouse.store %}
+                            {{ stock.warehouse.store.name }}
+                        {% else %}
+                            Retailer-wide
+                        {% endif %}
+                    </td>
+                    <td>{{ stock.warehouse.name }}</td>
+                    <td>{{ stock.on_hand_quantity }}</td>
+                    <td>{{ stock.reserved_quantity }}</td>
+                    <td><strong>{{ stock.available_quantity }}</strong></td>
+                    <td>
+                        {% if stock.is_low_stock %}
+                        <span class="ra-badge danger">Low</span>
+                        {% else %}
+                        <span class="ra-badge success">OK</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="7" class="ra-table-empty">No stock records yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Delivery Locations -->
+<div class="ra-card" style="margin-bottom: 20px;">
+    <div class="ra-card-header">
+        <span class="ra-card-title">Pincode & ETA Rules</span>
+        <span style="font-size: 12px; color: var(--text-muted);">Delivery coverage</span>
+    </div>
+    <div class="ra-table-wrap">
+        <table class="ra-table">
+            <thead>
+                <tr>
+                    <th>Delivery Location</th>
+                    <th>Warehouse</th>
+                    <th>Pincode</th>
+                    <th>Days</th>
+                    <th>Handling</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for location in delivery_locations %}
+                <tr>
+                    <td>{{ location.name }}</td>
+                    <td>{{ location.warehouse.name|default:location.store.name|default:"Retailer-wide" }}</td>
+                    <td>{{ location.postal_code|default:location.postal_code_prefix|default:"Geo radius" }}</td>
+                    <td>{{ location.delivery_days }}</td>
+                    <td>{{ location.handling_time_days }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="ra-table-empty">No delivery locations configured.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Category delivery rules -->
+<div class="ra-card" style="margin-bottom: 20px;">
+    <div class="ra-card-header">
+        <span class="ra-card-title">Category Delivery Days</span>
+    </div>
+    <div class="ra-table-wrap">
+        <table class="ra-table">
+            <thead>
+                <tr>
+                    <th>Category</th>
+                    <th>Store</th>
+                    <th>Delivery Days</th>
+                    <th>Status</th>
+                    <th>Updated</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rule in category_delivery_rules %}
+                <tr>
+                    <td>{{ rule.category.name }}</td>
+                    <td>{{ rule.store.name|default:"All stores" }}</td>
+                    <td>{{ rule.delivery_days }}</td>
+                    <td><span class="ra-badge {% if rule.is_active %}success{% else %}neutral{% endif %}">{% if rule.is_active %}Active{% else %}Disabled{% endif %}</span></td>
+                    <td style="color: var(--text-muted); font-size: 12.5px;">{{ rule.updated_at }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="ra-table-empty">No category delivery rules configured.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Recent Stock Ledger -->
+<div class="ra-card" style="margin-bottom: 20px;">
+    <div class="ra-card-header">
+        <span class="ra-card-title">Recent Stock Ledger</span>
+        <span style="font-size: 12px; color: var(--text-muted);">Movement audit</span>
+    </div>
+    <div class="ra-table-wrap">
+        <table class="ra-table">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Type</th>
+                    <th>Quantity</th>
+                    <th>Warehouse</th>
+                    <th>Time</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in ledger_entries %}
+                <tr>
+                    <td>{{ entry.product.name }}</td>
+                    <td><span class="ra-badge info">{{ entry.movement_type }}</span></td>
+                    <td>{{ entry.quantity_delta }}</td>
+                    <td>{{ entry.warehouse.name }}</td>
+                    <td style="color: var(--text-muted); font-size: 12.5px;">{{ entry.created_at }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="ra-table-empty">No stock movements yet.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Offline Sales -->
+<div class="ra-card">
+    <div class="ra-card-header">
+        <span class="ra-card-title">Offline Sales</span>
+        <span style="font-size: 12px; color: var(--text-muted);">Tracked separately from online orders</span>
+    </div>
+    <div class="ra-table-wrap">
+        <table class="ra-table">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Store</th>
+                    <th>Qty</th>
+                    <th>Total</th>
+                    <th>Sale Type</th>
+                    <th>Sold At</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sale in offline_sales %}
+                <tr>
+                    <td>{{ sale.product.name }}</td>
+                    <td>{{ sale.store.name }}</td>
+                    <td>{{ sale.quantity }}</td>
+                    <td><strong>{{ sale.total_amount }}</strong></td>
+                    <td><span class="ra-badge info">Offline Sale</span></td>
+                    <td style="color: var(--text-muted); font-size: 12.5px;">{{ sale.sold_at }}</td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="ra-table-empty">No offline sales logged.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,265 @@
+<div id="app-confirm-overlay" class="app-confirm-overlay" aria-hidden="true">
+    <div class="app-confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="app-confirm-title">
+        <div class="app-confirm-head">
+            <div class="app-confirm-icon" id="app-confirm-icon"><i class="ph ph-warning"></i></div>
+            <div>
+                <h3 id="app-confirm-title">Confirm action</h3>
+                <p id="app-confirm-message">Are you sure?</p>
+            </div>
+        </div>
+        <div class="app-confirm-actions">
+            <button type="button" class="app-confirm-btn app-confirm-cancel" id="app-confirm-cancel">Cancel</button>
+            <button type="button" class="app-confirm-btn app-confirm-ok danger" id="app-confirm-ok">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.app-confirm-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(15, 23, 42, 0.48);
+    backdrop-filter: blur(3px);
+}
+.app-confirm-overlay.active {
+    display: flex;
+}
+.app-confirm-dialog {
+    width: min(420px, 100%);
+    background: var(--surface, #fff);
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 14px;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.24);
+    overflow: hidden;
+    animation: appConfirmIn 0.16s ease-out;
+}
+@keyframes appConfirmIn {
+    from { transform: translateY(14px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+.app-confirm-head {
+    display: flex;
+    gap: 14px;
+    padding: 20px;
+}
+.app-confirm-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    background: rgba(239, 68, 68, 0.12);
+    color: #ef4444;
+    font-size: 21px;
+}
+.app-confirm-icon.warning,
+.app-confirm-icon.restore {
+    background: rgba(245, 158, 11, 0.14);
+    color: #d97706;
+}
+.app-confirm-icon.restore {
+    background: rgba(34, 197, 94, 0.14);
+    color: #16a34a;
+}
+.app-confirm-head h3 {
+    margin: 0 0 7px;
+    color: var(--text-main, #111827);
+    font-size: 17px;
+    font-weight: 700;
+}
+.app-confirm-head p {
+    margin: 0;
+    color: var(--text-muted, var(--muted, #64748b));
+    font-size: 14px;
+    line-height: 1.5;
+}
+.app-confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 20px;
+    background: var(--surface-soft, #f8fafc);
+    border-top: 1px solid var(--border, #e5e7eb);
+}
+.app-confirm-btn {
+    border: 0;
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+.app-confirm-cancel {
+    border: 1px solid var(--border, #e5e7eb);
+    background: var(--surface, #fff);
+    color: var(--text-muted, #64748b);
+}
+.app-confirm-ok {
+    color: #fff;
+    background: #ef4444;
+}
+.app-confirm-ok.warning {
+    background: #f59e0b;
+}
+.app-confirm-ok.restore {
+    background: #16a34a;
+}
+body.dark-mode .app-confirm-dialog {
+    background: var(--surface, #111827);
+}
+</style>
+
+<script>
+(function() {
+    let resolver = null;
+
+    function setOpen(open) {
+        const overlay = document.getElementById('app-confirm-overlay');
+        if (!overlay) return;
+        overlay.classList.toggle('active', open);
+        overlay.setAttribute('aria-hidden', open ? 'false' : 'true');
+    }
+
+    function finish(result) {
+        setOpen(false);
+        if (resolver) {
+            resolver(result);
+            resolver = null;
+        }
+    }
+
+    window.appConfirm = function(options = {}) {
+        const title = options.title || 'Confirm action';
+        const message = options.message || 'Are you sure?';
+        const confirmText = options.confirmText || 'Confirm';
+        const cancelText = options.cancelText || 'Cancel';
+        const tone = options.tone || 'danger';
+        const titleEl = document.getElementById('app-confirm-title');
+        const messageEl = document.getElementById('app-confirm-message');
+        const okBtn = document.getElementById('app-confirm-ok');
+        const cancelBtn = document.getElementById('app-confirm-cancel');
+        const icon = document.getElementById('app-confirm-icon');
+        if (!titleEl || !messageEl || !okBtn || !cancelBtn || !icon) {
+            return Promise.resolve(false);
+        }
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+        okBtn.textContent = confirmText;
+        cancelBtn.textContent = cancelText;
+        cancelBtn.style.display = options.hideCancel ? 'none' : '';
+        okBtn.className = `app-confirm-btn app-confirm-ok ${tone}`;
+        icon.className = `app-confirm-icon ${tone}`;
+        setOpen(true);
+        okBtn.focus();
+        return new Promise((resolve) => {
+            resolver = resolve;
+        });
+    };
+
+    window.appAlert = function(message, options = {}) {
+        return window.appConfirm({
+            title: options.title || 'Notice',
+            message: String(message || ''),
+            confirmText: options.confirmText || 'OK',
+            cancelText: options.cancelText || '',
+            tone: options.tone || 'warning',
+            hideCancel: true,
+        });
+    };
+
+    window.alert = function(message) {
+        window.appAlert(message);
+    };
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const overlay = document.getElementById('app-confirm-overlay');
+        const okBtn = document.getElementById('app-confirm-ok');
+        const cancelBtn = document.getElementById('app-confirm-cancel');
+        if (okBtn) okBtn.addEventListener('click', () => finish(true));
+        if (cancelBtn) cancelBtn.addEventListener('click', () => finish(false));
+        if (overlay) {
+            overlay.addEventListener('click', (event) => {
+                if (event.target === overlay) finish(false);
+            });
+        }
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && overlay && overlay.classList.contains('active')) {
+                finish(false);
+            }
+        });
+        const phoneModelActions = {
+            deleteStorageOption: { path: 'storage', verb: 'delete', title: 'Hide storage option', message: 'Hide this storage option from new dropdowns?', confirmText: 'Hide', tone: 'warning' },
+            restoreStorageOption: { path: 'storage', verb: 'restore', title: 'Restore storage option', message: 'Restore this storage option?', confirmText: 'Restore', tone: 'restore' },
+            permanentDeleteStorageOption: { path: 'storage', verb: 'delete-permanent', title: 'Delete storage option', message: 'Permanently delete this storage option? This cannot be undone.', confirmText: 'Delete Permanently', tone: 'danger' },
+            deleteColorOption: { path: 'color', verb: 'delete', title: 'Hide colour option', message: 'Hide this colour option from new dropdowns?', confirmText: 'Hide', tone: 'warning' },
+            restoreColorOption: { path: 'color', verb: 'restore', title: 'Restore colour option', message: 'Restore this colour option?', confirmText: 'Restore', tone: 'restore' },
+            permanentDeleteColorOption: { path: 'color', verb: 'delete-permanent', title: 'Delete colour option', message: 'Permanently delete this colour option? This cannot be undone.', confirmText: 'Delete Permanently', tone: 'danger' },
+            deletePlatform: { path: 'platform', verb: 'delete', title: 'Move device type to trash', message: 'Move this device type to trash?', confirmText: 'Move to Trash', tone: 'warning' },
+            restorePlatform: { path: 'platform', verb: 'restore', title: 'Restore device type', message: 'Restore this device type?', confirmText: 'Restore', tone: 'restore' },
+            permanentDeletePlatform: { path: 'platform', verb: 'delete-permanent', title: 'Delete device type', message: 'Permanently delete this device type, brands, models, and variants? This cannot be undone.', confirmText: 'Delete Permanently', tone: 'danger' },
+            deleteBrand: { path: 'brand', verb: 'delete', title: 'Move brand to trash', message: 'Move this brand to trash?', confirmText: 'Move to Trash', tone: 'warning' },
+            restoreBrand: { path: 'brand', verb: 'restore', title: 'Restore brand', message: 'Restore this brand?', confirmText: 'Restore', tone: 'restore' },
+            permanentDeleteBrand: { path: 'brand', verb: 'delete-permanent', title: 'Delete brand', message: 'Permanently delete this brand? This cannot be undone.', confirmText: 'Delete Permanently', tone: 'danger' },
+            deleteModel: { path: 'model', verb: 'delete', title: 'Move model to trash', message: 'Move this model to trash?', confirmText: 'Move to Trash', tone: 'warning' },
+            restoreModel: { path: 'model', verb: 'restore', title: 'Restore model', message: 'Restore this model?', confirmText: 'Restore', tone: 'restore' },
+            permanentDeleteModel: { path: 'model', verb: 'delete-permanent', title: 'Delete model', message: 'Permanently delete this model and its variants? This cannot be undone.', confirmText: 'Delete Permanently', tone: 'danger' },
+            deleteVariant: { path: 'variant', verb: 'delete', title: 'Delete variant', message: 'Delete this variant? Products linked to it will lose this association.', confirmText: 'Delete', tone: 'danger' },
+            restoreVariant: { path: 'variant', verb: 'restore', title: 'Restore variant', message: 'Restore this variant?', confirmText: 'Restore', tone: 'restore' },
+            permanentDeleteVariant: { path: 'variant', verb: 'delete-permanent', title: 'Delete variant', message: 'Permanently delete this variant? Products linked to it will lose this association.', confirmText: 'Delete Permanently', tone: 'danger' },
+        };
+
+        function getCookie(name) {
+            const cookies = document.cookie ? document.cookie.split(';') : [];
+            for (const cookie of cookies) {
+                const item = cookie.trim();
+                if (item.startsWith(`${name}=`)) return decodeURIComponent(item.slice(name.length + 1));
+            }
+            return '';
+        }
+
+        document.addEventListener('click', async function(event) {
+            const trigger = event.target.closest('[onclick]');
+            if (!trigger) return;
+            const onclick = trigger.getAttribute('onclick') || '';
+            const match = onclick.match(/^\s*(deleteStorageOption|restoreStorageOption|permanentDeleteStorageOption|deleteColorOption|restoreColorOption|permanentDeleteColorOption|deletePlatform|restorePlatform|permanentDeletePlatform|deleteBrand|restoreBrand|permanentDeleteBrand|deleteModel|restoreModel|permanentDeleteModel|deleteVariant|restoreVariant|permanentDeleteVariant)\('([^']+)'\)/);
+            if (!match) return;
+            const action = phoneModelActions[match[1]];
+            if (!action) return;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            const confirmed = await window.appConfirm(action);
+            if (!confirmed) return;
+            const response = await fetch(`/admin/catalog/phone-models/${action.path}/${match[2]}/${action.verb}/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+            });
+            if (!response.ok) {
+                if (window.showToast) window.showToast('Action failed. Refresh and try again.', false);
+                return;
+            }
+            if (window.showToast) window.showToast(action.verb === 'restore' ? 'Restored' : 'Updated');
+            window.location.reload();
+        }, true);
+        document.addEventListener('submit', async function(event) {
+            const form = event.target;
+            if (!form.matches || !form.matches('form[data-confirm]') || form.dataset.confirmSubmitting === '1') return;
+            event.preventDefault();
+            const confirmed = await window.appConfirm({
+                title: form.dataset.confirmTitle || 'Confirm action',
+                message: form.dataset.confirm || 'Are you sure?',
+                confirmText: form.dataset.confirmText || 'Confirm',
+                tone: form.dataset.confirmTone || 'danger',
+            });
+            if (!confirmed) return;
+            form.dataset.confirmSubmitting = '1';
+            form.requestSubmit();
+        }, true);
+    });
+})();
+</script>

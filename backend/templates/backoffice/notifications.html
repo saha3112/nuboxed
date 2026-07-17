@@ -1,0 +1,57 @@
+{% extends "backoffice/base.html" %}
+
+{% block content %}
+<section class="page-shell">
+    <section class="hero-panel">
+        <div>
+            <p class="eyebrow">Notification Center</p>
+            <h3 style="max-width:620px;">Activity, approvals, alerts, and user requests in one focused queue.</h3>
+            <p style="margin:14px 0 0; color:var(--muted); max-width:560px;">Review the latest events without leaving the admin workspace.</p>
+        </div>
+    </section>
+
+    <section class="panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Inbox</p>
+                <h3>{{ backoffice_notifications|length }} notifications</h3>
+            </div>
+        </div>
+        <div class="bo-notify-page-list">
+            {% for notification in backoffice_notifications %}
+                <div class="bo-notify-item {% if not notification.read_at %}is-unread{% endif %}">
+                    <span class="bo-notify-avatar">
+                        {{ notification.subject|first|upper }}
+                        <span class="bo-notify-status-dot {% if notification.status == 'failed' %}is-busy{% else %}is-online{% endif %}"></span>
+                    </span>
+                    <span class="bo-notify-item-copy">
+                        <strong>{{ notification.subject }}</strong>
+                        <small>{{ notification.get_status_display }} &bull; {{ notification.created_at|date:"d M, H:i" }}</small>
+                    </span>
+                </div>
+            {% empty %}
+            <div style="padding: 64px 24px; text-align: center; color: var(--text-muted);">
+                {% if global_brand_settings.notification_empty_image %}
+                    <img src="{{ global_brand_settings.notification_empty_image.url }}" alt="No notifications" style="width: 160px; height: 160px; object-fit: contain; margin: 0 auto 20px; display: block; border-radius: 16px;">
+                {% else %}
+                    <svg width="160" height="160" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin: 0 auto 20px; display: block;">
+                        <circle cx="60" cy="60" r="50" fill="var(--surface-soft)" opacity="0.3"/>
+                        <circle cx="60" cy="60" r="38" fill="var(--surface-soft)" opacity="0.5"/>
+                        <circle cx="60" cy="60" r="26" fill="var(--surface-soft)" opacity="0.8"/>
+                        <g transform="translate(42, 38)" stroke="var(--primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 4v2M18 6a10 10 0 00-10 10v9H4c-1 0-1.5.5-1.5 1.5S3 28 4 28h28c1 0 1.5-.5 1.5-1.5S33 25 32 25h-4v-9a10 10 0 00-10-10z" fill="var(--surface)"/>
+                            <path d="M14 31a4 4 0 008 0" stroke-width="2.5"/>
+                        </g>
+                        <circle cx="34" cy="36" r="2.5" fill="var(--primary)"/>
+                        <circle cx="86" cy="42" r="3" fill="#22c55e"/>
+                        <circle cx="78" cy="86" r="2" fill="var(--primary)"/>
+                    </svg>
+                {% endif %}
+                <div style="font-weight: 700; font-size: 18px; color: var(--ink); margin-bottom: 6px;">Inbox is Empty</div>
+                <div style="font-size: 14px; color: var(--muted); max-width: 320px; margin: 0 auto;">You have cleared all alerts and approvals. We'll let you know when new activities happen.</div>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+</section>
+{% endblock %}

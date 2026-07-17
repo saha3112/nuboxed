@@ -1,0 +1,288 @@
+{% extends "retailer/base.html" %}
+
+{% block content %}
+<div class="ra-card ra-hero" style="margin-bottom:20px;">
+    <div class="ra-card-body ra-hero-body">
+        <div>
+            <div class="ra-hero-title">Business Profile</div>
+            <div class="ra-hero-copy">Update your retailer identity, contact details, and upload required business documents for verification.</div>
+        </div>
+        <span class="ra-badge info">{{ retailer.status|title }}</span>
+    </div>
+</div>
+
+<form method="post" action="" class="ra-form" enctype="multipart/form-data">
+{% csrf_token %}
+
+<!-- ─── Section 1: Business Identity ─── -->
+<div class="ra-card" style="max-width: 960px; margin-bottom: 20px;">
+    <div class="ra-card-header">
+        <span class="ra-card-title"><i class="ph ph-identification-badge" style="margin-right:6px; color: var(--primary);"></i> Business Identity</span>
+    </div>
+    <div class="ra-card-body">
+        <div class="ra-form-grid">
+            {% for field in form %}
+                {% if field.name == 'legal_name' or field.name == 'display_name' or field.name == 'vat_number' or field.name == 'registration_number' or field.name == 'business_type' or field.name == 'description' %}
+                    <div class="ra-field">
+                        <label class="ra-label">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}<p style="font-size:11px; color:var(--text-muted); margin-top:3px;">{{ field.help_text }}</p>{% endif %}
+                        {% if field.errors %}<div class="ra-field-error">{{ field.errors.as_text }}</div>{% endif %}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- ─── Section 2: Contact Details ─── -->
+<div class="ra-card" style="max-width: 960px; margin-bottom: 20px;">
+    <div class="ra-card-header">
+        <span class="ra-card-title"><i class="ph ph-phone" style="margin-right:6px; color: var(--primary);"></i> Contact Details</span>
+    </div>
+    <div class="ra-card-body">
+        <div class="ra-form-grid">
+            {% for field in form %}
+                {% if field.name == 'support_email' or field.name == 'support_phone' or field.name == 'business_address' %}
+                    <div class="ra-field">
+                        <label class="ra-label">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.errors %}<div class="ra-field-error">{{ field.errors.as_text }}</div>{% endif %}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- ─── Section 3: Seller Documents (Meesho/Amazon/Flipkart style) ─── -->
+<div class="ra-card" style="max-width: 960px; margin-bottom: 20px;">
+    <div class="ra-card-header" style="border-bottom: 1px solid var(--border);">
+        <span class="ra-card-title"><i class="ph ph-files" style="margin-right:6px; color: var(--primary);"></i> Seller Verification Documents</span>
+    </div>
+    <div class="ra-card-body">
+        <p style="font-size:13px; color: var(--text-muted); margin-bottom: 20px; line-height:1.6;">
+            Upload required documents to verify your seller account. These documents are processed securely and are mandatory for marketplace activation — similar to Meesho, Amazon, and Flipkart seller onboarding.
+        </p>
+
+        <div class="seller-docs-grid">
+            {% for field in form %}
+                {% if field.name == 'business_document' or field.name == 'gst_certificate' or field.name == 'pan_card' or field.name == 'cancelled_cheque' or field.name == 'address_proof' or field.name == 'signature' or field.name == 'msme_certificate' or field.name == 'fssai_license' %}
+                    <div class="seller-doc-card" id="{{ field.name }}-doc-card" onclick="selectDocFromLibrary('{{ field.name }}')">
+                        <div class="seller-doc-icon">
+                            {% if field.name == 'business_document' %}
+                                <i class="ph ph-certificate"></i>
+                            {% elif field.name == 'gst_certificate' %}
+                                <i class="ph ph-receipt"></i>
+                            {% elif field.name == 'pan_card' %}
+                                <i class="ph ph-identification-card"></i>
+                            {% elif field.name == 'cancelled_cheque' %}
+                                <i class="ph ph-bank"></i>
+                            {% elif field.name == 'address_proof' %}
+                                <i class="ph ph-map-pin-area"></i>
+                            {% elif field.name == 'signature' %}
+                                <i class="ph ph-pen-nib"></i>
+                            {% elif field.name == 'msme_certificate' %}
+                                <i class="ph ph-factory"></i>
+                            {% elif field.name == 'fssai_license' %}
+                                <i class="ph ph-cookie"></i>
+                            {% endif %}
+                        </div>
+                        <div class="seller-doc-info">
+                            <div class="seller-doc-title">{{ field.label }}</div>
+                            <div class="seller-doc-hint">{{ field.help_text|default:"Click to upload from Media Library" }}</div>
+                        </div>
+                        <div class="seller-doc-status" id="{{ field.name }}-status">
+                            {% if field.value %}
+                                <span class="seller-doc-badge uploaded"><i class="ph ph-check-circle"></i> Uploaded</span>
+                            {% else %}
+                                <span class="seller-doc-badge pending"><i class="ph ph-upload-simple"></i> Upload</span>
+                            {% endif %}
+                        </div>
+                        <input type="hidden" name="{{ field.name }}_library_id" id="id_{{ field.name }}_library_id">
+                        {% if field.errors %}
+                        <div class="ra-field-error" style="grid-column: 1/-1;">{{ field.errors.as_text }}</div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Hidden form fields (library_id fields) -->
+{% for field in form %}
+    {% if 'library_id' in field.name %}
+        {{ field }}
+    {% endif %}
+{% endfor %}
+
+<!-- Save Button -->
+<div style="max-width: 960px; margin-top: 8px; margin-bottom: 40px;">
+    <button type="submit" class="ra-btn ra-btn-primary" style="padding: 12px 32px; font-size: 14px;">
+        <i class="ph ph-floppy-disk"></i> Save Business Profile
+    </button>
+</div>
+
+</form>
+
+<style>
+/* ─── Seller Documents Grid ─── */
+.seller-docs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 12px;
+}
+
+.seller-doc-card {
+    display: grid;
+    grid-template-columns: 48px 1fr auto;
+    align-items: center;
+    gap: 14px;
+    padding: 16px 18px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--card-bg);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.seller-doc-card:hover {
+    border-color: var(--primary);
+    box-shadow: 0 4px 16px rgba(60,80,224,.08);
+    transform: translateY(-1px);
+}
+.seller-doc-card:active {
+    transform: translateY(0);
+}
+
+.seller-doc-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, rgba(60,80,224,0.08), rgba(60,80,224,0.04));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+.seller-doc-info {
+    min-width: 0;
+}
+.seller-doc-title {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-main);
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.seller-doc-hint {
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.seller-doc-status {
+    flex-shrink: 0;
+}
+
+.seller-doc-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 8px;
+    white-space: nowrap;
+}
+.seller-doc-badge.uploaded {
+    background: rgba(34, 197, 94, 0.08);
+    color: #16a34a;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+}
+.seller-doc-badge.pending {
+    background: rgba(234, 179, 8, 0.06);
+    color: #ca8a04;
+    border: 1px solid rgba(234, 179, 8, 0.18);
+}
+.seller-doc-badge.selected {
+    background: rgba(224, 68, 32, 0.06);
+    color: var(--primary);
+    border: 1px solid rgba(224, 68, 32, 0.2);
+}
+
+/* ─── Inline Checkbox Fields ─── */
+.ra-checkbox-inline {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+}
+.ra-checkbox-inline input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--primary);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.ra-checkbox-inline label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-main);
+    cursor: pointer;
+    user-select: none;
+}
+
+@media (max-width: 640px) {
+    .seller-docs-grid {
+        grid-template-columns: 1fr;
+    }
+    .seller-doc-card {
+        grid-template-columns: 40px 1fr;
+    }
+    .seller-doc-status {
+        grid-column: 2;
+    }
+}
+</style>
+
+<script>
+function selectDocFromLibrary(fieldName) {
+    if (typeof window.openMediaLibrary !== 'function') {
+        window.appAlert ? window.appAlert('Media Library is not loaded on this page.', { title: 'Media Library', tone: 'warning' }) : console.warn('Media Library is not loaded on this page.');
+        return;
+    }
+    window.openMediaLibrary(asset => {
+        // Set the library ID hidden input value
+        const libInput = document.getElementById('id_' + fieldName + '_library_id');
+        if (libInput) {
+            libInput.value = asset.id;
+        }
+
+        // Update status badge
+        const statusDiv = document.getElementById(fieldName + '-status');
+        if (statusDiv) {
+            statusDiv.innerHTML = `
+                <span class="seller-doc-badge selected">
+                    <i class="ph ph-check-circle"></i> ${asset.filename}
+                </span>
+            `;
+        }
+
+        // Highlight card
+        const card = document.getElementById(fieldName + '-doc-card');
+        if (card) {
+            card.style.borderColor = 'var(--primary)';
+            card.style.background = 'rgba(60,80,224,0.02)';
+        }
+    });
+}
+</script>
+{% endblock %}

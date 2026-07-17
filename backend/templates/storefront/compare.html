@@ -1,0 +1,255 @@
+{% extends "storefront/base.html" %}
+{% load currency_tags %}
+
+{% block content %}
+<style>
+.compare-wrapper {
+    padding: 40px 15px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+.compare-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+.compare-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+    border-radius: 12px;
+    overflow: hidden;
+}
+.compare-table th, .compare-table td {
+    padding: 20px;
+    border: 1px solid #eaeaea;
+    text-align: center;
+    vertical-align: top;
+    width: 25%;
+}
+.compare-table th {
+    background: #fdfdfd;
+    font-weight: 600;
+    color: #444;
+}
+.compare-img {
+    width: 180px;
+    height: 180px;
+    object-fit: contain;
+    margin: 0 auto 15px;
+    display: block;
+}
+.compare-product-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #111;
+    margin: 0 0 10px;
+    text-decoration: none;
+    display: block;
+}
+.compare-product-name:hover {
+    color: var(--primary, #000);
+}
+.compare-price {
+    font-size: 20px;
+    font-weight: 700;
+    color: #000;
+    margin-bottom: 15px;
+}
+.remove-btn {
+    display: inline-block;
+    padding: 6px 12px;
+    font-size: 13px;
+    color: #dc3545;
+    background: #fff0f1;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    margin-bottom: 15px;
+    transition: background 0.2s;
+}
+.remove-btn:hover {
+    background: #ffe3e5;
+}
+.compare-btn {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background: var(--primary, #000);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 15px;
+}
+.compare-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: #666;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+}
+.compare-attribute {
+    font-size: 14px;
+    color: #555;
+    padding: 10px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+.compare-attribute:last-child {
+    border-bottom: none;
+}
+.compare-attribute ul, .compare-attribute ol {
+    margin: 8px 0 0 20px;
+    padding: 0;
+}
+.compare-attribute li {
+    margin-bottom: 4px;
+    line-height: 1.4;
+}
+</style>
+
+<section class="page-head">
+  <div class="container">
+    <h1>Product Comparison</h1>
+    <div class="breadcrumb">
+        <a href="{% url 'storefront:home' %}">Home</a>
+        <span>/</span>
+        <span>Compare</span>
+    </div>
+  </div>
+</section>
+
+<div class="compare-wrapper">
+    {% if compare_products %}
+        <div class="compare-header">
+            <h2 style="margin: 0 0 10px; font-size: 24px;">Comparing {{ compare_products|length }} Product{{ compare_products|length|pluralize }}</h2>
+            <p style="color: #666; margin: 0;">Evaluate features and prices side-by-side.</p>
+        </div>
+        
+        <div style="overflow-x: auto;">
+            <table class="compare-table">
+                <tbody>
+                    <tr>
+                        {% for item in compare_products %}
+                            <td style="position: relative; padding: 25px 20px;">
+                                <!-- Actions Wrap -->
+                                <div style="display: flex; justify-content: space-between; position: absolute; top: 15px; left: 15px; right: 15px; z-index: 2;">
+                                    {% with pid=item.product.id|stringformat:"s" %}
+                                    <form method="post" action="{% url 'storefront:wishlist-add' product_id=item.product.id %}" class="ajax-wishlist-form">
+                                        {% csrf_token %}
+                                        <button type="submit" title="Add to Wishlist" class="{% if pid in wishlist %}selected{% endif %}" style="background: #fff; border: 1px solid {% if pid in wishlist %}#ef4444{% else %}#e2e8f0{% endif %}; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: {% if pid in wishlist %}#ef4444{% else %}#94a3b8{% endif %}; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.05);" onmouseover="this.style.color='#ef4444'; this.style.borderColor='#ef4444';" onmouseout="if(!this.classList.contains('selected')) { this.style.color='#94a3b8'; this.style.borderColor='#e2e8f0'; }">
+                                            <i class="{% if pid in wishlist %}fa-solid in-wishlist{% else %}fa-regular{% endif %} fa-heart"></i>
+                                        </button>
+                                    </form>
+                                    {% endwith %}
+                                    <form method="post" action="{% url 'storefront:compare-remove' product_id=item.product.id %}" class="ajax-compare-remove-form">
+                                        {% csrf_token %}
+                                        <button type="submit" title="Remove from Compare" style="background: #fff; border: 1px solid #e2e8f0; border-radius: 50%; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; color: #94a3b8; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.05);" onmouseover="this.style.color='#0f172a'; this.style.borderColor='#0f172a';" onmouseout="this.style.color='#94a3b8'; this.style.borderColor='#e2e8f0';">
+                                            <i class="fa-solid fa-times"></i>
+                                        </button>
+                                    </form>
+                                </div>
+
+                                <!-- Image -->
+                                {% if item.product.media_items.first %}
+                                    <img src="{{ item.product.media_items.first.file.url }}" alt="{{ item.product.name }}" class="compare-img" style="margin-top: 20px; width: 100%; max-width: 200px; height: 200px; object-fit: contain; border-radius: 8px;">
+                                {% else %}
+                                    <div style="width: 100%; max-width: 200px; height: 200px; background: #f8f9fa; border-radius: 8px; margin: 20px auto 15px; display: flex; align-items: center; justify-content: center; color: #cbd5e1;">
+                                        <i class="fa-solid fa-image" style="font-size: 3em;"></i>
+                                    </div>
+                                {% endif %}
+
+                                <!-- Store Badge -->
+                                <div style="margin: 15px 0 10px;">
+                                    <span style="display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; background: #f1f5f9; color: #475569; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-radius: 20px;">
+                                        <i class="fa-solid fa-store"></i> {{ item.product.store.name }}
+                                    </span>
+                                </div>
+                                
+                                <!-- Name -->
+                                <a href="{% url 'catalog:product-detail' slug=item.product.slug %}" class="compare-product-name" style="font-size: 16px; font-weight: 600; line-height: 1.4; height: 44px; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; margin-bottom: 12px; color: #0f172a; text-decoration: none;">{{ item.product.name }}</a>
+                                
+                                <!-- Price -->
+                                <div class="compare-price" style="font-size: 22px; color: #0f766e; font-weight: 800; margin-bottom: 15px;">{{ item.price|format_currency:item.product.store.currency_code }}</div>
+                                
+                                <!-- Cart -->
+                                <form method="post" action="{% url 'storefront:cart-add' product_id=item.product.id %}" class="ajax-cart-form">
+                                    {% csrf_token %}
+                                    <button type="submit" class="compare-btn" style="background: #0f766e; color: #fff; width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#0d625b'" onmouseout="this.style.background='#0f766e'">
+                                        <i class="fa-solid fa-cart-plus" style="margin-right: 6px;"></i> Add to Cart
+                                    </button>
+                                </form>
+                            </td>
+                        {% endfor %}
+                    </tr>
+                    
+                    <tr>
+                        {% for item in compare_products %}
+                            <td>
+                                <div class="compare-attribute">
+                                    <strong>Store:</strong> {{ item.product.store.name }}
+                                </div>
+                                <div class="compare-attribute">
+                                    <strong>Condition:</strong> {{ item.product.get_condition_display }}
+                                </div>
+                                <div class="compare-attribute">
+                                    <strong>Warranty:</strong> {{ item.product.warranty|default:"N/A" }}
+                                </div>
+                                {% if item.product.weight and item.product.weight > 0 %}
+                                <div class="compare-attribute">
+                                    <strong>Weight:</strong> {{ item.product.weight }}
+                                </div>
+                                {% endif %}
+                                {% if item.product.length and item.product.length > 0 %}
+                                <div class="compare-attribute">
+                                    <strong>Dimensions (LxWxH):</strong> {{ item.product.length }} x {{ item.product.width }} x {{ item.product.height }}
+                                </div>
+                                {% endif %}
+                                {% if item.product.phone_variant %}
+                                    {% if item.product.phone_variant.color %}
+                                    <div class="compare-attribute">
+                                        <strong>Color:</strong> {{ item.product.phone_variant.color }}
+                                    </div>
+                                    {% endif %}
+                                    {% if item.product.phone_variant.storage %}
+                                    <div class="compare-attribute">
+                                        <strong>Storage:</strong> {{ item.product.phone_variant.storage }}
+                                    </div>
+                                    {% endif %}
+                                    {% if item.product.phone_variant.ram %}
+                                    <div class="compare-attribute">
+                                        <strong>RAM:</strong> {{ item.product.phone_variant.ram }}
+                                    </div>
+                                    {% endif %}
+                                {% endif %}
+                                {% for attr in item.product.attribute_assignments.all %}
+                                <div class="compare-attribute">
+                                    <strong>{{ attr.attribute.name }}:</strong> 
+                                    {% if attr.chosen_values.all %}
+                                        {% for val in attr.chosen_values.all %}
+                                            {{ val.label }}{% if not forloop.last %}, {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        {{ attr.text_value|safe }}
+                                    {% endif %}
+                                </div>
+                                {% endfor %}
+                            </td>
+                        {% endfor %}
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="compare-empty">
+            <i class="fa-solid fa-code-compare" style="font-size: 48px; color: #ccc; margin-bottom: 20px; display: block;"></i>
+            <h3 style="font-size: 20px; color: #333; margin-bottom: 10px;">Your compare list is empty</h3>
+            <p>Add products to compare them side-by-side.</p>
+            <a href="{% url 'storefront:products' %}" class="compare-btn" style="display: inline-block; width: auto; padding: 12px 24px; margin-top: 20px;">Continue Shopping</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,1209 @@
+{% extends "backoffice/base.html" %}
+
+{% block content %}
+<style>
+    /* Form Page Styling - Light & Dark Mode */
+    .form-page {
+        background: var(--bg);
+        min-height: 100vh;
+        padding: 40px 24px;
+    }
+
+    .form-panel {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .panel-header {
+        border-bottom: 1px solid var(--border);
+        padding: 32px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 24px;
+    }
+
+    .panel-header > div:first-child {
+        flex: 1;
+    }
+
+    .panel-header h3 {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--text-main);
+        margin: 0 0 8px 0;
+    }
+
+    .panel-header p {
+        color: var(--muted);
+        font-size: 14px;
+        margin: 0;
+        line-height: 1.6;
+    }
+
+    .panel-header .eyebrow {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 0 0 12px 0;
+    }
+
+    /* Form Styling */
+    .admin-form {
+        padding: 32px;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 24px;
+    }
+
+    .form-field {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .form-field.boolean-field {
+        flex-direction: row;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .form-field label {
+        font-weight: 600;
+        color: var(--text-main);
+        font-size: 14px;
+    }
+
+    .form-field small {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    /* Input Styling */
+    .admin-form input[type="text"],
+    .admin-form input[type="email"],
+    .admin-form input[type="number"],
+    .admin-form input[type="search"],
+    .admin-form input[type="url"],
+    .admin-form textarea,
+    .admin-form select {
+        padding: 10px 14px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface-soft);
+        color: var(--text-main);
+        font-size: 14px;
+        font-family: inherit;
+        transition: all 0.2s ease;
+    }
+
+    .admin-form input[type="text"]:focus,
+    .admin-form input[type="email"]:focus,
+    .admin-form input[type="number"]:focus,
+    .admin-form input[type="search"]:focus,
+    .admin-form input[type="url"]:focus,
+    .admin-form textarea:focus,
+    .admin-form select:focus {
+        outline: none;
+        border-color: var(--primary);
+        background: var(--surface);
+        box-shadow: 0 0 0 3px rgba(224, 68, 32, 0.1);
+    }
+
+    .admin-form textarea {
+        resize: vertical;
+        min-height: 120px;
+    }
+
+    /* Checkbox Styling */
+    .admin-form input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+        accent-color: var(--primary);
+    }
+
+    /* Button Styling */
+    .form-actions {
+        grid-column: 1 / -1;
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+        padding-top: 24px;
+        border-top: 1px solid var(--border);
+        margin-top: 24px;
+    }
+
+    .ghost-button,
+    .primary-button {
+        padding: 10px 24px;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: 1px solid var(--border);
+        font-family: inherit;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .ghost-button {
+        background: transparent;
+        color: var(--text-main);
+        border-color: var(--border);
+    }
+
+    .ghost-button:hover {
+        background: var(--surface-soft);
+        border-color: var(--text-main);
+    }
+
+    .primary-button {
+        background: var(--primary);
+        color: #fff;
+        border-color: var(--primary);
+    }
+
+    .primary-button:hover {
+        background: #b9381c;
+        border-color: #b9381c;
+        box-shadow: 0 8px 16px rgba(224, 68, 32, 0.2);
+    }
+
+    /* Error Styling */
+    .admin-form .errorlist {
+        background: rgba(239, 68, 68, 0.1);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 8px;
+        color: #dc2626;
+    }
+
+    .admin-form .errorlist li {
+        font-size: 13px;
+    }
+
+    ul.errorlist {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+    /* Dark Mode Adjustments */
+    body.dark-mode .admin-form input[type="text"],
+    body.dark-mode .admin-form input[type="email"],
+    body.dark-mode .admin-form input[type="number"],
+    body.dark-mode .admin-form input[type="search"],
+    body.dark-mode .admin-form input[type="url"],
+    body.dark-mode .admin-form textarea,
+    body.dark-mode .admin-form select {
+        background: #172033;
+        border-color: #243041;
+    }
+
+    body.dark-mode .admin-form input[type="text"]:focus,
+    body.dark-mode .admin-form input[type="email"]:focus,
+    body.dark-mode .admin-form input[type="number"]:focus,
+    body.dark-mode .admin-form input[type="search"]:focus,
+    body.dark-mode .admin-form input[type="url"]:focus,
+    body.dark-mode .admin-form textarea:focus,
+    body.dark-mode .admin-form select:focus {
+        background: #0f172a;
+        border-color: #e04420;
+    }
+
+    body.dark-mode .ghost-button {
+        background: transparent;
+        border-color: #243041;
+        color: #e5edf9;
+    }
+
+    body.dark-mode .ghost-button:hover {
+        background: #172033;
+        border-color: #e04420;
+        color: #fff;
+    }
+
+    /* Two Column Layout */
+    .admin-form.two-column {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    @media (max-width: 768px) {
+        .admin-form.two-column {
+            grid-template-columns: 1fr;
+        }
+
+        .panel-header {
+            flex-direction: column;
+        }
+    }
+</style>
+<style>
+    .toast-notification {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 16px 20px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        animation: slideIn 0.3s ease-out;
+        max-width: 400px;
+        backdrop-filter: blur(10px);
+    }
+
+    .toast-notification.success {
+        border-left: 4px solid #22c55e;
+        background: #f0fdf4;
+        border-color: #dcfce7;
+    }
+
+    .toast-notification.success::backdrop {
+        background: #f0fdf4 !important;
+    }
+
+    .toast-notification.error {
+        border-left: 4px solid #ef4444;
+        background: #fef2f2;
+        border-color: #fee2e2;
+    }
+
+    body.dark-mode .toast-notification.success {
+        background: rgba(34, 197, 94, 0.15);
+        border-color: rgba(34, 197, 94, 0.3);
+    }
+
+    body.dark-mode .toast-notification.error {
+        background: rgba(239, 68, 68, 0.15);
+        border-color: rgba(239, 68, 68, 0.3);
+    }
+
+    .toast-message {
+        color: var(--text-main);
+        font-size: 14px;
+        font-weight: 500;
+        flex: 1;
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateX(420px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    @keyframes slideOut {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(420px);
+            opacity: 0;
+        }
+    }
+</style>
+<style>
+    /* Ensure variant attribute field is always visible */
+    .admin-form .form-field:has(#id_is_variant_attribute) {
+        display: grid !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        height: auto !important;
+        min-height: auto !important;
+    }
+</style>
+<section class="page-shell form-page">
+    <div class="panel form-panel">
+        <div class="panel-header">
+            <div>
+                <p class="eyebrow">Management Form</p>
+                <h3>{{ page_title }}</h3>
+                <p style="margin:8px 0 0; color:var(--muted);">Update records safely without touching existing platform behavior or business logic.</p>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <a class="ghost-button" href="{{ cancel_url }}">Back</a>
+            </div>
+        </div>
+        <form method="post" enctype="multipart/form-data" class="admin-form two-column">
+            {% csrf_token %}
+            {{ form.non_field_errors }}
+            {% if module_key_active == "permissions" %}
+                <div class="form-field" style="grid-column: 1 / -1; padding: 18px; border: 1px solid rgba(224,68,32,.18); border-radius: 12px; background: rgba(224,68,32,.04);">
+                    <div style="font-size: 15px; font-weight: 700; color: var(--text-main); margin-bottom: 4px;">Choose a feature capability</div>
+                    <div style="font-size: 12px; color: var(--muted);">Select a ready-made feature permission below. Code and permission name are generated consistently for role assignment.</div>
+                </div>
+            {% endif %}
+            {% for field in form %}
+                {% if field.name != "color_values_payload" and field.name != "product_images" and field.name != "product_videos" and field.name != "product_360_images" and field.name != "product_video_urls" and field.name != "remove_asset_ids" %}
+                    {% if field.field.widget.input_type == 'file' %}
+                        <div class="form-field file-field-custom" style="grid-column: 1 / -1; margin-bottom: 24px;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600;">{{ field.label }}</label>
+                            <div style="display: flex; gap: 20px; align-items: center; border: 1px dashed var(--border); border-radius: 12px; padding: 16px; background: rgba(0,0,0,0.015);">
+                                {% if field.value %}
+                                <div class="file-preview-wrap" style="width: 90px; height: 90px; border-radius: 8px; border: 1px solid var(--border); overflow: hidden; background: #fff; flex-shrink: 0; display: grid; place-items: center; transition: opacity 0.2s;">
+                                    {% if ".png" in field.value.name|lower or ".jpg" in field.value.name|lower or ".jpeg" in field.value.name|lower or ".gif" in field.value.name|lower or ".webp" in field.value.name|lower %}
+                                        <img src="{{ field.value.url }}" alt="Preview" style="width: 100%; height: 100%; object-fit: contain;">
+                                    {% else %}
+                                        <i class="ph ph-file" style="font-size: 32px; color: var(--muted);"></i>
+                                    {% endif %}
+                                </div>
+                                {% else %}
+                                <div class="file-preview-wrap" style="width: 90px; height: 90px; border-radius: 8px; border: 1px dashed var(--border); overflow: hidden; background: var(--body-bg); flex-shrink: 0; display: grid; place-items: center; color: var(--muted);">
+                                    <i class="ph ph-cloud-arrow-up" style="font-size: 28px;"></i>
+                                </div>
+                                {% endif %}
+                                <div style="display: flex; flex-direction: column; gap: 6px; flex-grow: 1;">
+                                    {% if field.value %}
+                                    <div style="font-size: 13px; color: var(--text-main); font-weight: 500;">
+                                        Currently: <a href="{{ field.value.url }}" target="_blank" style="color: var(--primary); text-decoration: underline;">{{ field.value.name }}</a>
+                                    </div>
+                                    {% endif %}
+                                    {% if field.help_text %}
+                                    <small style="font-size: 12px; color: var(--muted);">{{ field.help_text }}</small>
+                                    {% endif %}
+                                    <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
+                                        <input type="hidden" name="{{ field.name }}_library_id" id="id_{{ field.name }}_library_id">
+                                        <button type="button" class="ghost-button" onclick="handleSelectFromLibrary('{{ field.name }}', this)" style="padding: 5px 12px; font-size: 12.5px; border-color: var(--primary); color: var(--primary); background: rgba(224, 68, 32, 0.02);">
+                                            Select from Media Library
+                                        </button>
+                                        {% if field.value and not field.field.required %}
+                                        <input type="checkbox" name="{{ field.name }}-clear" id="id_{{ field.name }}-clear" style="display: none;">
+                                        <button type="button" class="ghost-button" onclick="toggleFieldClear('{{ field.name }}', this)" style="padding: 5px 12px; font-size: 12.5px; color: var(--danger); border-color: rgba(239, 68, 68, 0.2); background: rgba(239, 68, 68, 0.01);">
+                                            Remove
+                                        </button>
+                                        {% endif %}
+                                    </div>
+                                    <div id="staged-name-{{ field.name }}" style="font-size: 12.5px; color: #22c55e; font-weight: 500; display: none; margin-top: 4px;">
+                                        <i class="ph ph-check-circle" style="vertical-align: middle;"></i> Staged: <span class="filename"></span>
+                                    </div>
+                                    {{ field.errors }}
+                                </div>
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="form-field{% if field.field.widget.input_type == 'checkbox' %} boolean-field{% endif %}">
+                            <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                            {{ field }}
+                            {% if field.help_text %}
+                                <small>{{ field.help_text }}</small>
+                            {% endif %}
+                            {{ field.errors }}
+                        </div>
+                    {% endif %}
+                {% endif %}
+            {% endfor %}
+
+            <!-- Custom Media Section for Product forms -->
+            {% if form.product_images %}
+                <style>
+                    .upload-zone {
+                        border: 2px dashed var(--border);
+                        border-radius: 12px;
+                        padding: 24px;
+                        text-align: center;
+                        background: var(--body-bg);
+                        cursor: pointer;
+                        transition: all 0.2s ease;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 6px;
+                        margin-top: 4px;
+                    }
+                    .upload-zone:hover, .upload-zone.dragover {
+                        border-color: var(--primary);
+                        background: rgba(224, 68, 32, 0.04);
+                    }
+                    .upload-zone-title {
+                        font-weight: 600;
+                        font-size: 13.5px;
+                        color: var(--text-main);
+                        margin: 0;
+                    }
+                    .upload-zone-subtitle {
+                        font-size: 11.5px;
+                        color: var(--text-muted);
+                        margin: 0 0 6px;
+                    }
+                </style>
+
+                <div class="ra-section" style="grid-column: 1 / -1; margin-top: 24px; border-top: 1px solid var(--border); padding-top: 24px;">
+                    <div class="ra-section-title" style="font-size: 16px; font-weight: 700; color: var(--text-main); margin-bottom: 6px;">Product Gallery and Media</div>
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">Upload product showcase images, video clips, 360 rotation frames, or reference external video links.</p>
+
+                    <!-- Images Upload Zone -->
+                    <div class="form-field file-field-custom" style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600;">Product Gallery Images</label>
+                        <div style="margin-top: 10px;">
+                            <button type="button" class="bo-media-select-btn" onclick="selectProductGalleryFromLibrary('images', 'product_images')">
+                                <i class="ph ph-image"></i>
+                                Select from Media Library
+                            </button>
+                            <input type="file" name="product_images" id="id_product_images" multiple accept="image/*" style="display: none;" onchange="updateStagedList('images', this)">
+                            <input type="hidden" name="product_images_library_ids" id="id_product_images_library_ids" value="">
+                        </div>
+                        <div class="staged-files-list" id="staged-images-list" style="margin-top: 8px;"></div>
+                        {{ form.product_images.errors }}
+                    </div>
+
+                    <!-- Videos Upload Zone -->
+                    <div class="form-field file-field-custom" style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600;">Product Videos</label>
+                        <div style="margin-top: 10px;">
+                            <button type="button" class="bo-media-select-btn" onclick="selectProductGalleryFromLibrary('videos', 'product_videos')">
+                                <i class="ph ph-video"></i>
+                                Select from Media Library
+                            </button>
+                            <input type="file" name="product_videos" id="id_product_videos" multiple accept="video/*" style="display: none;" onchange="updateStagedList('videos', this)">
+                            <input type="hidden" name="product_videos_library_ids" id="id_product_videos_library_ids" value="">
+                        </div>
+                        <div class="staged-files-list" id="staged-videos-list" style="margin-top: 8px;"></div>
+                        {{ form.product_videos.errors }}
+                    </div>
+
+                    <!-- 360 Rotation Images Upload Zone -->
+                    <div class="form-field file-field-custom" style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600;">360° Interactive Rotation Images</label>
+                        <div style="margin-top: 10px;">
+                            <button type="button" class="bo-media-select-btn" onclick="selectProductGalleryFromLibrary('spin', 'product_360_images')">
+                                <i class="ph ph-arrows-clockwise"></i>
+                                Select from Media Library
+                            </button>
+                            <input type="file" name="product_360_images" id="id_product_360_images" multiple accept="image/*" style="display: none;" onchange="updateStagedList('spin', this)">
+                            <input type="hidden" name="product_360_images_library_ids" id="id_product_360_images_library_ids" value="">
+                        </div>
+                        <div class="staged-files-list" id="staged-spin-list" style="margin-top: 8px;"></div>
+                        {{ form.product_360_images.errors }}
+                    </div>
+
+                    <!-- Video URLs -->
+                    <div class="form-field" style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 8px; font-weight: 600;">{{ form.product_video_urls.label }} (YouTube / Vimeo / External Links)</label>
+                        {{ form.product_video_urls }}
+                        <span style="font-size: 11px; color: var(--text-muted); display: block; margin-top: 4px;">Paste external video URLs (e.g. YouTube watch links) here. Put one URL per line.</span>
+                        {{ form.product_video_urls.errors }}
+                    </div>
+
+                    <!-- Current Gallery Manager -->
+                    {% if object and form.remove_asset_ids.queryset %}
+                    <div class="form-field" style="margin-top: 24px;">
+                        <label style="display: block; margin-bottom: 12px; font-weight: 600;">Current Media Items (Sort & Reorder)</label>
+                        <div id="retailer-remove-asset-inputs"></div>
+                        <div class="ra-asset-grid" id="retailer-asset-manager" style="display: grid; gap: 14px;">
+                            {% for asset in form.remove_asset_ids.queryset %}
+                            <div data-asset-card="{{ asset.pk }}" class="ra-asset-card" style="display: grid; gap: 14px; border: 1px solid var(--border); border-radius: 12px; padding: 14px; background: rgba(0,0,0,0.01);">
+                                <div class="ra-asset-head" style="display: flex; align-items: center; gap: 12px;">
+                                    {% if asset.file %}
+                                        {% if asset.media_type == "image" %}
+                                        <img src="{{ asset.file.url }}" alt="{{ asset.title|default:'Asset' }}" class="ra-asset-preview" style="width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border);">
+                                        {% elif asset.media_type == "image_360" or asset.media_type == "360" %}
+                                        <div class="ra-asset-preview" style="position: relative; width: 64px; height: 64px; border-radius: 8px; border: 1px solid var(--border); overflow: hidden; background: #fff1ec; color: var(--primary); display: grid; place-items: center;">
+                                            <img src="{{ asset.file.url }}" alt="{{ asset.title|default:'Asset' }}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.4;">
+                                            <i class="ph ph-arrows-clockwise" style="position: absolute; font-size: 20px;"></i>
+                                        </div>
+                                        {% elif asset.media_type == "video" %}
+                                        <div class="ra-asset-preview" style="position: relative; width: 64px; height: 64px; border-radius: 8px; border: 1px solid var(--border); overflow: hidden; background: #000; display: grid; place-items: center;">
+                                            <video src="{{ asset.file.url }}" style="width: 100%; height: 100%; object-fit: cover; opacity: 0.6;" muted></video>
+                                            <i class="ph-fill ph-play-circle" style="position: absolute; font-size: 22px; color: #fff;"></i>
+                                        </div>
+                                        {% endif %}
+                                    {% else %}
+                                        <div class="ra-asset-preview" style="position: relative; width: 64px; height: 64px; border-radius: 8px; border: 1px solid var(--border); overflow: hidden; background: #1e293b; color: #fff; display: grid; place-items: center;">
+                                            <i class="ph-fill ph-play-circle" style="font-size: 24px; color: #f43f5e;"></i>
+                                        </div>
+                                    {% endif %}
+                                    <div class="ra-asset-meta" style="flex-grow: 1;">
+                                        <div class="ra-asset-name" style="font-weight: 600; font-size: 13.5px; color: var(--text-main);">{{ asset.title|default:asset.get_media_type_display }}</div>
+                                        <div class="ra-asset-copy" style="font-size: 11.5px; color: var(--text-muted);">Specify order below. Items with lower order number show up first.</div>
+                                    </div>
+                                    <button type="button" data-asset-remove-id="{{ asset.pk }}" class="ghost-button" style="margin-left:auto; padding: 4px 10px; font-size: 12px; color: var(--danger); border-color: rgba(239, 68, 68, 0.2); background: rgba(239, 68, 68, 0.01);">Remove</button>
+                                </div>
+                                <div class="ra-asset-controls" style="display: flex; align-items: center; justify-content: space-between; margin-top: 8px; border-top: 1px solid var(--border); padding-top: 12px; gap: 16px;">
+                                    <label class="ra-inline-field" style="display: flex; align-items: center; gap: 8px;">
+                                        <span class="ra-inline-label" style="font-size: 12px; font-weight: 500; color: var(--text-main);">Sort Order</span>
+                                        <input type="number" name="asset_sort_{{ asset.id }}" value="{{ asset.sort_order }}" min="0" style="width:72px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 6px;">
+                                    </label>
+                                    {% if asset.media_type == "image" %}
+                                    <label class="ra-inline-field" style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                        <input type="radio" name="primary_asset_id" value="{{ asset.id }}" {% if asset.is_primary %}checked{% endif %} style="cursor: pointer;">
+                                        <span style="font-size:12px; color:var(--text-main); font-weight: 500;">Front Feature Image</span>
+                                    </label>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+            {% if show_color_manager %}
+                {{ form.color_values_payload }}
+                <section class="form-field" style="grid-column: 1 / -1;">
+                    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:12px;">
+                        <div>
+                            <label style="display:block; margin-bottom:4px;">Color Values Builder</label>
+                            <small>Create color names, open a palette picker, and choose single or mix colors.</small>
+                        </div>
+                        <button type="button" class="ghost-button" id="add-color-row">Add Color</button>
+                    </div>
+                    <div id="color-manager-shell" class="builder-shell" data-initial-values="{{ color_value_rows_json|escape }}"></div>
+                </section>
+            {% endif %}
+            <div class="form-actions">
+                <a class="ghost-button" href="{{ cancel_url }}">Cancel</a>
+                <button class="primary-button" type="submit" name="save_action" value="stay">Save & stay</button>
+                <button class="ghost-button" type="submit" name="save_action" value="exit">Save & exit</button>
+            </div>
+        </form>
+    </div>
+</section>
+{% if show_color_manager %}
+<script>
+(() => {
+    const nameInput = document.getElementById("id_name");
+    const dataTypeInput = document.getElementById("id_data_type");
+    const colorModeInput = document.getElementById("id_color_mode");
+    const payloadInput = document.getElementById("id_color_values_payload");
+    const shell = document.getElementById("color-manager-shell");
+    const addButton = document.getElementById("add-color-row");
+    if (!shell || !payloadInput) return;
+
+    const parseInitial = () => {
+        try {
+            return JSON.parse(shell.dataset.initialValues || "[]");
+        } catch (error) {
+            return [];
+        }
+    };
+
+    let rows = parseInitial();
+
+    const syncVisibility = () => {
+        const isColor = (nameInput?.value || "").trim().toLowerCase() === "color" || dataTypeInput?.value === "color";
+        shell.closest(".form-field").style.display = isColor ? "" : "none";
+        if (colorModeInput) {
+            colorModeInput.closest(".form-field").style.display = isColor ? "" : "none";
+        }
+        if (dataTypeInput && isColor) {
+            dataTypeInput.value = "color";
+        }
+    };
+
+    const updatePayload = () => {
+        payloadInput.value = JSON.stringify(rows);
+    };
+
+    const addColorInput = (row, rowIndex, value = "#000000") => {
+        row.colors.push(value);
+        render();
+    };
+
+    const removeColorInput = (rowIndex, colorIndex) => {
+        rows[rowIndex].colors.splice(colorIndex, 1);
+        if (!rows[rowIndex].colors.length) {
+            rows[rowIndex].colors.push("#000000");
+        }
+        render();
+    };
+
+    const render = () => {
+        syncVisibility();
+        updatePayload();
+        shell.innerHTML = "";
+
+        rows.forEach((row, rowIndex) => {
+            if (!row.colors || !row.colors.length) {
+                row.colors = ["#000000"];
+            }
+            const card = document.createElement("div");
+            card.className = "builder-card";
+
+            const header = document.createElement("div");
+            header.className = "builder-card-head";
+
+            const titleWrap = document.createElement("div");
+            titleWrap.className = "builder-card-title";
+            titleWrap.style.gridTemplateColumns = "minmax(220px,1fr) 180px";
+
+            const labelInput = document.createElement("input");
+            labelInput.type = "text";
+            labelInput.placeholder = "Color name";
+            labelInput.value = row.label || "";
+            labelInput.addEventListener("input", (event) => {
+                rows[rowIndex].label = event.target.value;
+                updatePayload();
+            });
+
+            const modeSelect = document.createElement("select");
+            modeSelect.innerHTML = '<option value="single">Single</option><option value="multi">Multiple / Mix</option>';
+            modeSelect.value = row.mode || "single";
+            modeSelect.addEventListener("change", (event) => {
+                rows[rowIndex].mode = event.target.value;
+                if (event.target.value === "single") {
+                    rows[rowIndex].colors = [rows[rowIndex].colors[0] || "#000000"];
+                }
+                render();
+            });
+
+            titleWrap.appendChild(labelInput);
+            titleWrap.appendChild(modeSelect);
+
+            const removeButton = document.createElement("button");
+            removeButton.type = "button";
+            removeButton.className = "ghost-button";
+            removeButton.textContent = "Remove";
+            removeButton.addEventListener("click", () => {
+                rows.splice(rowIndex, 1);
+                render();
+            });
+
+            header.appendChild(titleWrap);
+            header.appendChild(removeButton);
+            card.appendChild(header);
+
+            const palette = document.createElement("div");
+            palette.className = "builder-color-row";
+
+            row.colors.forEach((colorValue, colorIndex) => {
+                const chip = document.createElement("div");
+                chip.className = "builder-color-chip";
+
+                const colorInput = document.createElement("input");
+                colorInput.type = "color";
+                colorInput.value = colorValue;
+                colorInput.style.width = "44px";
+                colorInput.style.height = "36px";
+                colorInput.addEventListener("input", (event) => {
+                    rows[rowIndex].colors[colorIndex] = event.target.value;
+                    updatePayload();
+                });
+
+                const colorCode = document.createElement("span");
+                colorCode.textContent = colorValue;
+                colorInput.addEventListener("input", (event) => {
+                    colorCode.textContent = event.target.value;
+                });
+
+                chip.appendChild(colorInput);
+                chip.appendChild(colorCode);
+
+                if ((row.mode || "single") === "multi") {
+                    const removeColorButton = document.createElement("button");
+                    removeColorButton.type = "button";
+                    removeColorButton.className = "ghost-button";
+                    removeColorButton.textContent = "Remove";
+                    removeColorButton.addEventListener("click", () => removeColorInput(rowIndex, colorIndex));
+                    chip.appendChild(removeColorButton);
+                }
+
+                palette.appendChild(chip);
+            });
+
+            if ((row.mode || "single") === "multi") {
+                const addMoreButton = document.createElement("button");
+                addMoreButton.type = "button";
+                addMoreButton.className = "ghost-button";
+                addMoreButton.textContent = "Add Color";
+                addMoreButton.addEventListener("click", () => addColorInput(row, rowIndex));
+                palette.appendChild(addMoreButton);
+            }
+
+            card.appendChild(palette);
+            shell.appendChild(card);
+        });
+    };
+
+    addButton?.addEventListener("click", () => {
+        rows.push({label: "", mode: "single", colors: ["#000000"]});
+        render();
+    });
+
+    nameInput?.addEventListener("input", syncVisibility);
+    dataTypeInput?.addEventListener("change", syncVisibility);
+    syncVisibility();
+    render();
+})();
+</script>
+{% endif %}
+
+<script>
+// Open Media Library Modal and set field values on selection
+function handleSelectFromLibrary(fieldName, button) {
+    if (typeof window.openMediaLibrary !== 'function') {
+        window.appAlert ? window.appAlert('Media Library is not loaded on this page.', { title: 'Media Library', tone: 'warning' }) : console.warn('Media Library is not loaded on this page.');
+        return;
+    }
+    window.openMediaLibrary(asset => {
+        // Set the library ID hidden input value
+        const libInput = document.getElementById('id_' + fieldName + '_library_id');
+        if (libInput) {
+            libInput.value = asset.id;
+        }
+        
+        // Update visual preview card
+        const fieldDiv = button.closest('.file-field-custom');
+        const preview = fieldDiv ? fieldDiv.querySelector('.file-preview-wrap') : null;
+        if (preview) {
+            const isVideo = asset.filename.toLowerCase().endsWith('.mp4') || asset.filename.toLowerCase().endsWith('.webm');
+            if (isVideo) {
+                preview.innerHTML = `
+                    <div style="width:100%; height:100%; background:#0f172a; display:grid; place-items:center; color:#fff;">
+                        <i class="ph-fill ph-play-circle" style="font-size: 28px;"></i>
+                    </div>
+                `;
+            } else {
+                preview.innerHTML = `<img src="${asset.url}" alt="Library Preview" style="width: 100%; height: 100%; object-fit: contain;">`;
+            }
+            preview.style.opacity = '1';
+            preview.style.borderStyle = 'solid';
+        }
+        
+        // Show staged filename message
+        const displayDiv = document.getElementById('staged-name-' + fieldName);
+        if (displayDiv) {
+            displayDiv.querySelector('.filename').textContent = asset.filename + ' (Selected from Library)';
+            displayDiv.style.display = 'block';
+        }
+        
+        // Uncheck clearing checkbox if checked
+        const checkbox = document.getElementById('id_' + fieldName + '-clear');
+        if (checkbox && checkbox.checked) {
+            checkbox.checked = false;
+            const clearBtn = fieldDiv ? fieldDiv.querySelector('button[onclick*="toggleFieldClear"]') : null;
+            if (clearBtn) {
+                clearBtn.textContent = "Remove";
+                clearBtn.style.background = "rgba(239, 68, 68, 0.01)";
+                clearBtn.style.color = "var(--danger)";
+            }
+        }
+    });
+}
+
+// Toggle Django clear field input and adjust button state
+function toggleFieldClear(fieldName, button) {
+    const checkbox = document.getElementById('id_' + fieldName + '-clear');
+    if (!checkbox) return;
+    
+    checkbox.checked = !checkbox.checked;
+    
+    const fieldDiv = button.closest('.file-field-custom');
+    const preview = fieldDiv ? fieldDiv.querySelector('.file-preview-wrap') : null;
+    
+    if (checkbox.checked) {
+        button.textContent = "Keep Current File";
+        button.style.background = "var(--border)";
+        button.style.color = "var(--text-main)";
+        if (preview) preview.style.opacity = '0.35';
+    } else {
+        button.textContent = "Remove";
+        button.style.background = "rgba(239, 68, 68, 0.01)";
+        button.style.color = "var(--danger)";
+        if (preview) preview.style.opacity = '1';
+    }
+}
+
+// Stage selected files, preview image file contents instantly, and uncheck clear inputs
+function handleAdminFileChange(fieldName, input) {
+    const displayDiv = document.getElementById('staged-name-' + fieldName);
+    if (!displayDiv) return;
+    
+    if (input.files && input.files[0]) {
+        const filename = input.files[0].name;
+        displayDiv.querySelector('.filename').textContent = filename;
+        displayDiv.style.display = 'block';
+        
+        const checkbox = document.getElementById('id_' + fieldName + '-clear');
+        if (checkbox && checkbox.checked) {
+            checkbox.checked = false;
+            const fieldDiv = input.closest('.file-field-custom');
+            const clearBtn = fieldDiv ? fieldDiv.querySelector('button[onclick*="toggleFieldClear"]') : null;
+            if (clearBtn) {
+                clearBtn.textContent = "Remove";
+                clearBtn.style.background = "rgba(239, 68, 68, 0.01)";
+                clearBtn.style.color = "var(--danger)";
+            }
+            const preview = fieldDiv ? fieldDiv.querySelector('.file-preview-wrap') : null;
+            if (preview) preview.style.opacity = '1';
+        }
+        
+        const file = input.files[0];
+        if (file.type.match('image.*')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const fieldDiv = input.closest('.file-field-custom');
+                const preview = fieldDiv ? fieldDiv.querySelector('.file-preview-wrap') : null;
+                if (preview) {
+                    preview.innerHTML = `<img src="${e.target.result}" alt="Staged Preview" style="width: 100%; height: 100%; object-fit: contain;">`;
+                    preview.style.borderStyle = 'solid';
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    } else {
+        displayDiv.style.display = 'none';
+    }
+}
+
+// Handle Drag & Drop events on upload zones
+function handleDrop(e, inputId) {
+    const input = document.getElementById('id_' + inputId);
+    if (!input) return;
+    
+    const dt = new DataTransfer();
+    if (input.files) {
+        for (let i = 0; i < input.files.length; i++) {
+            dt.items.add(input.files[i]);
+        }
+    }
+    
+    const files = e.dataTransfer.files;
+    for (let i = 0; i < files.length; i++) {
+        dt.items.add(files[i]);
+    }
+    
+    input.files = dt.files;
+    const prefix = inputId.replace('product_', '').replace('_images', '').replace('videos', 'videos').replace('360_images', 'spin');
+    updateStagedList(prefix, input);
+}
+
+// Generate staged files previews dynamically
+function updateStagedList(prefix, input) {
+    const container = document.getElementById('staged-' + prefix + '-list');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    if (!input.files || input.files.length === 0) return;
+    
+    const wrapper = document.createElement('div');
+    wrapper.style.display = 'flex';
+    wrapper.style.flexWrap = 'wrap';
+    wrapper.style.gap = '8px';
+    wrapper.style.marginTop = '12px';
+    
+    for (let i = 0; i < input.files.length; i++) {
+        const file = input.files[i];
+        const index = i;
+        
+        const card = document.createElement('div');
+        card.style.display = 'flex';
+        card.style.alignItems = 'center';
+        card.style.gap = '8px';
+        card.style.background = 'var(--card-bg)';
+        card.style.border = '1px solid var(--border)';
+        card.style.borderRadius = '8px';
+        card.style.padding = '6px 12px';
+        card.style.fontSize = '12px';
+        card.style.color = 'var(--text-main)';
+        card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
+        
+        if (prefix === 'images' || prefix === 'spin') {
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            img.style.width = '36px';
+            img.style.height = '36px';
+            img.style.objectFit = 'cover';
+            img.style.borderRadius = '4px';
+            img.style.border = '1px solid var(--border)';
+            card.appendChild(img);
+        } else {
+            const icon = document.createElement('i');
+            icon.className = (prefix === 'videos') ? 'ph ph-video' : 'ph ph-image';
+            icon.style.color = 'var(--primary)';
+            icon.style.fontSize = '20px';
+            card.appendChild(icon);
+        }
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = file.name;
+        nameSpan.style.maxWidth = '180px';
+        nameSpan.style.overflow = 'hidden';
+        nameSpan.style.textOverflow = 'ellipsis';
+        nameSpan.style.whiteSpace = 'nowrap';
+        card.appendChild(nameSpan);
+        
+        const sizeSpan = document.createElement('span');
+        sizeSpan.textContent = '(' + (file.size / 1024).toFixed(1) + ' KB)';
+        sizeSpan.style.color = 'var(--text-muted)';
+        card.appendChild(sizeSpan);
+        
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.style.background = 'none';
+        delBtn.style.border = 'none';
+        delBtn.style.color = 'var(--danger)';
+        delBtn.style.cursor = 'pointer';
+        delBtn.style.padding = '0';
+        delBtn.style.display = 'flex';
+        delBtn.style.alignItems = 'center';
+        delBtn.innerHTML = '<i class="ph ph-x" style="font-size:14px;"></i>';
+        delBtn.onclick = (event) => {
+            event.stopPropagation();
+            const dt = new DataTransfer();
+            for (let j = 0; j < input.files.length; j++) {
+                if (j !== index) {
+                    dt.items.add(input.files[j]);
+                }
+            }
+            input.files = dt.files;
+            updateStagedList(prefix, input);
+        };
+        card.appendChild(delBtn);
+        
+        wrapper.appendChild(card);
+    }
+    container.appendChild(wrapper);
+}
+// Local tracking of staged media library asset IDs
+const stagedLibraryAssets = {
+    images: [],
+    videos: [],
+    spin: []
+};
+
+function selectProductGalleryFromLibrary(prefix, inputId) {
+    if (typeof window.openMediaLibrary !== 'function') {
+        window.appAlert ? window.appAlert('Media Library is not loaded on this page.', { title: 'Media Library', tone: 'warning' }) : console.warn('Media Library is not loaded on this page.');
+        return;
+    }
+    window.openMediaLibrary(asset => {
+        // Prevent duplicate selection
+        if (stagedLibraryAssets[prefix].includes(asset.id)) return;
+        
+        stagedLibraryAssets[prefix].push(asset.id);
+        
+        // Update hidden input field value
+        const hiddenInputId = 'id_' + inputId + '_library_ids';
+        let hiddenInput = document.getElementById(hiddenInputId);
+        if (!hiddenInput) {
+            hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = inputId + '_library_ids';
+            hiddenInput.id = hiddenInputId;
+            const fileInput = document.getElementById('id_' + inputId);
+            const form = fileInput ? fileInput.closest('form') : document.querySelector('form');
+            if (form) {
+                form.appendChild(hiddenInput);
+            }
+        }
+        hiddenInput.value = stagedLibraryAssets[prefix].join(',');
+        
+        // Render staged thumbnail card in the list
+        renderStagedLibraryCard(prefix, asset, hiddenInputId);
+    });
+}
+
+function renderStagedLibraryCard(prefix, asset, hiddenInputId) {
+    const container = document.getElementById('staged-' + prefix + '-list');
+    if (!container) return;
+    
+    // Find wrapper or create
+    let wrapper = container.querySelector('.staged-library-wrapper');
+    if (!wrapper) {
+        wrapper = document.createElement('div');
+        wrapper.className = 'staged-library-wrapper';
+        wrapper.style.display = 'flex';
+        wrapper.style.flexWrap = 'wrap';
+        wrapper.style.gap = '8px';
+        wrapper.style.marginTop = '8px';
+        container.appendChild(wrapper);
+    }
+    
+    const card = document.createElement('div');
+    card.style.display = 'flex';
+    card.style.alignItems = 'center';
+    card.style.gap = '8px';
+    card.style.background = 'rgba(224, 68, 32, 0.04)';
+    card.style.border = '1px solid var(--primary)';
+    card.style.borderRadius = '8px';
+    card.style.padding = '6px 12px';
+    card.style.fontSize = '12px';
+    card.style.color = 'var(--text-main)';
+    card.style.boxShadow = '0 2px 8px rgba(0,0,0,0.04)';
+    
+    if ((prefix === 'images' || prefix === 'spin') && asset.url) {
+        const img = document.createElement('img');
+        img.src = asset.url;
+        img.style.width = '36px';
+        img.style.height = '36px';
+        img.style.objectFit = 'cover';
+        img.style.borderRadius = '4px';
+        img.style.border = '1px solid var(--border)';
+        card.appendChild(img);
+    } else {
+        const icon = document.createElement('i');
+        icon.className = (prefix === 'videos') ? 'ph ph-video' : 'ph ph-image';
+        icon.style.color = 'var(--primary)';
+        icon.style.fontSize = '20px';
+        card.appendChild(icon);
+    }
+    
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = asset.filename + ' (Library)';
+    nameSpan.style.maxWidth = '180px';
+    nameSpan.style.overflow = 'hidden';
+    nameSpan.style.textOverflow = 'ellipsis';
+    nameSpan.style.whiteSpace = 'nowrap';
+    card.appendChild(nameSpan);
+    
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.style.background = 'none';
+    delBtn.style.border = 'none';
+    delBtn.style.color = 'var(--danger)';
+    delBtn.style.cursor = 'pointer';
+    delBtn.style.padding = '0';
+    delBtn.style.display = 'flex';
+    delBtn.style.alignItems = 'center';
+    delBtn.innerHTML = '<i class="ph ph-x" style="font-size:14px;"></i>';
+    delBtn.onclick = (event) => {
+        event.stopPropagation();
+        stagedLibraryAssets[prefix] = stagedLibraryAssets[prefix].filter(id => id !== asset.id);
+        const hiddenInput = document.getElementById(hiddenInputId);
+        if (hiddenInput) {
+            hiddenInput.value = stagedLibraryAssets[prefix].join(',');
+        }
+        card.remove();
+    };
+    card.appendChild(delBtn);
+    
+    wrapper.appendChild(card);
+}
+
+// Bind drag-over events to upload zones
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.upload-zone').forEach(zone => {
+        zone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            zone.classList.add('dragover');
+        });
+        zone.addEventListener('dragleave', () => {
+            zone.classList.remove('dragover');
+        });
+        zone.addEventListener('drop', (e) => {
+            zone.classList.remove('dragover');
+        });
+    });
+});
+
+// Current gallery asset manager (deleting existing items)
+(() => {
+    const manager = document.getElementById("retailer-asset-manager");
+    const removeInputs = document.getElementById("retailer-remove-asset-inputs");
+    if (!manager || !removeInputs) return;
+
+    manager.querySelectorAll("[data-asset-remove-id]").forEach((button) => {
+        button.addEventListener("click", () => {
+            const assetId = button.dataset.assetRemoveId;
+            const card = manager.querySelector(`[data-asset-card="${assetId}"]`);
+            if (!assetId || !card) return;
+
+            const existing = removeInputs.querySelector(`input[value="${assetId}"]`);
+            if (existing) {
+                existing.remove();
+                card.style.opacity = "1";
+                card.style.pointerEvents = "auto";
+                button.textContent = "Remove";
+                button.style.background = "rgba(239, 68, 68, 0.01)";
+                button.style.color = "var(--danger)";
+            } else {
+                const hidden = document.createElement("input");
+                hidden.type = "hidden";
+                hidden.name = "remove_asset_ids";
+                hidden.value = assetId;
+                removeInputs.appendChild(hidden);
+                card.style.opacity = "0.4";
+                button.textContent = "Keep Asset";
+                button.style.background = "var(--border)";
+                button.style.color = "var(--text-main)";
+            }
+        });
+    });
+})();
+
+// Ensure variant attribute field is always visible
+(() => {
+    const variantField = document.getElementById('id_is_variant_attribute');
+    if (!variantField) return;
+
+    const fieldContainer = variantField.closest('.form-field');
+    if (fieldContainer) {
+        fieldContainer.style.display = 'grid';
+        fieldContainer.style.visibility = 'visible';
+        fieldContainer.style.opacity = '1';
+        fieldContainer.style.height = 'auto';
+    }
+
+    // Watch for any changes to the data type and ensure variant field stays visible
+    const dataTypeInput = document.getElementById('id_data_type');
+    if (dataTypeInput) {
+        const observer = new MutationObserver(() => {
+            if (fieldContainer) {
+                fieldContainer.style.display = 'grid';
+                fieldContainer.style.visibility = 'visible';
+                fieldContainer.style.opacity = '1';
+                fieldContainer.style.height = 'auto';
+            }
+        });
+        observer.observe(fieldContainer, { attributes: true, subtree: true });
+    }
+})();
+
+// Toast notification system
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `toast-notification ${type}`;
+    toast.innerHTML = `<span class="toast-message">${message}</span>`;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease-out forwards';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// Intercept form submission for success message
+(() => {
+    const form = document.querySelector('form[method="post"]');
+    if (!form) return;
+
+    form.addEventListener('submit', (e) => {
+        const submitBtn = e.submitter;
+        if (submitBtn && submitBtn.textContent.includes('Save')) {
+            // Store flag that we're saving
+            sessionStorage.setItem('form-submitted', 'true');
+        }
+    });
+
+    // Check if form was just submitted successfully
+    if (sessionStorage.getItem('form-submitted')) {
+        sessionStorage.removeItem('form-submitted');
+        setTimeout(() => {
+            showToast('✓ Saved successfully!', 'success');
+        }, 500);
+    }
+})();
+</script>
+{% endblock %}

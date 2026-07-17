@@ -1,0 +1,117 @@
+{% extends "retailer/base.html" %}
+
+{% block content %}
+<div style="display: grid; grid-template-columns: 1fr 1.5fr; gap: 20px; align-items: start;">
+
+    <!-- Assign staff form -->
+    <div class="ra-card">
+        <div class="ra-card-header">
+            <span class="ra-card-title">Assign Staff Role</span>
+        </div>
+        <div class="ra-card-body">
+            <form method="post" class="ra-form">
+                {% csrf_token %}
+                {% for field in form %}
+                <div class="ra-field">
+                    <label class="ra-label">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}
+                    <div class="ra-field-error">{{ field.errors.as_text }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                <button type="submit" class="ra-btn ra-btn-primary ra-btn-block" style="margin-top: 4px;">
+                    <i class="ph ph-user-plus"></i> Assign Role
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Staff table -->
+    <div class="ra-card">
+        <div class="ra-card-header">
+            <span class="ra-card-title">Active Staff Members</span>
+            <span class="ra-badge info">{{ staff_memberships|length }} members</span>
+        </div>
+        <div style="padding: 14px 18px; border-bottom: 1px solid var(--border); display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            {% if show_deleted %}
+                <a href="{% url 'retailers:staff' %}" class="ra-btn ra-btn-secondary">Active Staff</a>
+            {% else %}
+                <a href="{% url 'retailers:staff' %}?show=deleted" class="ra-btn ra-btn-secondary">Deleted Staff</a>
+            {% endif %}
+        </div>
+        <div class="ra-table-wrap">
+            <form method="post" id="staff-bulk-form">
+            {% csrf_token %}
+            <div style="padding: 14px 18px; display:flex; gap:8px; flex-wrap:wrap;">
+                {% if show_deleted %}
+                    <button type="submit" name="staff_action" value="restore" class="ra-btn ra-btn-primary">Restore Selected</button>
+                    <button type="submit" name="staff_action" value="permanent_delete" class="ra-btn ra-btn-danger" onclick="return confirm('Permanently delete selected staff members?');">Permanently Delete</button>
+                {% else %}
+                    <button type="submit" name="staff_action" value="delete" class="ra-btn ra-btn-danger" onclick="return confirm('Move selected staff members to deleted staff?');">Delete Selected</button>
+                {% endif %}
+            </div>
+            <table class="ra-table">
+                <thead>
+                    <tr>
+                        <th><input type="checkbox" data-select-all-staff></th>
+                        <th>User</th>
+                        <th>Store</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for membership in staff_memberships %}
+                    <tr>
+                        <td><input type="checkbox" name="selected_memberships" value="{{ membership.id }}" data-staff-checkbox></td>
+                        <td>
+                            <div style="font-weight: 500; color: var(--text-main);">{{ membership.user.email }}</div>
+                            <div style="font-size: 12px; color: var(--text-muted);">{{ membership.title|default:"Team Member" }}</div>
+                        </td>
+                        <td>{{ membership.store.name|default:"All stores" }}</td>
+                        <td>
+                            {% for user_role in membership.user_roles.all %}
+                                <span class="ra-badge neutral" style="margin-right: 4px;">{{ user_role.role.name }}</span>
+                            {% empty %}
+                                <span style="color: var(--text-muted); font-size: 13px;">Unassigned</span>
+                            {% endfor %}
+                        </td>
+                        <td>
+                            <span class="ra-badge {% if membership.status == 'active' %}success{% else %}warning{% endif %}">
+                                {{ membership.status|title }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="ra-table-empty">
+                            <i class="ph ph-users" style="font-size: 32px; display: block; margin-bottom: 8px;"></i>
+                            No staff members assigned yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </form>
+        </div>
+    </div>
+
+</div>
+
+<style>
+@media (max-width: 900px) {
+    div[style*="grid-template-columns: 1fr 1.5fr"] {
+        grid-template-columns: 1fr !important;
+    }
+}
+</style>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const all = document.querySelector('[data-select-all-staff]');
+    const boxes = () => document.querySelectorAll('[data-staff-checkbox]');
+    if (!all) return;
+    all.addEventListener('change', function () { boxes().forEach(box => box.checked = all.checked); });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    restart: always
+    environment:
+      MYSQL_DATABASE: nuboxed
+      MYSQL_ROOT_PASSWORD: Chandan.1
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  web:
+    build: .
+    restart: always
+    command: gunicorn --bind 0.0.0.0:8000 --workers 3 config.wsgi:application
+    volumes:
+      - ./backend:/app
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    ports:
+      - "8000:8000"
+    env_file:
+      - backend/.env
+    depends_on:
+      - db
+      - redis
+
+  celery_worker:
+    build: .
+    restart: always
+    command: celery -A config worker -l info
+    volumes:
+      - ./backend:/app
+    env_file:
+      - backend/.env
+    depends_on:
+      - redis
+      - db
+
+  celery_beat:
+    build: .
+    restart: always
+    command: celery -A config beat -l info
+    volumes:
+      - ./backend:/app
+    env_file:
+      - backend/.env
+    depends_on:
+      - redis
+      - db
+
+  nginx:
+    image: nginx:alpine
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx:/etc/nginx/conf.d
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+    depends_on:
+      - web
+
+volumes:
+  db_data:
+  redis_data:
+  static_volume:
+  media_volume:
