@@ -1,6 +1,6 @@
-# CommerceOS
+# Nuboxed
 
-CommerceOS is a Europe-focused multi-retailer ecommerce marketplace platform built with Django and Django REST Framework.
+Nuboxed is a Europe-focused multi-retailer ecommerce marketplace platform built with Django and Django REST Framework.
 
 This repository currently contains:
 
