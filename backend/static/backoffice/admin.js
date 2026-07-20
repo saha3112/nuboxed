@@ -60,6 +60,10 @@ function refreshNotificationState() {
     if (notifySummary) {
         notifySummary.textContent = unread ? `${unread} New` : "All caught up";
     }
+    const notifyList = document.querySelector(".bo-notify-list");
+    if (notifyList && !items.length && !notifyList.querySelector("[data-notify-empty]")) {
+        notifyList.innerHTML = '<div data-notify-empty style="padding:32px 24px;text-align:center;color:var(--muted)"><div style="font-size:30px;margin-bottom:10px">✓</div><div style="font-weight:600;font-size:14px;color:var(--ink);margin-bottom:4px">All Caught Up!</div><div style="font-size:12px;color:var(--muted)">No new notifications at the moment.</div></div>';
+    }
 }
 
 document.addEventListener("click", (event) => {
@@ -102,6 +106,15 @@ document.addEventListener("click", (event) => {
         closeNotifications();
     }
 
+    const clearItem = event.target.closest("[data-notify-clear-item]");
+    if (clearItem) {
+        event.preventDefault();
+        const item = clearItem.closest("[data-notify-item]");
+        if (item) item.remove();
+        refreshNotificationState();
+        return;
+    }
+
     const notifyItem = event.target.closest("[data-notify-item]");
     if (notifyItem) {
         notifyItem.classList.remove("is-unread");
@@ -110,10 +123,10 @@ document.addEventListener("click", (event) => {
 
     if (notifyReadAll && event.target.closest("[data-notify-read-all]")) {
         event.preventDefault();
-        document.querySelectorAll("[data-notify-item]").forEach((item) => {
-            item.classList.remove("is-unread");
-        });
+        document.querySelectorAll("[data-notify-item]").forEach((item) => item.remove());
+        notifyReadAll.style.display = "none";
         refreshNotificationState();
+        return;
     }
 });
 

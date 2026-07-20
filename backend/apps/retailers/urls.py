@@ -22,8 +22,9 @@ from .views import (
     RetailerSaleCountdownListView,
     RetailerSaleCountdownUpdateView,
     RetailerSaleCountdownDeleteView,
-    RetailerOrdersView, RetailerOrderStatusView, RetailerOrderInvoiceView, RetailerOrderLabelView,
+    RetailerOrdersView, RetailerOrderDetailView, RetailerOrderStatusView, RetailerOrderCancelView, RetailerOrderTransactionView, RetailerOrderRefundView, RetailerOrderInvoiceView, RetailerOrderLabelView,
     RetailerOrderInvoicePrintView, RetailerOrderLabelPrintView, RetailerOrderWorkflowSettingsView,
+    RetailerCouponsView,
 )
 
 app_name = "retailers"
@@ -49,8 +50,13 @@ urlpatterns = [
     path("sale-countdown/", RetailerSaleCountdownListView.as_view(), name="sale-countdown"),
     path("sale-countdown/<uuid:pk>/edit/", RetailerSaleCountdownUpdateView.as_view(), name="sale-countdown-edit"),
     path("sale-countdown/<uuid:pk>/disable/", RetailerSaleCountdownDeleteView.as_view(), name="sale-countdown-disable"),
+    path("coupons/", RetailerCouponsView.as_view(), name="coupons"),
     path("orders/", RetailerOrdersView.as_view(), name="orders"),
+    path("orders/<uuid:pk>/", RetailerOrderDetailView.as_view(), name="order-detail"),
     path("orders/<uuid:pk>/status/", RetailerOrderStatusView.as_view(), name="order-status"),
+    path("orders/<uuid:pk>/cancel/", RetailerOrderCancelView.as_view(), name="order-cancel"),
+    path("orders/<uuid:pk>/transaction/", RetailerOrderTransactionView.as_view(), name="order-transaction"),
+    path("orders/<uuid:pk>/refund/", RetailerOrderRefundView.as_view(), name="order-refund"),
     path("orders/<uuid:pk>/invoice/", RetailerOrderInvoiceView.as_view(), name="order-invoice"),
     path("orders/<uuid:pk>/invoice/print/", RetailerOrderInvoicePrintView.as_view(), name="order-invoice-print"),
     path("orders/<uuid:pk>/label/", RetailerOrderLabelView.as_view(), name="order-label"),

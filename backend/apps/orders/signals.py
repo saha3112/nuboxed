@@ -26,6 +26,7 @@ def record_order_timeline_for_status_change(sender, instance, created, **kwargs)
     OrderTimeline.objects.create(
         order=instance,
         status=instance.status,
-        title=instance.status.replace("_", " ").title(),
-        note=f"Order status changed from {previous_status} to {instance.status}.",
+        title=f"Order {instance.get_status_display()}",
+        note=getattr(instance, "_timeline_note", "") or f"Order status changed from {previous_status} to {instance.status}.",
+        actor=getattr(instance, "_timeline_actor", None),
     )

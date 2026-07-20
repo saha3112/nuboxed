@@ -1,5 +1,5 @@
 {% extends "retailer/base.html" %}
 {% block content %}
 <div class="ra-page-header"><div><div class="ra-eyebrow">Storefront controls</div><h1>Edit Sale Countdown</h1></div></div>
-<section class="ra-card" style="max-width:760px;"><div class="ra-card-body"><form method="post" class="ra-form">{% csrf_token %}{% for field in form %}<div class="ra-field"><label class="ra-label">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}<button class="ra-btn ra-btn-primary" type="submit">Save setting</button> <a class="ra-btn ra-btn-secondary" href="{% url 'retailers:sale-countdown' %}">Cancel</a></form></div></section>
+<section class="ra-card" style="max-width:760px;"><div class="ra-card-body"><form method="post" class="ra-form">{% csrf_token %}{% for field in form %}<div class="ra-field"><label class="ra-label">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}<div class="ra-form-actions-sticky" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;"><a class="ra-btn ra-btn-outline" style="margin-right:auto;" href="{% url 'retailers:sale-countdown' %}"><i class="ph ph-x"></i> Cancel</a><button class="ra-btn ra-btn-primary" type="submit"><i class="ph ph-floppy-disk"></i> Save setting</button></div></form></div></section>
 {% endblock %}

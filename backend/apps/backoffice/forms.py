@@ -21,6 +21,35 @@ from apps.shipments.models import CourierPartner
 from apps.inventory.models import Warehouse
 
 
+class EmailSettingsForm(forms.Form):
+    host = forms.CharField(label="SMTP host", required=False, widget=forms.TextInput(attrs={"placeholder": "smtp.example.com"}))
+    port = forms.IntegerField(label="SMTP port", required=False, initial=587, min_value=1, max_value=65535)
+    username = forms.CharField(label="SMTP username", required=False)
+    password = forms.CharField(label="SMTP password", required=False, widget=forms.PasswordInput(attrs={"placeholder": "Leave blank to keep current password", "autocomplete": "new-password"}))
+    use_tls = forms.BooleanField(label="Use TLS", required=False, initial=True)
+    use_ssl = forms.BooleanField(label="Use SSL", required=False)
+    default_from_email = forms.EmailField(label="Default from email", required=False)
+    timeout = forms.IntegerField(label="Connection timeout (seconds)", required=False, initial=30, min_value=1, max_value=300)
+    test_recipient = forms.EmailField(label="Test recipient", required=False, widget=forms.EmailInput(attrs={"placeholder": "you@example.com"}))
+
+    def __init__(self, *args, current=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        current = current or {}
+        for name in self.fields:
+            if name != "password" and name in current:
+                self.fields[name].initial = current[name]
+        if current.get("password"):
+            self.fields["password"].help_text = "A password is already saved. Leave blank to keep it."
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get("use_tls") and cleaned.get("use_ssl"):
+            # SSL takes precedence if an older browser/session submits both.
+            # The form JavaScript also keeps these checkboxes mutually exclusive.
+            cleaned["use_tls"] = False
+        return cleaned
+
+
 class BackofficeLoginForm(AuthenticationForm):
     username = forms.EmailField(
         label="Email",

@@ -1,0 +1,55 @@
+{% extends "backoffice/base.html" %}
+
+{% block content %}
+<style>
+    .email-settings-page{max-width:1100px;margin:0 auto;padding:28px 4px 60px}
+    .email-settings-hero{padding:28px 32px;border:1px solid #f2b9a8;border-radius:20px;background:linear-gradient(115deg,#fff7f3,#f7f9ff);margin-bottom:24px}
+    .email-settings-hero h1{margin:0 0 8px;font-size:32px;color:#172033}.email-settings-hero p{margin:0;color:#64748b}
+    .email-settings-card{padding:28px 32px;border:1px solid #e2e8f0;border-radius:18px;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.06)}
+    .email-settings-card h2{margin:0 0 6px;color:#172033}.email-settings-card .intro{margin:0 0 24px;color:#64748b}
+    .email-settings-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.email-settings-form .field{display:grid;gap:7px}.email-settings-form .wide{grid-column:1/-1}
+    .email-settings-form label{font-weight:700;color:#334155}.email-settings-form input{width:100%;box-sizing:border-box;padding:12px 13px;border:1px solid #cbd5e1;border-radius:9px;font:inherit;color:#172033;background:#fff}.email-settings-form input:focus{outline:2px solid rgba(224,68,32,.2);border-color:#e04420}
+    .email-settings-form .check{display:flex;align-items:center;gap:9px}.email-settings-form .check input{width:auto}.help{color:#64748b;font-size:12px}.actions{grid-column:1/-1;display:flex;justify-content:flex-end;margin-top:4px}.save{border:0;border-radius:8px;padding:12px 22px;background:#e04420;color:white;font-weight:700;cursor:pointer}.errors{grid-column:1/-1;color:#b42318}
+    .smtp-toast{position:fixed;top:88px;right:28px;z-index:3000;display:flex;align-items:flex-start;gap:10px;min-width:300px;max-width:460px;padding:14px 18px;border-radius:12px;box-shadow:0 12px 30px rgba(15,23,42,.18);font-weight:700;line-height:1.45;animation:smtp-toast-in .2s ease-out}.smtp-toast i{font-size:21px;flex:0 0 auto;margin-top:1px}.smtp-toast.success{color:#047857;background:#ecfdf3;border:1px solid #86efac}.smtp-toast.error{color:#be123c;background:#fff1f2;border:1px solid #fda4af}.smtp-toast.is-hiding{opacity:0;transform:translateY(-8px);transition:opacity .25s ease,transform .25s ease}@keyframes smtp-toast-in{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+    @media(max-width:700px){.email-settings-form{grid-template-columns:1fr}.email-settings-form .wide{grid-column:auto}.email-settings-card,.email-settings-hero{padding:22px}.actions{grid-column:auto}}
+</style>
+<main class="email-settings-page">
+    {% if form.non_field_errors %}
+        <div class="smtp-toast error" role="alert" data-smtp-toast><i class="ph ph-warning-circle"></i><span>{{ form.non_field_errors|striptags }}</span></div>
+    {% endif %}
+    <section class="email-settings-hero"><h1>Email / SMTP Settings</h1><p>Configure the mail server used for registration, order, status, return, and notification emails.</p></section>
+    <section class="email-settings-card">
+        <h2>SMTP connection</h2><p class="intro">Use your provider's SMTP details. TLS and SSL cannot be enabled together.</p>
+        <form method="post" class="email-settings-form">
+            {% csrf_token %}
+            {% for field in form %}
+                <div class="field {% if field.name == 'default_from_email' %}wide{% endif %} {% if field.name == 'use_tls' or field.name == 'use_ssl' %}check{% endif %}">
+                    {% if field.name == 'use_tls' or field.name == 'use_ssl' %}{{ field }}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{% else %}<label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% endif %}
+                    {% if field.help_text %}<span class="help">{{ field.help_text }}</span>{% endif %}{% if field.errors %}<span class="errors">{{ field.errors|striptags }}</span>{% endif %}
+                </div>
+            {% endfor %}
+            <div class="actions"><button class="save" type="submit" name="action" value="save">Save SMTP settings</button><button class="save" style="margin-left:10px;background:#172033" type="submit" name="action" value="test">Send test email</button></div>
+        </form>
+    </section>
+</main>
+<script>
+(function () {
+    const tls = document.getElementById("id_use_tls");
+    const ssl = document.getElementById("id_use_ssl");
+    if (!tls || !ssl) return;
+    tls.addEventListener("change", function () { if (tls.checked) ssl.checked = false; });
+    ssl.addEventListener("change", function () { if (ssl.checked) tls.checked = false; });
+    if (tls.checked && ssl.checked) tls.checked = false;
+})();
+</script>
+<script>
+(function () {
+    document.querySelectorAll('[data-smtp-toast]').forEach(function (toast) {
+        window.setTimeout(function () {
+            toast.classList.add('is-hiding');
+            window.setTimeout(function () { toast.remove(); }, 280);
+        }, 2000);
+    });
+})();
+</script>
+{% endblock %}

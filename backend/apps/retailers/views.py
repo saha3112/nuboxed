@@ -8,6 +8,7 @@ from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.generic import CreateView, FormView, TemplateView, UpdateView, View
 from django.utils import timezone
 import json
@@ -23,11 +24,13 @@ from apps.users.models import User
 from apps.users.services import generate_unique_username
 from apps.settings_app.forms import RetailerSaleCountdownSettingForm
 from apps.settings_app.models import SaleCountdownSetting
-from apps.orders.models import Order
+from apps.orders.models import Coupon, Order
 from apps.orders.forms import OrderStatusForm, OrderWorkflowSettingForm
-from apps.orders.services import get_order_workflow_setting, update_order_status, generate_delivery_label
-from apps.payments.models import Invoice
-from apps.payments.services import generate_invoice_for_order
+from apps.orders.services import build_order_timeline, coupon_feature_enabled, get_order_workflow_setting, get_order_workflow_setting_for_order, update_order_status, generate_delivery_label
+from apps.payments.models import Invoice, PaymentTransaction
+from apps.payments.services import generate_invoice_for_order, process_refund, amount_in_words
+from apps.common.security import build_public_url
+from decimal import Decimal, InvalidOperation
 from django.template.response import TemplateResponse
 
 
@@ -48,17 +51,6 @@ class RetailerLoginView(LoginView):
             account__retailer_profile__isnull=False,
         ).exists():
             return redirect("retailers:dashboard")
-        if request.user.is_authenticated and not (
-            request.user.is_superuser
-            or request.user.global_roles.filter(role__code="super_admin", account_membership__isnull=True).exists()
-        ):
-            has_retailer_membership = request.user.account_memberships.filter(
-                status="active",
-                account__retailer_profile__isnull=False,
-            ).exists()
-            if has_retailer_membership:
-                request.session[self.session_user_key] = str(request.user.pk)
-                return redirect("retailers:dashboard")
         return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
@@ -73,12 +65,21 @@ class RetailerLoginView(LoginView):
 class RetailerLogoutView(LogoutView):
     next_page = reverse_lazy("retailers:login")
 
-    def get(self, request, *args, **kwargs):
+    @staticmethod
+    def clear_portal_session(request):
+        # Keep the admin portal session intact, but always persist removal of
+        # the retailer portal identity immediately. This matters when the
+        # login page is open in another tab using the same browser session.
         request.session.pop(RetailerLoginView.session_user_key, None)
+        request.session.modified = True
+        request.session.save()
+
+    def get(self, request, *args, **kwargs):
+        self.clear_portal_session(request)
         return redirect(self.next_page)
 
     def post(self, request, *args, **kwargs):
-        request.session.pop(RetailerLoginView.session_user_key, None)
+        self.clear_portal_session(request)
         return redirect(self.next_page)
 
 
@@ -93,12 +94,7 @@ class RetailerPortalMixin(LoginRequiredMixin, UserPassesTestMixin):
             if user:
                 return user
             self.request.session.pop(self.session_user_key, None)
-        user = self.request.user
-        if user.is_authenticated and not (
-            user.is_superuser
-            or user.global_roles.filter(role__code="super_admin", account_membership__isnull=True).exists()
-        ):
-            return user
+            self.request.session.modified = True
         return None
 
     def dispatch(self, request, *args, **kwargs):
@@ -108,7 +104,9 @@ class RetailerPortalMixin(LoginRequiredMixin, UserPassesTestMixin):
         return super().dispatch(request, *args, **kwargs)
 
     def get_membership(self):
-        user = getattr(self, "portal_user", None) or self.request.user
+        user = getattr(self, "portal_user", None)
+        if not user:
+            raise Http404("Retailer login required.")
         if user.is_superuser or user.global_roles.filter(
             role__code="super_admin",
             account_membership__isnull=True,
@@ -129,7 +127,9 @@ class RetailerPortalMixin(LoginRequiredMixin, UserPassesTestMixin):
 
     def has_retailer_permission(self, permission_code):
         retailer = self.get_retailer()
-        user = getattr(self, "portal_user", None) or self.request.user
+        user = getattr(self, "portal_user", None)
+        if not user:
+            return False
         return user.has_api_permission(permission_code, account=retailer.account)
 
     def test_func(self):
@@ -152,6 +152,7 @@ class RetailerPortalMixin(LoginRequiredMixin, UserPassesTestMixin):
                 "stores": stores,
                 "primary_store": self.get_primary_store(retailer),
                 "can_manage_sale_countdown": self.has_retailer_permission("sale_countdown.manage"),
+                "can_manage_coupons": coupon_feature_enabled(),
             }
         )
         return context
@@ -257,22 +258,92 @@ class RetailerOrdersView(RetailerPortalMixin, TemplateView):
     template_name = "retailer/orders.html"
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context.update({"page_title": "Orders", "orders": Order.objects.filter(retailer=self.get_retailer()).select_related("customer").prefetch_related("items__product", "items__variant").order_by("-created_at")})
+        context.update({"page_title": "Orders", "orders": Order.objects.filter(retailer=self.get_retailer()).select_related("customer").prefetch_related("items__product", "items__variant", "timeline_entries__actor").order_by("-created_at")})
         return context
+
+
+class RetailerOrderDetailView(RetailerPortalMixin, TemplateView):
+    template_name = "orders/retailer_detail.html"
+
+    def get_context_data(self, **kwargs):
+        c = super().get_context_data(**kwargs)
+        order = get_object_or_404(Order.objects.select_related("customer", "retailer", "address").prefetch_related(
+            "items__product__media_items", "items__product__phone_variant__phone_model", "items__warehouse",
+            "items__variant__attribute_values__attribute", "items__variant__attribute_values__option",
+            "timeline_entries", "payment_transactions__gateway", "payment_transactions__refunds", "invoices__items", "shipments__courier_partner",
+            "return_requests__timeline_entries", "return_requests__items__order_item__product",
+        ), pk=kwargs["pk"], retailer=self.get_retailer())
+        order_items = list(order.items.all())
+        cancellation_entry = order.timeline_entries.filter(status=Order.STATUS_CANCELLED).order_by("-occurred_at").first()
+        refund_transactions = [refund for transaction in order.payment_transactions.all() for refund in transaction.refunds.all()]
+        c.update({"page_title": f"Order {order.number}", "order": order, "portal": "retailer", "order_detail_page": True, "order_item_count": len(order_items), "order_unit_count": sum(item.quantity for item in order_items), "order_can_cancel": order.status not in {Order.STATUS_CANCELLED, Order.STATUS_DELIVERED, Order.STATUS_RETURNED, Order.STATUS_REFUNDED}, "cancellation_entry": cancellation_entry, "refund_transactions": refund_transactions})
+        return c
 
 
 class RetailerOrderStatusView(RetailerPortalMixin, View):
     def post(self, request, pk):
         order = get_object_or_404(Order, pk=pk, retailer=self.get_retailer())
         form = OrderStatusForm(request.POST)
-        if form.is_valid(): update_order_status(order, form.cleaned_data["status"], actor=getattr(self, "portal_user", request.user))
+        if form.is_valid():
+            updated_order = update_order_status(order, form.cleaned_data["status"], actor=getattr(self, "portal_user", request.user))
+            if getattr(updated_order, "_fulfillment_warning", ""):
+                messages.warning(request, f"Order status updated, but courier booking is pending: {updated_order._fulfillment_warning}")
         return redirect("retailers:orders")
+
+
+class RetailerOrderCancelView(RetailerPortalMixin, View):
+    def post(self, request, pk):
+        order = get_object_or_404(Order, pk=pk, retailer=self.get_retailer())
+        if order.status in {Order.STATUS_CANCELLED, Order.STATUS_DELIVERED, Order.STATUS_RETURNED, Order.STATUS_REFUNDED}:
+            messages.error(request, "This order cannot be cancelled in its current status.")
+        else:
+            update_order_status(order, Order.STATUS_CANCELLED, actor=getattr(self, "portal_user", request.user), note=request.POST.get("cancellation_reason", "Customer requested"))
+            messages.success(request, f"Order {order.number} was cancelled successfully.")
+        return redirect("retailers:order-detail", pk=order.pk)
+
+
+class RetailerOrderTransactionView(RetailerPortalMixin, View):
+    def get(self, request, pk):
+        order = get_object_or_404(Order, pk=pk, retailer=self.get_retailer())
+        transactions = PaymentTransaction.objects.filter(order=order).select_related("gateway").prefetch_related("refunds")
+        return JsonResponse({"order": order.number, "transactions": [{
+            "transaction_number": tx.transaction_number,
+            "status": tx.get_status_display(),
+            "gateway": tx.gateway.name,
+            "amount": str(tx.amount),
+            "currency": tx.currency,
+            "gateway_transaction_id": tx.gateway_transaction_id or "Not provided",
+            "captured_at": tx.captured_at.strftime("%d %b %Y, %H:%M") if tx.captured_at else "Not captured",
+            "refunds": [{"number": refund.refund_number, "amount": str(refund.amount), "status": refund.get_status_display(), "reason": refund.reason} for refund in tx.refunds.all()],
+        } for tx in transactions]})
+
+
+class RetailerOrderRefundView(RetailerPortalMixin, View):
+    def post(self, request, pk):
+        order = get_object_or_404(Order, pk=pk, retailer=self.get_retailer())
+        transaction = PaymentTransaction.objects.filter(order=order, status=PaymentTransaction.STATUS_CAPTURED).first()
+        try:
+            if not transaction:
+                raise ValueError("No captured payment transaction is available for this order.")
+            amount = Decimal(request.POST.get("amount", "0"))
+            if amount <= 0:
+                raise ValueError("Refund amount must be greater than zero.")
+            reason = request.POST.get("reason", "Customer request").strip() or "Customer request"
+            refund = process_refund(transaction, amount=amount, reason=reason, actor=getattr(self, "portal_user", request.user))
+            if transaction.status == PaymentTransaction.STATUS_REFUNDED:
+                update_order_status(order, Order.STATUS_REFUNDED, actor=getattr(self, "portal_user", request.user), note=f"Full payment refund {refund.refund_number} processed: {reason}")
+            else:
+                build_order_timeline(order, order.status, "Partial refund processed", f"Refund {refund.refund_number} of {amount} {transaction.currency} processed: {reason}", actor=getattr(self, "portal_user", request.user))
+            messages.success(request, f"Refund {refund.refund_number} processed successfully.")
+        except (ValueError, InvalidOperation) as exc:
+            messages.error(request, str(exc))
+        return redirect("retailers:order-detail", pk=order.pk)
 
 
 class RetailerOrderInvoiceView(RetailerPortalMixin, View):
     def post(self, request, pk):
         order = get_object_or_404(Order, pk=pk, retailer=self.get_retailer())
-        setting = get_order_workflow_setting(order.retailer)
+        setting = get_order_workflow_setting_for_order(order)
         if setting.allow_manual_invoice: generate_invoice_for_order(order, actor=getattr(self, "portal_user", request.user))
         return redirect("retailers:order-invoice-print", pk=order.pk)
 
@@ -280,20 +351,22 @@ class RetailerOrderInvoiceView(RetailerPortalMixin, View):
 class RetailerOrderLabelView(RetailerPortalMixin, View):
     def post(self, request, pk):
         order = get_object_or_404(Order, pk=pk, retailer=self.get_retailer())
-        if get_order_workflow_setting(order.retailer).allow_manual_label: generate_delivery_label(order, actor=getattr(self, "portal_user", request.user))
+        if get_order_workflow_setting_for_order(order).allow_manual_label: generate_delivery_label(order, actor=getattr(self, "portal_user", request.user))
         return redirect("retailers:order-label-print", pk=order.pk)
 
 
+@method_decorator(xframe_options_sameorigin, name="dispatch")
 class RetailerOrderInvoicePrintView(RetailerPortalMixin, TemplateView):
     template_name = "orders/invoice_print.html"
     def get_context_data(self, **kwargs):
-        c = super().get_context_data(**kwargs); order = get_object_or_404(Order, pk=kwargs["pk"], retailer=self.get_retailer()); c.update({"order": order, "invoice": Invoice.objects.filter(order=order).prefetch_related("items").first(), "invoice_design": {}}); return c
+        c = super().get_context_data(**kwargs); order = get_object_or_404(Order, pk=kwargs["pk"], retailer=self.get_retailer()); invoice = generate_invoice_for_order(order, actor=getattr(self, "portal_user", self.request.user)); shipment = order.shipments.order_by("-created_at").first(); invoice_access_url = build_public_url(self.request, reverse("storefront:invoice-access", kwargs={"invoice_number": invoice.invoice_number})); c.update({"order": order, "invoice": invoice, "invoice_design": {}, "tracking_number": getattr(shipment, "tracking_number", ""), "amount_in_words": amount_in_words(invoice.total_amount or order.total_amount, invoice.currency or order.currency_code), "invoice_url_json": json.dumps(invoice_access_url), "invoice_access_url": invoice_access_url}); return c
 
 
+@method_decorator(xframe_options_sameorigin, name="dispatch")
 class RetailerOrderLabelPrintView(RetailerPortalMixin, TemplateView):
     template_name = "orders/label_print.html"
     def get_context_data(self, **kwargs):
-        c = super().get_context_data(**kwargs); order = get_object_or_404(Order, pk=kwargs["pk"], retailer=self.get_retailer()); label = generate_delivery_label(order); c.update({"order": order, "label": label}); return c
+        c = super().get_context_data(**kwargs); order = get_object_or_404(Order, pk=kwargs["pk"], retailer=self.get_retailer()); label = generate_delivery_label(order); payload = dict(label.payload); verification_url = build_public_url(self.request, reverse("storefront:label-verify", kwargs={"label_number": label.label_number})); payload["tracking_url"] = verification_url; payload["barcode_value"] = verification_url; c.update({"order": order, "label": label, "verification_url": verification_url, "label_payload_json": json.dumps(payload)}); return c
 
 
 class RetailerOrderWorkflowSettingsView(RetailerPortalMixin, FormView):
@@ -303,6 +376,38 @@ class RetailerOrderWorkflowSettingsView(RetailerPortalMixin, FormView):
         kwargs = super().get_form_kwargs(); kwargs["instance"] = get_order_workflow_setting(self.get_retailer()); return kwargs
     def form_valid(self, form): form.save(); messages.success(self.request, "Order workflow settings saved."); return redirect("retailers:order-settings")
     def get_context_data(self, **kwargs): c = super().get_context_data(**kwargs); c["page_title"] = "Order Workflow Settings"; return c
+
+
+class RetailerCouponsView(RetailerPortalMixin, TemplateView):
+    template_name = "retailer/coupons.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        retailer = self.get_retailer()
+        context.update({"page_title": "Coupons", "coupons": Coupon.objects.filter(retailer=retailer), "coupon_feature_enabled": coupon_feature_enabled()})
+        return context
+
+    def post(self, request):
+        if not coupon_feature_enabled():
+            messages.error(request, "Coupon management is disabled by the administrator.")
+            return redirect("retailers:coupons")
+        code = request.POST.get("code", "").strip().upper()
+        try:
+            value = request.POST.get("discount_value", "0")
+            Coupon.objects.create(
+                code=code,
+                retailer=self.get_retailer(),
+                discount_type=request.POST.get("discount_type", Coupon.TYPE_PERCENTAGE),
+                discount_value=value,
+                minimum_order_amount=request.POST.get("minimum_order_amount", "0") or 0,
+                maximum_discount_amount=request.POST.get("maximum_discount_amount") or None,
+                usage_limit=request.POST.get("usage_limit") or None,
+                is_active=True,
+            )
+            messages.success(request, "Coupon created successfully.")
+        except Exception as exc:
+            messages.error(request, f"Coupon could not be created: {exc}")
+        return redirect("retailers:coupons")
 
 
 

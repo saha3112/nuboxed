@@ -1,0 +1,8 @@
+{% extends "backoffice/base.html" %}
+{% block content %}<style>
+.bo-order-page-head{display:flex;align-items:center;justify-content:space-between;gap:20px;min-width:0}.bo-order-page-head h2{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:22px}.bo-order-breadcrumb{display:flex;align-items:center;gap:10px;color:#64748b;white-space:nowrap;font-size:13px}.bo-order-breadcrumb i{font-size:13px}.bo-order-breadcrumb span{color:#e04420;font-weight:600}
+.bo-main .content{padding:24px;background:var(--bg,#f1f5f9)}
+.bo-main .order-detail{font-family:Inter,"Segoe UI",sans-serif;color:#1c2434}.bo-main .order-box{border-color:#e2e8f0;border-radius:14px;background:#fff;box-shadow:0 1px 3px rgba(16,24,40,.06),0 10px 20px rgba(16,24,40,.04)}
+.bo-main .ra-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 18px;border-radius:10px;font:500 13.5px Inter,"Segoe UI",sans-serif;line-height:1.6;cursor:pointer;border:0;white-space:nowrap;text-decoration:none;transition:background .15s ease,opacity .15s ease}.bo-main .ra-btn:hover{transform:none;box-shadow:none}.bo-main .ra-btn-primary{background:#e04420;color:#fff}.bo-main .ra-btn-primary:hover{background:#b9381c;color:#fff}.bo-main .ra-btn-outline{background:transparent;color:#e04420;border:1px solid #e04420}.bo-main .ra-btn-outline:hover{background:#e04420;color:#fff}
+@media(max-width:700px){.bo-order-page-head{align-items:flex-start;flex-direction:column;gap:6px}.bo-order-breadcrumb{font-size:12px}.bo-main .content{padding:16px}.order-detail-head .order-actions form{width:100%}.order-detail-head .order-actions select{flex:1}.order-detail-head .order-actions .ra-btn{flex:0 0 auto}}
+</style>{% include "orders/detail_body.html" %}{% endblock %}

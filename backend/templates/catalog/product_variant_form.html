@@ -19,9 +19,10 @@
                 </div>
                 {% endfor %}
             </div>
-            <button type="submit" class="ra-btn ra-btn-primary" style="margin-top: 8px;">
-                <i class="ph ph-floppy-disk"></i> Save Variant
-            </button>
+            <div class="ra-form-actions-sticky" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;">
+                <a href="{% url 'catalog:retailer-variants' %}" class="ra-btn ra-btn-outline" style="margin-right:auto;"><i class="ph ph-x"></i> Cancel</a>
+                <button type="submit" class="ra-btn ra-btn-primary"><i class="ph ph-floppy-disk"></i> Save Variant</button>
+            </div>
         </form>
     </div>
 </div>

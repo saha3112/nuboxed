@@ -1,1 +1,12 @@
-{% extends "backoffice/base.html" %}{% block content %}<div class="bo-card"><div class="bo-card-header"><div><h3>Email Templates</h3><p>Edit messages used for registration, orders, cancellations, returns and status changes.</p></div></div><table><thead><tr><th>Event</th><th>Subject</th><th>Status</th><th></th></tr></thead><tbody>{% for item in templates %}<tr><td><strong>{{ item.event_name }}</strong></td><td>{{ item.subject_template }}</td><td>{{ item.is_active|yesno:"Active,Disabled" }}</td><td><a class="primary-button" href="{% url 'backoffice:email-template-edit' item.pk %}">Edit</a></td></tr>{% empty %}<tr><td colspan="4">No email templates have been seeded yet. Fallback messages remain active.</td></tr>{% endfor %}</tbody></table></div>{% endblock %}
+{% extends "backoffice/base.html" %}
+{% block content %}
+<div class="page-shell">
+    <section class="hero-panel"><div><p class="eyebrow">Communication center</p><h3>Email Templates</h3><p class="subtle-copy">Manage the messages sent to customers, retailers, and administrators when platform events occur.</p></div><div class="hero-actions"><span class="status-pill neutral"><i class="ph ph-envelope"></i>&nbsp; Email channel</span></div></section>
+    <section class="panel">
+        <div class="panel-header"><div><h3>Available email messages</h3><p class="subtle-copy">Choose a template to edit its subject, body, or active status.</p></div><span class="subtle-copy">{{ templates|length }} templates</span></div>
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>Event</th><th>Subject preview</th><th>Status</th><th style="text-align:right">Action</th></tr></thead><tbody>
+        {% for item in templates %}<tr><td><strong>{{ item.event_name|title }}</strong><small style="display:block">{{ item.event_name }}</small></td><td>{{ item.subject_template|default:"No subject" }}</td><td>{% if item.is_active %}<span class="status-pill success">Active</span>{% else %}<span class="status-pill neutral">Disabled</span>{% endif %}</td><td style="text-align:right"><a class="primary-button" href="{% url 'backoffice:email-template-edit' item.pk %}"><i class="ph ph-pencil-simple"></i>&nbsp; Edit</a></td></tr>{% empty %}<tr><td colspan="4"><div class="empty-state"><i class="ph ph-envelope-open" style="font-size:42px;color:var(--accent)"></i><h4>No email templates yet</h4><p>Fallback messages remain active until templates are created.</p></div></td></tr>{% endfor %}
+        </tbody></table></div>
+    </section>
+</div>
+{% endblock %}

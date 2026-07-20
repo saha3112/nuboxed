@@ -23,8 +23,34 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link rel="stylesheet" href="{% static 'backoffice/admin.css' %}">
     <link rel="stylesheet" href="{% static 'shared/icon-fallback.css' %}">
+    <style>
+        .portal-toast-stack{position:fixed;top:88px;right:28px;z-index:3000;display:flex;flex-direction:column;gap:10px;pointer-events:none}
+        .portal-toast{display:flex;align-items:flex-start;gap:10px;min-width:300px;max-width:460px;padding:14px 18px;border-radius:12px;box-shadow:0 12px 30px rgba(15,23,42,.18);font-weight:700;line-height:1.45;pointer-events:auto;animation:portal-toast-in .2s ease-out}
+        .portal-toast i{font-size:21px;flex:0 0 auto;margin-top:1px}.portal-toast.success{color:#047857;background:#ecfdf3;border:1px solid #86efac}.portal-toast.error{color:#be123c;background:#fff1f2;border:1px solid #fda4af}.portal-toast.info{color:#b9381c;background:#fff7f3;border:1px solid #f2b9a8}.portal-toast.is-hiding{opacity:0;transform:translateY(-8px);transition:opacity .25s ease,transform .25s ease}@keyframes portal-toast-in{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+        @media(max-width:600px){.portal-toast-stack{top:72px;right:12px;left:12px}.portal-toast{min-width:0;max-width:none}}
+        .admin-form:has(.form-actions){padding-bottom:86px}
+        .admin-form .form-actions{display:flex;align-items:center;gap:12px;position:fixed;left:290px;right:0;bottom:0;z-index:1000;margin:0;padding:14px 32px;background:var(--surface,#fff);border-top:1px solid var(--line,#e2e8f0);box-shadow:0 -10px 28px rgba(15,23,42,.10)}
+        .admin-form .form-actions a:first-child{margin-right:auto}
+        .bo-sidebar.collapsed ~ .bo-main .admin-form .form-actions{left:92px}
+        @media(max-width:1180px){.admin-form .form-actions,.bo-sidebar.collapsed ~ .bo-main .admin-form .form-actions{left:0}}
+        @media(max-width:600px){.admin-form .form-actions{padding-left:20px;padding-right:20px}.admin-form .form-actions>*{flex:1;text-align:center}}
+        .ra-form-actions-sticky{position:fixed !important;left:290px;right:0;bottom:0;z-index:1000;margin:0 !important;padding:14px 32px !important;background:var(--surface,#fff);border:0;border-top:1px solid var(--line,#e2e8f0);border-radius:0;box-shadow:0 -10px 28px rgba(15,23,42,.12);backdrop-filter:blur(12px)}
+        .bo-sidebar.collapsed ~ .bo-main .ra-form-actions-sticky{left:92px}
+        @media(max-width:1180px){.ra-form-actions-sticky,.bo-sidebar.collapsed ~ .bo-main .ra-form-actions-sticky{left:0}}
+        @media(max-width:600px){.ra-form-actions-sticky{padding:12px 16px !important}.ra-form-actions-sticky .ra-btn{flex:1;justify-content:center}}
+    </style>
 </head>
 <body class="admin-body" data-portal-context="backoffice" x-data="backofficeShell('{{ active_group|default:''|escapejs }}')" x-init="init()" :class="darkMode ? 'dark-mode' : ''">
+    {% if messages %}
+    <div class="portal-toast-stack" aria-live="polite">
+        {% for message in messages %}
+        <div class="portal-toast {% if 'error' in message.tags or 'danger' in message.tags %}error{% elif 'info' in message.tags %}info{% else %}success{% endif %}" role="alert" data-portal-toast>
+            <i class="ph {% if 'error' in message.tags or 'danger' in message.tags %}ph-warning-circle{% elif 'info' in message.tags %}ph-info{% else %}ph-check-circle{% endif %}"></i>
+            <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
     <div class="bo-overlay" data-sidebar-overlay></div>
     <div class="bo-shell">
         <aside class="bo-sidebar" data-sidebar>
@@ -70,7 +96,7 @@
                 {% for group_name, modules in sidebar_groups.items %}
                     {% if group_name == "Catalog" %}
                         <!-- Catalog Group -->
-                        <section class="bo-nav-group">
+                        <section class="bo-nav-group bo-nav-group-catalog">
                             <button class="bo-nav-toggle" type="button" @click="toggleGroup('{{ group_name|escapejs }}')" :class="activeGroup === '{{ group_name|escapejs }}' ? 'active' : ''">
                                 <span class="bo-nav-link-left">
                                     <i class="ph ph-package"></i>
@@ -107,7 +133,7 @@
                             </div>
                         </section>
                     {% else %}
-                    <section class="bo-nav-group">
+                    <section class="bo-nav-group bo-nav-group-{{ group_name|slugify }}">
                         <button class="bo-nav-toggle" type="button" @click="toggleGroup('{{ group_name|escapejs }}')" :class="activeGroup === '{{ group_name|escapejs }}' ? 'active' : ''">
                             <span class="bo-nav-link-left">
                         {% if group_name == "Commerce" %}
@@ -233,25 +259,29 @@
                         <i class="ph" :class="darkMode ? 'ph-moon' : 'ph-sun'"></i>
                     </button>
 
-                    <div class="bo-notify" x-data="{ open: false }">
-                    <button class="bo-icon-btn" data-notify-toggle type="button" title="Notifications" @click="open = !open">
+                    <div class="bo-notify">
+                    <button class="bo-icon-btn" data-notify-toggle type="button" title="Notifications">
                         <i class="ph ph-bell"></i>
                         {% if backoffice_unread_notification_count %}<span class="bo-notify-count">{{ backoffice_unread_notification_count }}</span>{% endif %}
                     </button>
-                    <div class="bo-dropdown bo-notify-dropdown" data-notify-dropdown x-show="open" x-transition @click.outside="open = false" style="display:none;">
+                    <div class="bo-dropdown bo-notify-dropdown" data-notify-dropdown style="display:none;">
                         <div class="bo-dropdown-head">
-                            <strong>Notification</strong>
+                            <div>
+                                <strong>Notifications</strong>
+                                <div class="bo-notify-summary" data-notify-summary>{% if backoffice_unread_notification_count %}{{ backoffice_unread_notification_count }} New{% else %}All caught up{% endif %}</div>
+                            </div>
                             <div style="display: flex; align-items: center; gap: 8px;">
-                                <button type="button" class="bo-notify-close" data-notify-close @click="open = false">
+                                <button type="button" class="bo-notify-clear-all" data-notify-read-all {% if not backoffice_notifications %}style="display:none"{% endif %}>Clear All</button>
+                                <button type="button" class="bo-notify-close" data-notify-close>
                                     <i class="ph ph-x"></i>
                                 </button>
                             </div>
                         </div>
                         <div class="bo-notify-list">
                             {% for notification in backoffice_notifications %}
-                                <div class="bo-notify-item {% if not notification.read_at %}is-unread{% endif %}">
+                                <div class="bo-notify-item {% if not notification.read_at %}is-unread{% endif %}" data-notify-item>
                                     <span class="bo-notify-avatar">
-                                        {{ notification.subject|first|upper }}
+                                        <span class="bo-notify-avatar-face">{{ notification.subject|first|upper }}</span>
                                         <span class="bo-notify-status-dot {% if notification.status == 'failed' %}is-busy{% else %}is-online{% endif %}"></span>
                                     </span>
                                     <span class="bo-notify-item-body">
@@ -260,9 +290,10 @@
                                             <small>{{ notification.get_status_display }} &bull; {{ notification.created_at|date:"d M, H:i" }}</small>
                                         </span>
                                     </span>
+                                    <button type="button" class="bo-notify-clear-item" data-notify-clear-item title="Clear notification"><i class="ph ph-trash"></i></button>
                                 </div>
                             {% empty %}
-                            <div style="padding: 32px 24px; text-align: center; color: var(--text-muted);">
+                            <div data-notify-empty style="padding: 32px 24px; text-align: center; color: var(--text-muted);">
                                 {% if global_brand_settings.notification_empty_image %}
                                     <img src="{{ global_brand_settings.notification_empty_image.url }}" alt="No notifications" style="width: 120px; height: 120px; object-fit: contain; margin: 0 auto 16px; display: block; border-radius: 12px;">
                                 {% else %}
@@ -284,7 +315,6 @@
                             </div>
                             {% endfor %}
                         </div>
-                        <div class="bo-dropdown-divider"></div>
                         <div class="bo-notify-actions">
                             <a href="{% url 'backoffice:notifications' %}" class="ghost-button bo-notify-full">View All Notifications</a>
                         </div>
@@ -310,15 +340,15 @@
                 </div>
             </header>
 
-            <section class="bo-page-head">
-                <div>
-                    <p class="eyebrow">Control Center</p>
-                    <h2>{{ page_title }}</h2>
-                </div>
-            </section>
+            {% if not hide_page_head %}<section class="bo-page-head {% if order_detail_page %}bo-order-page-head{% endif %}">
+                <div>{% if not order_detail_page %}<p class="eyebrow">Control Center</p>{% endif %}<h2>{{ page_title }}</h2></div>
+                {% if order_detail_page %}<nav class="bo-order-breadcrumb"><a href="{% url 'backoffice:dashboard' %}">Dashboard</a><i class="ph ph-caret-right"></i><span>{{ page_title }}</span><i class="ph ph-caret-right"></i><span>Order Details</span></nav>{% endif %}
+            </section>{% endif %}
 
             <main class="content">
                 {% include "shared/app_confirm.html" %}
+                {% include "orders/shipping_label_modal.html" %}
+                {% include "orders/invoice_modal.html" %}
                 {% block content %}{% endblock %}
             </main>
         </main>
@@ -344,6 +374,11 @@
     </div>
     <script src="{% static 'backoffice/admin.js' %}"></script>
     <script src="{% static 'common/password-toggle.js' %}"></script>
+    <script>
+    document.querySelectorAll('[data-portal-toast]').forEach(function (toast) {
+        window.setTimeout(function () { toast.classList.add('is-hiding'); window.setTimeout(function () { toast.remove(); }, 280); }, 2000);
+    });
+    </script>
     <script>
     function backofficeShell(initialGroup) {
         return {

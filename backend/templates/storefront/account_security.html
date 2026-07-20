@@ -1,0 +1,58 @@
+{% extends "storefront/base.html" %}
+
+{% block content %}
+<style>
+    .security-page { max-width: 900px; margin: 38px auto 70px; padding: 0 20px; }
+    .security-page h1 { margin:0; color:#17212b; font-size:32px; }
+    .account-back-link { display:flex; width:max-content; align-items:center; gap:8px; margin:0 0 26px auto; padding:10px 16px; border:1px solid #e04420; border-radius:8px; background:#fff8f5; color:#c83818; font-size:14px; font-weight:700; text-decoration:none; transition:all .18s ease; }
+    .account-back-link:hover { background:#e04420; color:#fff; box-shadow:0 4px 10px rgba(224,68,32,.2); transform:translateY(-1px); }
+    .security-intro { color:#64748b; margin:8px 0 28px; }
+    .security-card { padding:26px; margin-bottom:20px; border:1px solid #e1e7ec; border-radius:16px; background:#fff; box-shadow:0 8px 24px rgba(15,23,42,.05); }
+    .security-card h2 { margin:0 0 5px; color:#17212b; font-size:21px; }
+    .security-card > p { color:#64748b; font-size:14px; margin:0 0 20px; }
+    .security-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .security-field { display:grid; gap:6px; }
+    .security-field label { color:#334155; font-size:13px; font-weight:650; }
+    .security-field input { border:1px solid #d7e0e8; border-radius:9px; padding:11px 12px; font:inherit; width:100%; box-sizing:border-box; -webkit-appearance:none; }
+    /* Keep only our custom eye control; hide browser-native password buttons. */
+    .security-field input[type="password"]::-webkit-textfield-decoration-container,
+    .security-field input[type="password"]::-webkit-credentials-auto-fill-button,
+    .security-field input[type="password"]::-webkit-password-reveal-button,
+    .security-field input[type="password"]::-ms-reveal,
+    .security-field input[type="password"]::-moz-textfield-decoration-container { display:none !important; visibility:hidden !important; }
+    .security-field input:focus { outline:2px solid rgba(224,68,32,.18); border-color:#e04420; }
+    .security-submit { margin-top:18px; border:0; border-radius:9px; padding:12px 18px; background:#e04420; color:#fff; font-weight:700; cursor:pointer; }
+    .security-submit:hover { background:#c83818; }
+    .security-errors { margin:0 0 14px; color:#b42318; font-size:13px; }
+    .password-field { position:relative; }
+    .password-field input { padding-right:42px; }
+    /* Cover the browser's native reveal button and keep one consistent toggle. */
+    .password-toggle { position:absolute; right:7px; top:25px; z-index:3; display:flex; align-items:center; justify-content:center; width:34px; height:34px; border:0; border-radius:7px; background:#fff; color:#64748b; cursor:pointer; padding:0; }
+    .password-toggle:hover { background:#fff; color:#e04420; }
+    @media (max-width:640px) { .security-grid { grid-template-columns:1fr; } }
+</style>
+<section class="page-head"><div class="container"><h1>Manage Profile</h1><div class="breadcrumb"><a href="{% url 'storefront:home' %}">Home</a><span>/</span><a href="{% url 'storefront:customer-dashboard' %}">Your Account</a><span>/</span><span>Manage Profile</span></div></div></section>
+<main class="security-page">
+    <a class="account-back-link" href="{% url 'storefront:customer-dashboard' %}">← Back to Account</a>
+    <p class="security-intro">Keep your personal details and login credentials up to date.</p>
+    <section class="security-card">
+        <h2>Personal details</h2><p>Update the name, email, and phone number used on your account.</p>
+        {% if profile_form.non_field_errors %}<div class="security-errors">{{ profile_form.non_field_errors }}</div>{% endif %}
+        <form method="post"><input type="hidden" name="action" value="profile">{% csrf_token %}<div class="security-grid">
+            {% for field in profile_form %}<div class="security-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.errors %}<span class="security-errors">{{ field.errors|striptags }}</span>{% endif %}</div>{% endfor %}
+        </div><button class="security-submit" type="submit">Save personal details</button></form>
+    </section>
+    <section class="security-card">
+        <h2>Change password</h2><p>Use a strong password that you do not use on another website.</p>
+        {% if password_form.non_field_errors %}<div class="security-errors">{{ password_form.non_field_errors }}</div>{% endif %}
+        <form method="post"><input type="hidden" name="action" value="password">{% csrf_token %}<div class="security-grid">
+            {% for field in password_form %}<div class="security-field {% if field.field.widget.input_type == 'password' %}password-field{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.field.widget.input_type == 'password' %}<button type="button" class="password-toggle" data-password-toggle="{{ field.id_for_label }}" aria-label="Show password"><i class="fa-solid fa-eye"></i></button>{% endif %}{% if field.errors %}<span class="security-errors">{{ field.errors|striptags }}</span>{% endif %}</div>{% endfor %}
+        </div><button class="security-submit" type="submit">Change password</button></form>
+    </section>
+</main>
+<script>
+document.querySelectorAll('[data-password-toggle]').forEach(function(button) {
+    button.addEventListener('click', function() { const input = document.getElementById(button.dataset.passwordToggle); const visible = input.type === 'text'; input.type = visible ? 'password' : 'text'; button.innerHTML = visible ? '<i class="fa-solid fa-eye"></i>' : '<i class="fa-solid fa-eye-slash"></i>'; });
+});
+</script>
+{% endblock %}

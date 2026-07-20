@@ -11,6 +11,7 @@ BASE_DIR = Path(__file__).resolve().parents[3]
 SECRET_KEY = os.getenv("SECRET_KEY", "change-me")
 DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 ALLOWED_HOSTS = [host.strip() for host in os.getenv("ALLOWED_HOSTS", "").split(",") if host.strip()]
+PUBLIC_APP_URL = os.getenv("PUBLIC_APP_URL", "").strip().rstrip("/")
 
 INSTALLED_APPS = [
     # "jazzmin",  # Temporarily disabled

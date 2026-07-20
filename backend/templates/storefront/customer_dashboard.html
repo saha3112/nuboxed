@@ -84,6 +84,35 @@
     .btn-track:hover { background: #F7CA00; }
     .btn-secondary { background: #fff; border: 1px solid #D5D9D9; border-radius: 8px; padding: 8px 15px; text-align: center; color: #111; text-decoration: none; font-size: 14px; display: block; box-shadow: 0 2px 5px rgba(213,217,217,0.5); }
     .btn-secondary:hover { background: #F7FAFA; }
+
+    .account-panel { margin: 0 0 42px; padding: 28px; border: 1px solid #e1e7ec; border-radius: 16px; background: linear-gradient(135deg, #fff, #fbfcfd); box-shadow: 0 8px 24px rgba(15, 23, 42, .05); }
+    .account-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin-bottom: 22px; }
+    .account-panel-header h2 { margin: 4px 0 6px; color: #17212b; font-size: 24px; font-weight: 650; }
+    .account-panel-header p { margin: 0; color: #64748b; font-size: 14px; }
+    .section-kicker { color: #e04420; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .address-preview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+    .address-preview-card { padding: 18px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; color: #475569; font-size: 14px; line-height: 1.45; }
+    .address-preview-card.is-default { border-color: #f3b39e; box-shadow: inset 0 0 0 1px #fde2d8; }
+    .address-preview-card p { margin: 3px 0; }
+    .address-preview-card small { color: #94a3b8; font-weight: 700; }
+    .address-card-title { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; color: #17212b; }
+    .default-badge { padding: 3px 8px; border-radius: 999px; background: #fff1eb; color: #e04420; font-size: 11px; font-weight: 800; }
+    .empty-address-state { padding: 18px; border-radius: 10px; background: #f8fafc; color: #64748b; }
+    @media (max-width: 640px) { .account-panel-header { align-items: flex-start; flex-direction: column; } }
+
+    /* Account-home layout inspired by the familiar marketplace account grid. */
+    .dashboard-container { max-width: 1180px; margin: 34px auto 72px; padding: 0 24px; }
+    .account-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin: 0 0 34px; }
+    .account-card { min-height: 128px; box-sizing: border-box; align-items: center; padding: 22px; border-color: #d5d9d9; border-radius: 10px; box-shadow: 0 2px 5px rgba(15,23,42,.04); }
+    .account-card:hover { background: #f7fafa; border-color: #aab7c4; transform: translateY(-1px); }
+    .account-card-icon { flex: 0 0 54px; width: 54px; height: 54px; margin-right: 16px; background: #f1f3f3; color: #e04420; }
+    .account-card-content h2 { font-size: 18px; font-weight: 650; color: #17212b; }
+    .account-card-content p { color: #5f6b76; }
+    .account-welcome-panel { margin: 0 0 24px; padding: 22px 26px; border: 1px solid #e1e7ec; border-radius: 12px; background: #fff; }
+    .account-welcome-panel h2 { margin: 0 0 5px; color: #17212b; font-size: 22px; font-weight: 650; }
+    .account-welcome-panel p { margin: 0; color: #64748b; font-size: 14px; }
+    @media (max-width: 900px) { .account-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 600px) { .account-grid { grid-template-columns: 1fr; } .dashboard-container { padding: 0 16px; } }
 </style>
 
 <section class="page-head">
@@ -98,8 +127,12 @@
 </section>
 
 <section class="dashboard-container">
+    <div class="account-welcome-panel">
+        <h2>Hello, {{ request.user.get_full_name|default:request.user.email }}</h2>
+        <p>Manage your orders, saved addresses, wishlist, and account details from one place.</p>
+    </div>
     <div class="account-grid">
-        <a href="#orders" class="account-card">
+        <a href="{% url 'storefront:account-orders' %}" class="account-card">
             <div class="account-card-icon">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
             </div>
@@ -118,18 +151,18 @@
                 <p>View or modify your saved items</p>
             </div>
         </a>
-        
-        <a href="#" class="account-card">
+
+        <a href="{% url 'storefront:account-security' %}" class="account-card">
             <div class="account-card-icon">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
             </div>
             <div class="account-card-content">
-                <h2>Login & security</h2>
+                <h2>Manage Profile</h2>
                 <p>Edit login, name, and mobile number</p>
             </div>
         </a>
         
-        <a href="#" class="account-card">
+        <a href="{% url 'storefront:account-addresses' %}" class="account-card">
             <div class="account-card-icon">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
             </div>
@@ -152,6 +185,37 @@
             </div>
         </a>
     </div>
+
+    {% comment %}Address preview and order history are available on their dedicated pages.{% endcomment %}
+    {% comment %}
+    <section class="account-panel address-preview" aria-labelledby="saved-addresses-title">
+        <div class="account-panel-header">
+            <div>
+                <span class="section-kicker">Delivery preferences</span>
+                <h2 id="saved-addresses-title">Your Addresses</h2>
+                <p>Save multiple delivery addresses and choose one default address for checkout.</p>
+            </div>
+            <a class="primary-link" href="{% url 'storefront:account-addresses' %}">Manage addresses</a>
+        </div>
+        {% if addresses %}
+            <div class="address-preview-grid">
+                {% for address in addresses|slice:":3" %}
+                    <article class="address-preview-card {% if address.is_default %}is-default{% endif %}">
+                        <div class="address-card-title">
+                            <strong>{{ address.label }}</strong>
+                            {% if address.is_default %}<span class="default-badge">Default</span>{% endif %}
+                        </div>
+                        <p>{{ address.full_name|default:request.user.get_full_name|default:request.user.email }}</p>
+                        <p>{{ address.address_line1 }}{% if address.address_line2 %}, {{ address.address_line2 }}{% endif %}</p>
+                        <p>{{ address.city }}, {{ address.state }} {{ address.postal_code }}</p>
+                        <small>{{ address.country_code }}</small>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-address-state">No saved addresses yet. Add one before your next order.</div>
+        {% endif %}
+    </section>
     
     <div class="orders-section" id="orders">
         <h2>Your Orders</h2>
@@ -216,5 +280,6 @@
             </div>
         {% endfor %}
     </div>
+    {% endcomment %}
 </section>
 {% endblock %}

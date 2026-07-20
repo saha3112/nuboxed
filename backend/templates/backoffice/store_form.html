@@ -23,7 +23,9 @@
     .ra-store-form-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 22px; align-items: start; }
     .ra-store-form-main { min-width: 0; }
     .ra-form { display: grid; gap: 18px; }
+    .ra-store-form { padding-bottom: 112px; }
     .ra-form-section { padding: 20px; }
+    .ra-store-form .ra-form-section:last-of-type { scroll-margin-bottom: 112px; }
     .ra-form-section-head {
         display: flex;
         justify-content: space-between;
@@ -460,9 +462,9 @@
                 </div>
 
                 <div class="ra-form-actions-sticky" style="display:flex; gap:12px; flex-wrap:wrap;">
+                    <a href="{{ cancel_url }}" class="ra-btn ra-btn-outline" style="margin-right:auto;"><i class="ph ph-x"></i> Cancel</a>
                     <button type="submit" name="save_action" value="stay" class="ra-btn ra-btn-primary"><i class="ph ph-floppy-disk"></i> Save & stay</button>
                     <button type="submit" name="save_action" value="exit" class="ra-btn ra-btn-outline"><i class="ph ph-arrow-square-out"></i> Save & exit</button>
-                    <a href="{{ cancel_url }}" class="ra-btn">Cancel</a>
                 </div>
             </form>
         </div>

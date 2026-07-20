@@ -118,7 +118,8 @@
 {% endfor %}
 
 <!-- Save Button -->
-<div style="max-width: 960px; margin-top: 8px; margin-bottom: 40px;">
+<div class="ra-form-actions-sticky" style="display:flex; gap:12px; flex-wrap:wrap; max-width:960px; margin-top:8px; margin-bottom:40px;">
+    <a href="{% url 'retailers:dashboard' %}" class="ra-btn ra-btn-outline" style="margin-right:auto;"><i class="ph ph-x"></i> Cancel</a>
     <button type="submit" class="ra-btn ra-btn-primary" style="padding: 12px 32px; font-size: 14px;">
         <i class="ph ph-floppy-disk"></i> Save Business Profile
     </button>

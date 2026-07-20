@@ -1,1 +1,37 @@
-{% extends "backoffice/base.html" %}{% block content %}<div class="bo-card"><h3>Order Processing</h3><p>Update status and create customer documents for every retailer order.</p><div class="table-responsive"><table><thead><tr><th>Order</th><th>Retailer</th><th>Customer</th><th>Total</th><th>Status</th><th>Documents</th></tr></thead><tbody>{% for order in orders %}<tr><td>{{ order.number }}</td><td>{{ order.retailer }}</td><td>{{ order.customer.email }}</td><td>{{ order.total_amount }} {{ order.currency_code }}</td><td><form method="post" action="{% url 'backoffice:order-status' order.pk %}">{% csrf_token %}<select name="status" onchange="this.form.submit()">{% for value,label in order.STATUS_CHOICES %}<option value="{{ value }}" {% if value == order.status %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></form></td><td><form method="post" style="display:inline" action="{% url 'backoffice:order-invoice' order.pk %}">{% csrf_token %}<button type="submit">Invoice</button></form> <form method="post" style="display:inline" action="{% url 'backoffice:order-label' order.pk %}">{% csrf_token %}<button type="submit">Label</button></form></td></tr>{% empty %}<tr><td colspan="6">No orders yet.</td></tr>{% endfor %}</tbody></table></div></div>{% endblock %}
+{% extends "backoffice/base.html" %}
+{% block content %}
+<style>
+    .bo-orders-page .orders-hero { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; margin-bottom:24px; padding:28px 30px; border:1px solid rgba(224,68,32,.22); border-radius:18px; background:linear-gradient(135deg,#fffaf8,#f8fbff); }
+    .bo-orders-page .orders-eyebrow { margin:0 0 7px; color:#e04420; font-size:12px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+    .bo-orders-page .orders-hero h1 { margin:0; color:#172235; font-size:clamp(26px,3vw,36px); line-height:1.1; }
+    .bo-orders-page .orders-hero p { margin:8px 0 0; color:#6b7b91; font-size:14px; }
+    .bo-orders-page .orders-count { display:inline-flex; align-items:center; gap:7px; padding:10px 14px; border-radius:999px; color:#53657d; background:#eef3f9; font-size:13px; font-weight:700; white-space:nowrap; }
+    .bo-orders-page .orders-card { overflow:hidden; border:1px solid #e8edf3; border-radius:16px; background:#fff; }
+    .bo-orders-page .orders-card-header { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:22px 24px; border-bottom:1px solid #e8edf3; }
+    .bo-orders-page .orders-card-header h2 { margin:0; color:#172235; font-size:20px; }
+    .bo-orders-page .orders-card-header p { margin:8px 0 0; color:#6b7b91; font-size:14px; }
+    .bo-orders-page .orders-toolbar-table { min-width: 940px; }
+    .bo-orders-page .order-status-form,
+    .bo-orders-page .order-document-form { display: inline-flex; margin: 0; vertical-align: middle; }
+    .bo-orders-page .order-status-form select { min-width: 170px; padding: 8px 30px 8px 10px; border: 1px solid #d7e0ea; border-radius: 8px; color: #25344a; background: #fff; font-size: 13px; }
+    .bo-orders-page .order-status-badge { display:inline-flex; align-items:center; padding:7px 10px; border-radius:999px; color:#b9381c; background:#fff1ec; font-size:12px; font-weight:700; white-space:nowrap; }
+    .bo-orders-page .cancel-audit { display:block; margin-top:7px; color:#6b7b91; font-size:11px; line-height:1.45; }
+    .bo-orders-page .order-actions { display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .bo-orders-page .order-actions a, .bo-orders-page .order-actions button { white-space: nowrap; }
+    .bo-orders-page .order-number-link { color: inherit; text-decoration: none; }
+    .bo-orders-page .order-number-link:hover { color: var(--accent); }
+    @media (max-width: 900px) { .bo-orders-page .orders-toolbar-table { min-width: 1020px; } }
+</style>
+<div class="page-shell bo-orders-page">
+    <section class="orders-hero">
+        <div><p class="orders-eyebrow">Control Center / Commerce</p><h1>Orders</h1><p>Monitor customer orders and generate the documents needed to complete delivery.</p></div>
+        <span class="orders-count"><i class="ph ph-receipt"></i> {{ orders|length }} orders</span>
+    </section>
+    <section class="orders-card">
+        <div class="orders-card-header"><div><h2>Order processing</h2><p>Open an order to review details and update its fulfillment status.</p></div><a class="ghost-button" href="{% url 'backoffice:order-workflow-settings' %}"><i class="ph ph-gear"></i>&nbsp; Workflow settings</a></div>
+        <div class="table-wrap"><table class="data-table orders-toolbar-table"><thead><tr><th>Order</th><th>Retailer</th><th>Customer</th><th>Total</th><th>Status</th><th style="text-align:right">Actions</th></tr></thead><tbody>
+        {% for order in orders %}<tr><td><a class="order-number-link" href="{% url 'backoffice:order-detail' order.pk %}"><strong>{{ order.number }}</strong></a><small style="display:block">{{ order.created_at|date:"d M Y, H:i" }}</small></td><td>{{ order.retailer.display_name|default:order.retailer }}</td><td>{{ order.customer.email }}</td><td><strong>{{ order.total_amount }}</strong> {{ order.currency_code }}</td><td><span class="order-status-badge">{{ order.get_status_display }}</span>{% if order.status == "cancelled" %}{% for entry in order.timeline_entries.all %}{% if entry.status == "cancelled" %}<small class="cancel-audit">By: {% if entry.actor %}{{ entry.actor.get_full_name|default:entry.actor.email }}{% else %}System{% endif %}<br>Reason: {{ entry.note|default:"Not specified" }}</small>{% endif %}{% endfor %}{% endif %}</td><td><div class="order-actions"><a class="ghost-button" href="{% url 'backoffice:order-detail' order.pk %}"><i class="ph ph-eye"></i>&nbsp; Details</a><form method="post" class="order-document-form" action="{% url 'backoffice:order-invoice' order.pk %}">{% csrf_token %}<button class="ghost-button" type="submit"><i class="ph ph-file-text"></i>&nbsp; Invoice</button></form><form method="post" class="order-document-form" target="shipping_label_frame" onsubmit="return openShippingLabelModal(this);" action="{% url 'backoffice:order-label' order.pk %}">{% csrf_token %}<button class="primary-button" type="submit"><i class="ph ph-printer"></i>&nbsp; Label</button></form></div></td></tr>{% empty %}<tr><td colspan="6"><div class="empty-state"><i class="ph ph-receipt" style="font-size:42px;color:var(--accent)"></i><h4>No orders yet</h4><p>New customer orders will appear here.</p></div></td></tr>{% endfor %}
+        </tbody></table></div>
+    </section>
+</div>
+{% endblock %}

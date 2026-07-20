@@ -1,1 +1,151 @@
-{% extends "backoffice/base.html" %}{% block content %}<div class="bo-card"><div class="bo-card-header"><div><h3>Order Workflow Settings</h3><p>Configure automatic documents and notifications per retailer. Each retailer has one locked store.</p></div></div>{% for retailer, form in workflow_rows %}<form method="post" class="bo-card" style="margin:16px 0;padding:18px">{% csrf_token %}<input type="hidden" name="retailer_id" value="{{ retailer.pk }}"><h4>{{ retailer.display_name }}</h4><p class="muted">Store: {{ retailer.stores.first.name|default:"Not configured" }}</p>{{ form.as_p }}<button class="primary-button" type="submit">Save settings</button></form>{% empty %}<p>No retailers found.</p>{% endfor %}</div>{% endblock %}
+{% extends "backoffice/base.html" %}
+{% block content %}
+<div class="page-shell workflow-page">
+    <section class="hero-panel">
+        <div><p class="eyebrow">Control Center / Commerce</p><h3>Order Workflow Settings</h3><p class="subtle-copy">Set one workflow for every store. Configure a store-specific override only when it is genuinely needed.</p></div>
+        <div class="hero-actions"><span class="status-pill success"><i class="ph ph-globe"></i>&nbsp; Global default active</span></div>
+    </section>
+
+    <section class="panel workflow-panel">
+        <div class="panel-header"><div><h3>Global workflow</h3><p class="subtle-copy">All stores use these settings by default.</p></div><span class="status-pill neutral"><i class="ph ph-check-circle"></i>&nbsp; Default for all stores</span></div>
+        <form method="post" class="workflow-form">
+            {% csrf_token %}<input type="hidden" name="scope" value="global">
+            <div class="workflow-setting-grid">{% for field in global_form %}<label class="workflow-setting-item"><span>{{ field }}<strong>{{ field.label }}</strong></span>{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{{ field.errors }}</label>{% endfor %}</div>
+            <div class="workflow-actions"><span class="subtle-copy">Changes apply to every store that does not use an override.</span><button class="primary-button" type="submit"><i class="ph ph-floppy-disk"></i>&nbsp; Save global settings</button></div>
+        </form>
+    </section>
+
+    <section class="panel workflow-panel">
+        <div class="panel-header"><div><h3>Optional store override</h3><p class="subtle-copy">Select one store to configure. Other stores stay on the global workflow and are not opened here.</p></div><i class="ph ph-storefront" style="font-size:28px;color:var(--accent)"></i></div>
+        <form method="get" class="store-picker" id="workflow-store-form">
+            <div class="store-picker-heading"><div><label for="workflow-store-list">Stores to customize</label><small id="workflow-store-help">Choose stores manually. You can add or remove stores before opening them.</small></div><span class="selection-count" data-selection-count>0 selected</span></div>
+            <div class="store-picker-list" id="workflow-store-list" role="group" aria-describedby="workflow-store-help">
+                {% for store in stores %}<label class="store-choice"><input type="checkbox" name="store" value="{{ store.pk }}" {% if store.pk|stringformat:'s' in selected_store_ids %}checked{% endif %}><span class="store-choice-check"><i class="ph ph-check"></i></span><span class="store-choice-copy"><strong>{{ store.name }}</strong><small>{{ store.retailer.display_name }}</small></span><span class="store-choice-action">Add</span><button type="button" class="store-choice-remove" data-remove-store aria-label="Remove {{ store.name }}"><i class="ph ph-x"></i>&nbsp; Remove</button></label>{% empty %}<p class="subtle-copy">No stores are available.</p>{% endfor %}
+            </div>
+            <div class="selected-store-chips" data-selected-chips aria-live="polite"></div>
+            <div class="store-picker-actions"><span class="subtle-copy">Selected stores will open below for individual override settings.</span><button class="ghost-button" type="submit"><i class="ph ph-arrow-right"></i>&nbsp; Open selected stores</button></div>
+        </form>
+
+        {% if workflow_rows %}
+        {% for selected_store, override_form in workflow_rows %}
+        <form method="post" class="workflow-override-form">
+            {% csrf_token %}<input type="hidden" name="scope" value="store"><input type="hidden" name="store_id" value="{{ selected_store.pk }}">{% for selected_id in selected_store_ids %}<input type="hidden" name="selected_store_ids" value="{{ selected_id }}">{% endfor %}
+            <div class="override-heading"><div><p class="eyebrow">Selected store</p><h3>{{ selected_store.name }}</h3><p class="subtle-copy"><i class="ph ph-storefront"></i>&nbsp; {{ selected_store.retailer.display_name }}</p></div><span class="status-pill {% if override_form.is_active.value %}warning{% else %}neutral{% endif %}">{% if override_form.is_active.value %}Custom active{% else %}Using global{% endif %}</span></div>
+            <div class="workflow-setting-grid workflow-override-grid">{% for field in override_form %}<label class="workflow-setting-item"><span>{{ field }}<strong>{{ field.label }}</strong></span>{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{{ field.errors }}</label>{% endfor %}</div>
+            <div class="workflow-actions"><span class="subtle-copy">Turn off custom settings to return this store to the global workflow.</span><button class="primary-button" type="submit"><i class="ph ph-check"></i>&nbsp; Save store override</button></div>
+        </form>
+        {% endfor %}
+        {% else %}
+        <div class="workflow-empty"><i class="ph ph-storefront"></i><h4>Select one or more stores to continue</h4><p>No store-specific settings are opened until you choose them above.</p></div>
+        {% endif %}
+    </section>
+</div>
+<style>
+    .workflow-page { max-width: 1400px; margin: 0 auto; }
+    .workflow-panel { overflow: hidden; }
+    .workflow-form, .workflow-override-form { display: grid; gap: 0; }
+    .workflow-setting-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 18px; padding: 20px; }
+    .workflow-setting-item { display: grid; gap: 7px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-soft, #f8fafc); color: var(--ink); }
+    .workflow-setting-item > span { display: flex; align-items: center; gap: 11px; min-height: 24px; }
+    .workflow-setting-item input[type="checkbox"].ra-checkbox {
+        appearance: none;
+        -webkit-appearance: none;
+        width: 20px !important;
+        height: 20px !important;
+        min-width: 20px;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 2px solid #94a3b8;
+        border-radius: 6px;
+        background: #fff;
+        box-shadow: none;
+        cursor: pointer;
+        flex: 0 0 20px;
+    }
+    .workflow-setting-item input[type="checkbox"].ra-checkbox:checked {
+        border-color: var(--accent);
+        background-color: var(--accent);
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='m5 10 3 3 7-7' fill='none' stroke='white' stroke-width='2.3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: 15px;
+    }
+    .workflow-setting-item input[type="checkbox"].ra-checkbox:focus-visible { outline: 3px solid rgba(224,68,32,.2); outline-offset: 2px; }
+    .workflow-setting-item strong { font-size: 14px; }
+    .workflow-setting-item small { color: var(--muted); font-size: 12px; }
+    .workflow-actions { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 20px; border-top: 1px solid var(--line); background: var(--surface-soft, #f8fafc); }
+    .workflow-actions .subtle-copy { margin: 0; }
+    .store-picker { display: grid; gap: 14px; padding: 20px; border-bottom: 1px solid var(--line); background: var(--surface-soft, #f8fafc); }
+    .store-picker-heading, .store-picker-actions { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+    .store-picker-heading > div { display: grid; gap: 5px; }
+    .store-picker label { color: var(--ink); font-size: 13px; font-weight: 700; }
+    .store-picker small { color: var(--muted); font-size: 12px; font-weight: 500; }
+    .selection-count { padding: 7px 10px; border: 1px solid rgba(224,68,32,.25); border-radius: 999px; color: var(--accent); background: rgba(224,68,32,.07); font-size: 12px; font-weight: 700; white-space: nowrap; }
+    .store-picker-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+    .store-choice { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease, background .15s ease; }
+    .store-choice:hover { border-color: rgba(224,68,32,.45); box-shadow: 0 4px 14px rgba(15,23,42,.06); }
+    .store-choice input { position: absolute; opacity: 0; pointer-events: none; }
+    .store-choice-check { display: grid; place-items: center; width: 20px; height: 20px; flex: 0 0 20px; border: 2px solid #94a3b8; border-radius: 6px; color: transparent; background: #fff; }
+    .store-choice-check i { font-size: 13px; font-weight: 700; }
+    .store-choice input:checked ~ .store-choice-check { border-color: var(--accent); color: #fff; background: var(--accent); }
+    .store-choice:has(input:checked) { border-color: rgba(224,68,32,.45); background: rgba(224,68,32,.045); }
+    .store-choice-copy { display: grid; gap: 3px; min-width: 0; flex: 1; }
+    .store-choice-copy strong, .store-choice-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .store-choice-action { color: var(--muted); font-size: 11px; font-weight: 700; }
+    .store-choice input:checked ~ .store-choice-action { color: var(--accent); }
+    .store-choice-remove { display: none; align-items: center; padding: 5px 7px; border: 1px solid rgba(224,68,32,.25); border-radius: 7px; color: var(--accent); background: transparent; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+    .store-choice input:checked ~ .store-choice-remove { display: inline-flex; }
+    .selected-store-chips { display: flex; flex-wrap: wrap; gap: 7px; min-height: 0; }
+    .selected-store-chips:empty { display: none; }
+    .selected-store-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 9px; border: 1px solid rgba(224,68,32,.25); border-radius: 999px; color: var(--ink); background: #fff; font-size: 12px; }
+    .selected-store-chip button { display: grid; place-items: center; width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%; color: var(--accent); background: rgba(224,68,32,.1); cursor: pointer; }
+    .override-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 22px 20px 6px; }
+    .override-heading h3 { margin: 0; color: var(--ink); }
+    .workflow-empty { padding: 56px 20px; text-align: center; color: var(--muted); }
+    .workflow-empty i { color: var(--accent); font-size: 42px; }
+    .workflow-empty h4 { margin: 12px 0 5px; color: var(--ink); }
+    .workflow-empty p { margin: 0; }
+    @media (max-width: 900px) { .store-picker-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 760px) { .workflow-setting-grid { grid-template-columns: 1fr; } .workflow-actions, .store-picker-heading, .store-picker-actions, .override-heading { align-items: stretch; flex-direction: column; } .workflow-actions button, .store-picker button { width: 100%; } .store-picker-list { grid-template-columns: 1fr; } }
+</style>
+<script>
+    (function () {
+        const form = document.getElementById('workflow-store-form');
+        if (!form) return;
+        const checks = Array.from(form.querySelectorAll('input[name="store"]'));
+        const count = form.querySelector('[data-selection-count]');
+        const chips = form.querySelector('[data-selected-chips]');
+        function renderSelection() {
+            const selected = checks.filter((input) => input.checked);
+            count.textContent = selected.length + (selected.length === 1 ? ' store selected' : ' stores selected');
+            chips.innerHTML = '';
+            selected.forEach((input) => {
+                const label = input.closest('.store-choice');
+                const name = label.querySelector('.store-choice-copy strong').textContent.trim();
+                const chip = document.createElement('span');
+                chip.className = 'selected-store-chip';
+                chip.innerHTML = '<span>' + name.replace(/[&<>"']/g, (char) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])) + '</span>';
+                const remove = document.createElement('button');
+                remove.type = 'button';
+                remove.setAttribute('aria-label', 'Remove ' + name);
+                remove.innerHTML = '<i class="ph ph-x"></i>';
+                remove.addEventListener('click', () => { input.checked = false; renderSelection(); });
+                chip.appendChild(remove);
+                chips.appendChild(chip);
+            });
+        }
+        checks.forEach((input) => input.addEventListener('change', renderSelection));
+        form.querySelectorAll('[data-remove-store]').forEach((remove) => {
+            remove.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                const choice = remove.closest('.store-choice');
+                const input = choice.querySelector('input[name="store"]');
+                input.checked = false;
+                renderSelection();
+            });
+        });
+        renderSelection();
+    })();
+</script>
+{% endblock %}

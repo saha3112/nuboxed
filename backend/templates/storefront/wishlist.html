@@ -3,6 +3,11 @@
 {% load static %}
 
 {% block content %}
+<style>
+  .page-shell { margin-top:38px; margin-bottom:80px; }
+  .wishlist-back-link { display:flex; width:max-content; align-items:center; gap:8px; margin:0 0 26px auto; padding:10px 16px; border:1px solid #e04420; border-radius:8px; background:#fff8f5; color:#c83818; font-size:14px; font-weight:700; text-decoration:none; transition:all .18s ease; }
+  .wishlist-back-link:hover { background:#e04420; color:#fff; box-shadow:0 4px 10px rgba(224,68,32,.2); transform:translateY(-1px); }
+</style>
 <section class="page-head">
   <div class="container">
     <h1>Your Wishlist</h1>
@@ -14,6 +19,7 @@
   </div>
 </section>
 <div class="page-shell">
+    <a class="wishlist-back-link" href="{% url 'storefront:customer-dashboard' %}">← Back to Account</a>
 
     <div class="section-shell">
         {% if products %}

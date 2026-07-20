@@ -20,6 +20,36 @@ from apps.payments.models import (
 )
 from apps.notifications.services import send_notification_event
 
+
+_ONES = ("Zero", "One", "Two", "Three", "Four", "Five", "Six", "Seven", "Eight", "Nine", "Ten", "Eleven", "Twelve", "Thirteen", "Fourteen", "Fifteen", "Sixteen", "Seventeen", "Eighteen", "Nineteen")
+_TENS = ("", "", "Twenty", "Thirty", "Forty", "Fifty", "Sixty", "Seventy", "Eighty", "Ninety")
+
+
+def _number_words(value: int) -> str:
+    if value < 20:
+        return _ONES[value]
+    if value < 100:
+        return _TENS[value // 10] + (f"-{_ONES[value % 10]}" if value % 10 else "")
+    if value < 1000:
+        return f"{_ONES[value // 100]} Hundred" + (f" {_number_words(value % 100)}" if value % 100 else "")
+    for divisor, name in ((10**9, "Billion"), (10**6, "Million"), (1000, "Thousand")):
+        if value >= divisor:
+            remainder = value % divisor
+            return f"{_number_words(value // divisor)} {name}" + (f" {_number_words(remainder)}" if remainder else "")
+    return str(value)
+
+
+def amount_in_words(amount, currency="EUR") -> str:
+    """Return a print-friendly amount in words without adding a dependency."""
+    value = Decimal(str(amount or 0)).quantize(Decimal("0.01"))
+    whole = int(value)
+    minor = int((value - whole) * 100)
+    currency_names = {"EUR": "Euros", "INR": "Indian Rupees", "USD": "US Dollars", "GBP": "Pounds"}
+    result = f"{currency_names.get(str(currency).upper(), str(currency).upper())} {_number_words(whole)}"
+    if minor:
+        result += f" and {_number_words(minor)} Cents"
+    return result + " Only."
+
 # Helper function to generate unique sequence numbers
 def generate_unique_number(prefix: str) -> str:
     return f"{prefix}-{timezone.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6].upper()}"
@@ -116,6 +146,21 @@ def generate_invoice_for_order(order, actor=None) -> Invoice:
     """
     existing = Invoice.objects.filter(order=order).first()
     if existing:
+        # Older invoices could exist without line items. Repair them from the
+        # immutable order snapshot so print/export always has usable data.
+        if not existing.items.exists():
+            for item in order.items.select_related("product", "variant").all():
+                InvoiceItem.objects.create(
+                    invoice=existing,
+                    product_name=item.product.name,
+                    product_sku=item.variant.sku if item.variant else item.product.sku,
+                    quantity=item.quantity,
+                    unit_price=item.unit_price,
+                    discount_amount=item.discount_price,
+                    tax_rate=item.tax_rate,
+                    tax_amount=item.tax_amount,
+                    line_total=item.line_total,
+                )
         return existing
     # Calculate tax parameters
     tax_type = Invoice.TAX_TYPE_VAT

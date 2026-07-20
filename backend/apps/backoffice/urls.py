@@ -65,22 +65,29 @@ from .views import (
     PhoneModelVariantsAPIView,
     PhoneModelsAPIView,
     PhoneBrandsAPIView,
-    BackofficeOrdersView, BackofficeOrderStatusView, BackofficeOrderInvoiceView, BackofficeOrderLabelView,
+    BackofficeOrdersView, BackofficeOrderDetailView, BackofficeOrderStatusView, BackofficeOrderCancelView, BackofficeOrderTransactionView, BackofficeOrderRefundView, BackofficeOrderAddressUpdateView, BackofficeOrderInvoiceView, BackofficeOrderLabelView, BackofficeCouponSettingsView,
     BackofficeOrderInvoicePrintView, BackofficeOrderLabelPrintView, BackofficeInvoiceDesignView,
-    BackofficeOrderWorkflowSettingsView, BackofficeEmailTemplateListView, BackofficeEmailTemplateUpdateView,
+    BackofficeOrderWorkflowSettingsView, BackofficeEmailSettingsView, BackofficeEmailTemplateListView, BackofficeEmailTemplateUpdateView,
 )
 
 app_name = "backoffice"
 
 urlpatterns = [
     path("orders/", BackofficeOrdersView.as_view(), name="orders"),
+    path("coupons/settings/", BackofficeCouponSettingsView.as_view(), name="coupon-settings"),
+    path("orders/<uuid:pk>/", BackofficeOrderDetailView.as_view(), name="order-detail"),
     path("orders/<uuid:pk>/status/", BackofficeOrderStatusView.as_view(), name="order-status"),
+    path("orders/<uuid:pk>/cancel/", BackofficeOrderCancelView.as_view(), name="order-cancel"),
+    path("orders/<uuid:pk>/transaction/", BackofficeOrderTransactionView.as_view(), name="order-transaction"),
+    path("orders/<uuid:pk>/refund/", BackofficeOrderRefundView.as_view(), name="order-refund"),
+    path("orders/<uuid:pk>/address/", BackofficeOrderAddressUpdateView.as_view(), name="order-address"),
     path("orders/<uuid:pk>/invoice/", BackofficeOrderInvoiceView.as_view(), name="order-invoice"),
     path("orders/<uuid:pk>/invoice/print/", BackofficeOrderInvoicePrintView.as_view(), name="order-invoice-print"),
     path("orders/<uuid:pk>/label/", BackofficeOrderLabelView.as_view(), name="order-label"),
     path("orders/<uuid:pk>/label/print/", BackofficeOrderLabelPrintView.as_view(), name="order-label-print"),
     path("invoice-design/", BackofficeInvoiceDesignView.as_view(), name="invoice-design"),
     path("order-workflow-settings/", BackofficeOrderWorkflowSettingsView.as_view(), name="order-workflow-settings"),
+    path("email-settings/", BackofficeEmailSettingsView.as_view(), name="email-settings"),
     path("email-templates/", BackofficeEmailTemplateListView.as_view(), name="email-templates"),
     path("email-templates/<uuid:pk>/edit/", BackofficeEmailTemplateUpdateView.as_view(), name="email-template-edit"),
     path("inventory/", BackofficeInventoryView.as_view(), name="inventory"),
@@ -134,7 +141,9 @@ urlpatterns = [
     path("modules/", RedirectView.as_view(url="/admin/", permanent=False), name="modules-redirect"),
     path("modules/<slug:module>/", BackofficeModuleListView.as_view(), name="module-list"),
     path("modules/<slug:module>/new/", BackofficeModuleCreateView.as_view(), name="module-create"),
-    path("modules/<slug:module>/<uuid:pk>/edit/", BackofficeModuleUpdateView.as_view(), name="module-edit"),
+    # Generic modules include both UUID-backed records and legacy integer-PK
+    # records (for example, users). Keep the converter broad enough for both.
+    path("modules/<slug:module>/<str:pk>/edit/", BackofficeModuleUpdateView.as_view(), name="module-edit"),
     path("modules/attributes/<uuid:pk>/options/", BackofficeAttributeOptionsView.as_view(), name="attribute-options"),
     path("modules/attributes/<uuid:pk>/delete/", BackofficeAttributeDeleteView.as_view(), name="attribute-delete"),
     path("modules/attributes/<uuid:pk>/restore/", BackofficeAttributeRestoreView.as_view(), name="attribute-restore"),
@@ -145,8 +154,8 @@ urlpatterns = [
     path("modules/variants/<uuid:pk>/delete/", BackofficeVariantDeleteView.as_view(), name="variant-delete"),
     path("modules/variants/<uuid:pk>/restore/", BackofficeVariantRestoreView.as_view(), name="variant-restore"),
     path("modules/variants/<uuid:pk>/delete-permanent/", BackofficeVariantPermanentDeleteView.as_view(), name="variant-delete-permanent"),
-    path("modules/<slug:module>/<uuid:pk>/delete/", BackofficeModuleDeleteView.as_view(), name="module-delete"),
-    path("modules/<slug:module>/<uuid:pk>/restore/", BackofficeModuleRestoreView.as_view(), name="module-restore"),
-    path("modules/<slug:module>/<uuid:pk>/delete-permanent/", BackofficeModulePermanentDeleteView.as_view(), name="module-delete-permanent"),
+    path("modules/<slug:module>/<str:pk>/delete/", BackofficeModuleDeleteView.as_view(), name="module-delete"),
+    path("modules/<slug:module>/<str:pk>/restore/", BackofficeModuleRestoreView.as_view(), name="module-restore"),
+    path("modules/<slug:module>/<str:pk>/delete-permanent/", BackofficeModulePermanentDeleteView.as_view(), name="module-delete-permanent"),
     path("modules/<slug:module>/export/", BackofficeExportView.as_view(), name="module-export"),
 ]

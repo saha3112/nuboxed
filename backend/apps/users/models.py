@@ -152,6 +152,7 @@ class UserAddress(BaseModel):
     phone = models.CharField(max_length=32, blank=True)
     address_line1 = models.CharField(max_length=255, blank=True)
     address_line2 = models.CharField(max_length=255, blank=True)
+    landmark = models.CharField(max_length=255, blank=True)
     city = models.CharField(max_length=120, blank=True)
     state = models.CharField(max_length=120, blank=True)
     postal_code = models.CharField(max_length=32)
@@ -174,6 +175,38 @@ class UserAddress(BaseModel):
 
     def __str__(self):
         return f"{self.user.email} / {self.label} / {self.postal_code}"
+
+
+class UserPaymentMethod(BaseModel):
+    TYPE_CARD = "card"
+    TYPE_UPI = "upi"
+    TYPE_BANK = "bank"
+    TYPE_WALLET = "wallet"
+    TYPE_CHOICES = (
+        (TYPE_CARD, "Credit or debit card"),
+        (TYPE_UPI, "UPI"),
+        (TYPE_BANK, "Bank account"),
+        (TYPE_WALLET, "Digital wallet"),
+    )
+
+    user = models.ForeignKey(User, related_name="payment_methods", on_delete=models.CASCADE)
+    country_code = models.CharField(max_length=2, default="DE")
+    method_type = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    display_name = models.CharField(max_length=120)
+    last4 = models.CharField(max_length=4, blank=True)
+    expiry = models.CharField(max_length=7, blank=True)
+    is_default = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ("-is_default", "-updated_at")
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.is_default:
+            self.user.payment_methods.exclude(id=self.id).update(is_default=False)
+
+    def __str__(self):
+        return self.display_name
 
 
 class GDPRConsent(BaseModel):

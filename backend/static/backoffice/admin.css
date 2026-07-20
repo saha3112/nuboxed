@@ -190,6 +190,9 @@ body.dark-mode .stat-card {
     top: 0;
     height: 100vh;
     overflow-y: auto;
+    min-height: 0;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
     z-index: 999;
     border-right: 1px solid var(--sidebar-border);
     box-shadow: 10px 0 30px rgba(15, 23, 42, 0.04);
@@ -364,6 +367,17 @@ body.dark-mode .stat-card {
     gap: 4px;
     flex: 1;
     align-content: start;
+    min-height: 0;
+}
+
+/* Long Operations menus stay inside the sidebar and remain fully scrollable
+   on tall store/product edit screens. */
+.bo-nav-group-operations .bo-subnav {
+    max-height: calc(100vh - 170px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 4px;
+    scrollbar-gutter: stable;
 }
 
 .bo-nav-group {
@@ -740,9 +754,15 @@ body.dark-mode .timeline-dot {
     overflow-x: hidden;
 }
 
+.bo-notify-summary {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 2px;
+}
+
 .bo-notify-item {
     display: grid;
-    grid-template-columns: 56px minmax(0, 1fr);
+    grid-template-columns: 56px minmax(0, 1fr) auto;
     align-items: center;
     gap: 12px;
     width: 100%;
@@ -819,8 +839,8 @@ body.dark-mode .timeline-dot {
 }
 
 .bo-notify-item-copy strong {
-    font-size: 16px;
-    font-weight: 700;
+    font-size: 13px;
+    font-weight: 600;
     line-height: 1.4;
     color: #1e293b;
     display: block;
@@ -836,7 +856,7 @@ body.dark-mode .timeline-dot {
 
 .bo-notify-item-copy small {
     color: #64748b;
-    font-size: 13px;
+    font-size: 12px;
     display: flex;
     align-items: center;
     gap: 8px;

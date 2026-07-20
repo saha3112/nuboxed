@@ -5,6 +5,14 @@ from django.core.exceptions import PermissionDenied
 from django.conf import settings
 from rest_framework.exceptions import Throttled
 
+
+def build_public_url(request, path: str) -> str:
+    """Build a QR-safe URL, allowing deployments to replace localhost via PUBLIC_APP_URL."""
+    configured_base = getattr(settings, "PUBLIC_APP_URL", "")
+    if configured_base:
+        return f"{configured_base}/{str(path).lstrip('/')}"
+    return request.build_absolute_uri(path)
+
 def verify_webhook_signature(payload_body: bytes, signature_header: str, secret: str) -> bool:
     """
     Verifies the webhook signature using HMAC SHA256.

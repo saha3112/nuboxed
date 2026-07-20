@@ -2,6 +2,8 @@
 
 {% block content %}
 <style>
+    .ra-store-form { padding-bottom: 112px; }
+    .ra-store-form .ra-form-section:last-of-type { scroll-margin-bottom: 112px; }
     .store-builder-toolbar {
         display: flex;
         align-items: center;
@@ -508,13 +510,13 @@
                 </div>
 
                 <div class="ra-form-actions-sticky" style="margin-top: 24px; border-top: 1px solid var(--border); padding-top: 20px; display: flex; gap: 12px; flex-wrap: wrap;">
+                    <a href="{% url 'retailers:dashboard' %}" class="ra-btn ra-btn-outline" style="margin-right:auto;"><i class="ph ph-x"></i> Cancel</a>
                     <button type="submit" name="save_action" value="stay" class="ra-btn ra-btn-primary">
                         <i class="ph ph-floppy-disk"></i> Save & stay
                     </button>
                     <button type="submit" name="save_action" value="exit" class="ra-btn ra-btn-outline">
                         <i class="ph ph-arrow-square-out"></i> Save & exit
                     </button>
-                    <a href="{% url 'retailers:dashboard' %}" class="ra-btn ra-btn-outline">Cancel</a>
                 </div>
             </form>
         </div>

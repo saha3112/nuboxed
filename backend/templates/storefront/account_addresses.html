@@ -1,0 +1,363 @@
+{% extends "storefront/base.html" %}
+
+{% block content %}
+<style>
+    .address-book-page { max-width: 1180px; margin: 38px auto 80px; padding: 0 24px; color: #111; }
+    .address-book-page h1 { margin: 0; font-size: 32px; font-weight: 500; color: #17212b; }
+    .address-book-subtitle { margin: 8px 0 30px; color: #5f6b76; font-size: 14px; }
+    .address-book-heading { display:flex; align-items:center; justify-content:space-between; gap:18px; margin-bottom:22px; }
+    .address-book-heading h2 { margin:0; font-size:24px; font-weight:500; color:#17212b; }
+    .address-book-link { color:#007185; text-decoration:none; font-size:14px; }
+    .address-book-link:hover { color:#c45500; text-decoration:underline; }
+    .account-back-link { display:flex; width:max-content; align-items:center; gap:8px; margin:0 0 26px auto; padding:10px 16px; border:1px solid #e04420; border-radius:8px; background:#fff8f5; color:#c83818; font-size:14px; font-weight:700; text-decoration:none; transition:all .18s ease; }
+    .account-back-link:hover { background:#e04420; color:#fff; box-shadow:0 4px 10px rgba(224,68,32,.2); transform:translateY(-1px); }
+    .address-grid { display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:20px; }
+    .address-card, .add-address-card { min-height:220px; box-sizing:border-box; border:1px solid #d5d9d9; border-radius:8px; background:#fff; box-shadow:0 2px 5px rgba(15,23,42,.05); }
+    .address-card { padding:22px; position:relative; }
+    .address-card:hover, .add-address-card:hover { border-color:#aab7c4; box-shadow:0 3px 9px rgba(15,23,42,.1); }
+    .add-address-card { display:flex; align-items:center; justify-content:center; flex-direction:column; gap:13px; border-style:dashed; border-color:#aab7c4; color:#007185; text-decoration:none; cursor:pointer; }
+    .add-address-card .plus { width:48px; height:48px; border:1px solid #aab7c4; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:30px; color:#5f6b76; font-weight:300; }
+    .add-address-card strong { font-size:17px; font-weight:500; }
+    .address-card-head { min-height:31px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px; border-bottom:1px solid #eaeded; padding-bottom:12px; margin-bottom:13px; }
+    .address-card-head strong { font-size:16px; font-weight:700; color:#17212b; }
+    .default-label { color:#c45500; font-size:12px; font-weight:700; white-space:nowrap; }
+    .address-card p { margin:4px 0; color:#334155; font-size:14px; line-height:1.45; }
+    .address-card .country { margin-top:9px; color:#64748b; font-size:13px; font-weight:700; }
+    .address-card-actions { display:flex; align-items:center; gap:16px; margin-top:18px; padding-top:13px; border-top:1px solid #eaeded; }
+    .address-card-actions form { display:flex; align-items:center; margin:0; padding:0; }
+    .address-card-actions a, .address-card-actions button { border:0; padding:0; background:transparent; color:#007185; cursor:pointer; text-decoration:none; font:inherit; font-size:13px; }
+    .address-card-actions a:hover, .address-card-actions button:hover { color:#c45500; text-decoration:underline; }
+    .action-separator { color:#cbd5e1; font-size:14px; user-select:none; }
+    .address-card-actions .remove { color:#b42318; }
+    .address-trash-link { color:#b42318; font-size:14px; font-weight:700; text-decoration:none; }
+    .address-trash-link:hover { color:#8f1d14; text-decoration:underline; }
+    .trash-toolbar { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:18px; padding:0 0 14px; border:0; border-radius:0; background:transparent; }
+    .trash-actions { display:flex; gap:10px; flex-wrap:wrap; }
+    .trash-actions button { border:1px solid #e04420; border-radius:8px; padding:9px 13px; background:#fff8f5; color:#e04420; cursor:pointer; font:inherit; font-weight:700; transition:all .18s ease; }
+    .trash-actions button:hover { border-color:#111827; background:#111827; color:#fff; }
+    .trash-actions button:not(.permanent-delete) { border-color:#16a34a; background:transparent; color:#16a34a; }
+    .trash-actions button:not(.permanent-delete):hover { border-color:#15803d; background:#15803d; color:#fff; }
+    .trash-actions .permanent-delete { border-color:#b42318; color:#b42318; }
+    .trash-actions .permanent-delete:hover { border-color:#b42318; background:#b42318; color:#fff; }
+    .trash-status { display:flex; align-items:center; gap:7px; color:#e04420; font-size:12px; font-weight:700; white-space:nowrap; }
+    .trash-status input { width:17px; height:17px; margin:0; accent-color:#e04420; cursor:pointer; }
+    .address-book-heading .address-book-link { display:inline-flex; align-items:center; gap:8px; padding:10px 16px; border:1px solid #e04420; border-radius:8px; background:#fff8f5; color:#e04420; font-size:14px; font-weight:700; text-decoration:none; transition:all .18s ease; }
+    .address-book-heading .address-book-link:hover { border-color:#111827; background:#111827; color:#fff; text-decoration:none; }
+    .address-book-heading .trash-back-link { margin:0; }
+    .address-confirm-overlay { position:fixed; inset:0; z-index:1000; display:none; align-items:center; justify-content:center; padding:20px; background:rgba(15,23,42,.48); }
+    .address-confirm-overlay.is-open { display:flex; }
+    .address-confirm-modal { width:min(430px,100%); padding:28px; border:1px solid #f0c5be; border-radius:16px; background:#fff; box-shadow:0 20px 60px rgba(15,23,42,.25); }
+    .address-confirm-icon { display:grid; place-items:center; width:48px; height:48px; margin-bottom:16px; border-radius:50%; background:#fff1eb; color:#b42318; font-size:22px; font-weight:800; }
+    .address-confirm-modal h3 { margin:0 0 8px; color:#17212b; font-size:21px; }
+    .address-confirm-modal p { margin:0; color:#64748b; line-height:1.5; }
+    .address-confirm-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:24px; }
+    .address-confirm-actions button { border:1px solid #cbd5e1; border-radius:8px; padding:10px 15px; background:#fff; color:#334155; cursor:pointer; font:inherit; font-weight:700; }
+    .address-confirm-actions .confirm-delete { border-color:#b42318; background:#b42318; color:#fff; }
+    .address-form-shell { max-width:560px; margin:0 auto; padding:28px 32px 32px; border:1px solid #d5d9d9; border-radius:8px; background:#fff; box-shadow:0 2px 6px rgba(15,23,42,.08); }
+    .address-form-shell h2 { margin:0 0 22px; color:#17212b; font-size:28px; font-weight:500; }
+    .address-form { display:grid; gap:15px; }
+    .address-form p { margin:0; display:grid; gap:6px; }
+    .address-form label { color:#17212b; font-size:13px; font-weight:700; }
+    .address-form input, .address-form select { width:100%; box-sizing:border-box; padding:10px 11px; border:1px solid #aab7c4; border-radius:5px; background:#fff; color:#17212b; font:inherit; }
+    .address-form select { cursor:pointer; }
+    .address-form input:focus { outline:3px solid #c8f3fa; border-color:#007185; }
+    .address-form .checkbox-row { display:flex; align-items:center; gap:8px; }
+    .address-form .checkbox-row input { width:auto; }
+    .address-type-field { margin:0; padding:0; border:0; }
+    .address-type-field legend { margin-bottom:8px; color:#17212b; font-size:13px; font-weight:700; }
+    .address-type-options { display:flex; flex-wrap:wrap; gap:12px; list-style:none; margin:0; padding:0; }
+    .address-type-options > div { margin:0; }
+    .address-type-options > div > label { position:relative; display:flex; align-items:center; gap:10px; min-width:132px; box-sizing:border-box; padding:12px 15px; border:1px solid #d5d9d9; border-radius:12px; background:linear-gradient(180deg,#fff,#fbfcfd); color:#334155; cursor:pointer; font-size:14px; font-weight:700; transition:all .18s ease; }
+    .address-type-options > div > label::before { display:flex; align-items:center; justify-content:center; width:32px; height:32px; flex:0 0 32px; border-radius:9px; background:#f1f3f3; color:#64748b; font-family:'Font Awesome 6 Free'; font-size:15px; font-weight:900; }
+    .address-type-options > div:nth-child(1) > label::before { content:'\f015'; }
+    .address-type-options > div:nth-child(2) > label::before { content:'\f0b1'; }
+    .address-type-options > div:nth-child(3) > label::before { content:'\f02b'; }
+    .address-type-options > div > label::after { content:''; position:absolute; top:10px; right:11px; width:6px; height:10px; border:solid #e04420; border-width:0 2px 2px 0; opacity:0; transform:rotate(45deg) scale(.85); transition:all .18s ease; }
+    .address-type-options > div > label:hover { border-color:#e04420; color:#c83818; background:#fff8f5; transform:translateY(-1px); box-shadow:0 4px 10px rgba(224,68,32,.1); }
+    .address-type-options > div > label:has(input:checked) { border-color:#e04420; background:#fff1eb; color:#c83818; box-shadow:0 0 0 2px rgba(224,68,32,.12),0 5px 12px rgba(224,68,32,.1); }
+    .address-type-options > div > label:has(input:checked)::before { background:#e04420; color:#fff; }
+    .address-type-options > div > label:has(input:checked)::after { border-color:#e04420; opacity:1; transform:rotate(45deg) scale(1); }
+    .address-type-options > div > label.is-selected { border-color:#e04420; background:#fff1eb; color:#c83818; box-shadow:0 0 0 2px rgba(224,68,32,.12),0 5px 12px rgba(224,68,32,.1); }
+    .address-type-options > div > label.is-selected::before { background:#e04420; color:#fff; }
+    .address-type-options > div > label.is-selected::after { border-color:#e04420; opacity:1; transform:rotate(45deg) scale(1); }
+    .address-type-options input { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+    .address-submit { margin-top:6px; border:1px solid #e04420; border-radius:7px; padding:11px 20px; background:#e04420; color:#fff; cursor:pointer; font-weight:700; }
+    .address-submit:hover { background:#c83818; }
+    .address-cancel { display:inline-block; margin-top:17px; color:#007185; font-size:14px; text-decoration:none; }
+    .address-cancel:hover { color:#c45500; text-decoration:underline; }
+    .address-error { color:#b42318; font-size:13px; }
+    @media (max-width: 900px) { .address-grid { grid-template-columns:repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 600px) { .address-book-page { padding:0 16px; } .address-grid { grid-template-columns:1fr; } .address-form-shell { padding:23px 18px; } }
+</style>
+
+<section class="page-head"><div class="container"><h1>{% if editing_address %}Edit Address{% elif adding_address %}Add Address{% else %}Your Addresses{% endif %}</h1><div class="breadcrumb"><a href="{% url 'storefront:home' %}">Home</a><span>/</span><a href="{% url 'storefront:customer-dashboard' %}">Your Account</a><span>/</span><span>{% if editing_address %}Edit Address{% elif adding_address %}Add Address{% else %}Addresses{% endif %}</span></div></div></section>
+
+<main class="address-book-page">
+    {% if editing_address or adding_address %}
+        <a class="account-back-link" href="{% url 'storefront:account-addresses' %}">← Back to Addresses</a>
+        <div class="address-form-shell">
+            <h2>{% if editing_address %}Edit address{% else %}Add a new address{% endif %}</h2>
+            {% if address_form.non_field_errors %}<div class="address-error">{{ address_form.non_field_errors }}</div>{% endif %}
+            <form class="address-form" method="post">
+                {% csrf_token %}
+                {% for field in address_form %}
+                    {% if field.name == "label" %}<fieldset class="address-type-field"><legend>{{ field.label }}</legend>{{ field }}</fieldset>
+                    {% elif field.name == "is_default" %}<p class="checkbox-row">{{ field }}<label for="{{ field.id_for_label }}">Make this my default address</label></p>
+                    {% else %}<p><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.errors %}<span class="address-error">{{ field.errors|striptags }}</span>{% endif %}</p>{% endif %}
+                {% endfor %}
+                <button class="address-submit" type="submit">{% if editing_address %}Save changes{% else %}Add address{% endif %}</button>
+            </form>
+            <a class="address-cancel" href="{% url 'storefront:account-addresses' %}">Cancel and return to address book</a>
+        </div>
+    {% elif not show_trash %}
+        <a class="account-back-link" href="{% url 'storefront:customer-dashboard' %}">← Back to Account</a>
+        <p class="address-book-subtitle">Add and manage your delivery addresses. Your default address is selected automatically at checkout.</p>
+        <div class="address-book-heading"><h2>Your Addresses</h2><a class="address-trash-link" href="{% url 'storefront:account-address-trash' %}">View Trash</a></div>
+        <div class="address-grid">
+            <a class="add-address-card" href="{% url 'storefront:account-address-new' %}"><span class="plus">+</span><strong>Add a new address</strong></a>
+            {% for address in addresses %}
+                <article class="address-card" data-address-card="{{ address.id }}">
+                    <div class="address-card-head"><strong>{{ address.label }}</strong>{% if address.is_default %}<span class="default-label">Default address</span>{% endif %}</div>
+                    <p><strong>{{ address.full_name|default:request.user.get_full_name|default:request.user.email }}</strong></p>
+                    {% if address.phone %}<p>{{ address.phone }}</p>{% endif %}
+                    <p>{{ address.address_line1 }}{% if address.address_line2 %}, {{ address.address_line2 }}{% endif %}</p>
+                    {% if address.landmark %}<p>{{ address.landmark }}</p>{% endif %}
+                    <p>{{ address.city }}, {{ address.state }} {{ address.postal_code }}</p>
+                    <p class="country">{{ address.country_code }}</p>
+                    <div class="address-card-actions">
+                        <a href="{% url 'storefront:account-address-edit' address_id=address.id %}">Edit</a>
+                        <span class="action-separator">|</span>
+                        <form class="set-default-address-form" method="post" action="{% url 'storefront:account-address-default' address_id=address.id %}" data-address-id="{{ address.id }}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"><button type="submit">Set as Default</button></form><span class="action-separator">|</span>
+                        <form method="post" action="{% url 'storefront:account-address-delete' address_id=address.id %}">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"><button class="remove" type="submit">Remove</button></form>
+                    </div>
+                </article>
+            {% endfor %}
+        </div>
+    {% endif %}
+    {% if show_trash %}
+        <div class="address-book-heading"><h2>Address Trash</h2><a class="account-back-link trash-back-link" href="{% url 'storefront:account-addresses' %}">← Back to Addresses</a></div>
+        {% if addresses %}
+            <form method="post" id="address-trash-form">
+                {% csrf_token %}
+                <div class="trash-toolbar">
+                    <label><input type="checkbox" data-select-all> Select all</label>
+                    <div class="trash-actions">
+                        <button type="submit" formaction="{% url 'storefront:account-address-restore' %}">Restore selected</button>
+                        <button type="button" class="permanent-delete" data-permanent-delete="{% url 'storefront:account-address-permanent-delete' %}">Permanently delete</button>
+                    </div>
+                </div>
+                <div class="address-grid">
+                    {% for address in addresses %}
+                        <article class="address-card trash-address-card">
+                            <div class="address-card-head"><strong>{{ address.label }}</strong><label class="trash-status"><input type="checkbox" name="address_ids" value="{{ address.id }}"><span>In trash</span></label></div>
+                            <p><strong>{{ address.full_name|default:request.user.get_full_name|default:request.user.email }}</strong></p>
+                            <p>{{ address.address_line1 }}{% if address.address_line2 %}, {{ address.address_line2 }}{% endif %}</p>
+                            <p>{{ address.city }}, {{ address.state }} {{ address.postal_code }}</p>
+                            <p class="country">{{ address.country_code }}</p>
+                        </article>
+                    {% endfor %}
+                </div>
+            </form>
+        {% else %}
+            <div class="empty-address-state">Trash is empty.</div>
+        {% endif %}
+    {% endif %}
+</main>
+
+<div class="address-confirm-overlay" data-address-confirm aria-hidden="true">
+    <div class="address-confirm-modal" role="dialog" aria-modal="true" aria-labelledby="address-confirm-title">
+        <div class="address-confirm-icon">!</div>
+        <h3 id="address-confirm-title">Permanently delete address?</h3>
+        <p>This action cannot be undone. The selected address will be removed permanently.</p>
+        <div class="address-confirm-actions">
+            <button type="button" data-confirm-cancel>Cancel</button>
+            <button type="button" class="confirm-delete" data-confirm-delete>Permanently delete</button>
+        </div>
+    </div>
+</div>
+
+<script>
+(function () {
+    const selectAll = document.querySelector('[data-select-all]');
+    if (selectAll) {
+        selectAll.addEventListener('change', function () {
+            document.querySelectorAll('#address-trash-form input[name="address_ids"]').forEach(function (checkbox) {
+                checkbox.checked = selectAll.checked;
+            });
+        });
+    }
+    const trashForm = document.getElementById('address-trash-form');
+    const confirmOverlay = document.querySelector('[data-address-confirm]');
+    const confirmCancel = document.querySelector('[data-confirm-cancel]');
+    const confirmDelete = document.querySelector('[data-confirm-delete]');
+    const permanentDeleteButton = document.querySelector('[data-permanent-delete]');
+    let permanentDeleteUrl = '';
+    function closeConfirm() {
+        if (!confirmOverlay) return;
+        confirmOverlay.classList.remove('is-open');
+        confirmOverlay.setAttribute('aria-hidden', 'true');
+    }
+    if (permanentDeleteButton && confirmOverlay) {
+        permanentDeleteButton.addEventListener('click', function () {
+            const selected = trashForm && trashForm.querySelectorAll('input[name="address_ids"]:checked').length;
+            if (!selected) { window.alert('Please select at least one address.'); return; }
+            permanentDeleteUrl = permanentDeleteButton.dataset.permanentDelete;
+            confirmOverlay.classList.add('is-open');
+            confirmOverlay.setAttribute('aria-hidden', 'false');
+        });
+    }
+    if (confirmCancel) confirmCancel.addEventListener('click', closeConfirm);
+    if (confirmDelete) confirmDelete.addEventListener('click', function () {
+        if (!trashForm || !permanentDeleteUrl) return;
+        trashForm.action = permanentDeleteUrl;
+        trashForm.submit();
+    });
+    if (confirmOverlay) confirmOverlay.addEventListener('click', function (event) {
+        if (event.target === confirmOverlay) closeConfirm();
+    });
+    function setupAddressForm(form) {
+        const country = form.querySelector('[data-country-select]');
+        const city = form.querySelector('[data-city-field]');
+        const state = form.querySelector('[data-state-field]');
+        const postal = form.querySelector('[data-postal-field]');
+        if (!country || !postal) return;
+
+        const labels = {
+            IN: ['City', 'State', 'Postal code', 'Address line 1', 'Address line 2'],
+            US: ['City', 'State', 'ZIP code', 'Street address', 'Apartment / suite'],
+            CA: ['City', 'Province', 'Postal code', 'Street address', 'Apartment / unit'],
+            GB: ['Town / City', 'County', 'Postcode', 'Address line 1', 'Address line 2'],
+            AU: ['Suburb / City', 'State / Territory', 'Postcode', 'Street address', 'Apartment / unit'],
+            DE: ['City', 'State / Region', 'Postal code', 'Street and house number', 'Apartment / suite'],
+            FR: ['City', 'Region', 'Postal code', 'Street address', 'Apartment / suite'],
+            default: ['City', 'State / Province', 'Postal code', 'Address line 1', 'Address line 2'],
+        };
+
+        function updatePlaceholders() {
+            const name = country.options[country.selectedIndex]?.text || 'your country';
+            const names = labels[country.value] || labels.default;
+            const address1 = form.querySelector('[name$="address_line1"]');
+            const address2 = form.querySelector('[name$="address_line2"]');
+            function setFieldLabel(field, text) {
+                if (!field) return;
+                const label = form.querySelector('label[for="' + field.id + '"]') || field.closest('p')?.querySelector('label');
+                if (label) label.textContent = text;
+            }
+            setFieldLabel(city, names[0]);
+            setFieldLabel(state, names[1]);
+            setFieldLabel(postal, names[2]);
+            setFieldLabel(address1, names[3]);
+            setFieldLabel(address2, names[4]);
+            postal.placeholder = 'Postal code for ' + name;
+            if (city) city.placeholder = names[0];
+            if (state) state.placeholder = names[1];
+            if (address1) address1.placeholder = names[3];
+            if (address2) address2.placeholder = names[4];
+        }
+
+        country.addEventListener('change', function () {
+            if (city) city.value = '';
+            if (state) state.value = '';
+            postal.value = '';
+            updatePlaceholders();
+        });
+        country.addEventListener('input', updatePlaceholders);
+
+        postal.addEventListener('blur', async function () {
+            const code = postal.value.trim();
+            const countryCode = country.value.toLowerCase();
+            if (!code) return;
+            try {
+                const response = await fetch('https://api.zippopotam.us/' + countryCode + '/' + encodeURIComponent(code));
+                if (!response.ok) return;
+                const data = await response.json();
+                const place = (data.places || [])[0];
+                if (place) {
+                    if (city && !city.value) city.value = place['place name'] || '';
+                    if (state && !state.value) state.value = place['state'] || place['state abbreviation'] || '';
+                }
+            } catch (error) {
+                // Postal lookup is an enhancement; manual city/state entry remains available.
+            }
+        });
+        updatePlaceholders();
+    }
+    document.querySelectorAll('.address-form').forEach(setupAddressForm);
+
+    // Radio buttons normally cannot be cleared by clicking the selected item.
+    // Make the address-type choices toggleable for a cleaner form experience.
+    document.querySelectorAll('.address-type-options').forEach(function (group) {
+        function refresh() {
+            group.querySelectorAll('label').forEach(function (label) {
+                const radio = label.querySelector('input[type="radio"]');
+                label.classList.toggle('is-selected', Boolean(radio && radio.checked));
+            });
+        }
+        group.querySelectorAll('label').forEach(function (label) {
+            label.addEventListener('mousedown', function () {
+                const radio = label.querySelector('input[type="radio"]');
+                label.dataset.wasChecked = radio && radio.checked ? 'true' : 'false';
+            });
+            label.addEventListener('click', function (event) {
+                const radio = label.querySelector('input[type="radio"]');
+                if (!radio) return;
+                if (label.dataset.wasChecked === 'true') {
+                    event.preventDefault();
+                    radio.checked = false;
+                }
+                window.setTimeout(refresh, 0);
+            });
+        });
+        group.querySelectorAll('input[type="radio"]').forEach(function (radio) {
+            radio.addEventListener('change', refresh);
+        });
+        refresh();
+    });
+
+    document.querySelectorAll('.set-default-address-form').forEach(function (form) {
+        form.addEventListener('submit', async function (event) {
+            event.preventDefault();
+            const button = form.querySelector('button[type="submit"]');
+            const originalText = button.textContent;
+            button.disabled = true;
+            button.textContent = 'Saving...';
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': form.querySelector('[name="csrfmiddlewaretoken"]').value,
+                    },
+                    body: new FormData(form),
+                });
+                const data = await response.json();
+                if (!response.ok || !data.success) throw new Error(data.message || 'Could not update the default address.');
+
+                document.querySelectorAll('[data-address-card]').forEach(function (card) {
+                    const header = card.querySelector('.address-card-head');
+                    const badge = header && header.querySelector('.default-label');
+                    if (card.dataset.addressCard === String(data.address_id)) {
+                        if (!badge) {
+                            const newBadge = document.createElement('span');
+                            newBadge.className = 'default-label';
+                            newBadge.textContent = 'Default address';
+                            header.appendChild(newBadge);
+                        }
+                    } else if (badge) {
+                        badge.remove();
+                    }
+                });
+                document.querySelectorAll('.set-default-address-form button').forEach(function (item) {
+                    item.textContent = 'Set as Default';
+                    item.disabled = false;
+                });
+            } catch (error) {
+                button.disabled = false;
+                button.textContent = originalText;
+                window.alert(error.message);
+            }
+        });
+    });
+})();
+</script>
+{% endblock %}

@@ -4,6 +4,12 @@
 {% block content %}
 <link rel="stylesheet" href="{% static 'backoffice/product-ra.css' %}">
 <style>
+    /* Keep product save actions visible while the long form is scrolled. */
+    .ra-form{padding-bottom:86px}
+    .ra-form-actions-sticky{position:fixed !important;left:290px;right:0;bottom:0;z-index:1000;margin:0 !important;padding:14px 32px !important;background:#fff;border:0;border-top:1px solid #e2e8f0;border-radius:0;box-shadow:0 -10px 28px rgba(15,23,42,.12);backdrop-filter:blur(12px)}
+    .bo-sidebar.collapsed ~ .bo-main .ra-form-actions-sticky{left:92px}
+    @media(max-width:1180px){.ra-form-actions-sticky{left:0}.bo-sidebar.collapsed ~ .bo-main .ra-form-actions-sticky{left:0}}
+    @media(max-width:600px){.ra-form-actions-sticky{padding:12px 16px !important}.ra-form-actions-sticky .ra-btn{flex:1;justify-content:center}}
     .ra-btn-media-library {
         border-color: var(--primary) !important;
         color: var(--primary) !important;
@@ -448,6 +454,9 @@
                 </div>
 
                 <div class="ra-form-actions-sticky" style="display:flex; gap:12px; flex-wrap:wrap; margin-top: 4px;">
+                    <a href="{% url 'backoffice:module-list' module='products' %}" class="ra-btn ra-btn-outline" style="margin-right:auto;">
+                        <i class="ph ph-x"></i> Cancel
+                    </a>
                     <button type="submit" name="save_action" value="stay" class="ra-btn ra-btn-primary">
                         <i class="ph ph-floppy-disk"></i> Save & stay
                     </button>

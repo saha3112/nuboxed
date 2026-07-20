@@ -1,0 +1,10 @@
+{% extends "backoffice/base.html" %}
+{% block content %}
+<style>
+.coupon-settings{max-width:900px}.coupon-settings .panel{background:var(--card-bg,#fff);border:1px solid var(--border,#e2e8f0);border-radius:16px;padding:24px;box-shadow:0 10px 24px rgba(15,23,42,.06);margin-bottom:18px}.coupon-settings h2{margin:0 0 8px;color:var(--text-main,#1f2937)}.coupon-settings p{color:var(--text-muted,#64748b);font-size:13px;line-height:1.6}.coupon-toggle{display:flex;align-items:center;gap:12px;margin:22px 0;font-size:14px;font-weight:600;color:var(--text-main,#1f2937)}.coupon-toggle input{width:18px;height:18px;accent-color:var(--primary,#e04420)}.coupon-actions{display:flex;gap:10px;flex-wrap:wrap}.coupon-link{display:inline-flex;align-items:center;min-height:40px;padding:0 15px;border-radius:10px;text-decoration:none;background:var(--primary,#e04420);color:#fff;font-weight:700;font-size:13px}.coupon-link.secondary{background:transparent;color:var(--primary,#e04420);border:1px solid var(--primary,#e04420)}
+</style>
+<div class="coupon-settings">
+  <div class="panel"><h2>Coupon code feature</h2><p>Choose whether retailers can manage coupon codes for their own stores. When disabled, the retailer coupon menu and storefront coupon box remain hidden.</p><form method="post">{% csrf_token %}<label class="coupon-toggle"><input type="checkbox" name="enabled" {% if coupon_enabled %}checked{% endif %}> Enable coupon codes for retailers</label><div class="coupon-actions"><button class="ra-btn ra-btn-primary" type="submit">Save feature setting</button><a class="coupon-link secondary" href="{% url 'backoffice:module-list' module='coupons' %}">Manage coupon codes</a></div></form></div>
+  <div class="panel"><h2>How it works</h2><p>Create a global coupon or assign it to a retailer from Manage coupon codes. Percentage and fixed discounts, minimum order, maximum discount, validity dates and usage limits are supported.</p></div>
+</div>
+{% endblock %}

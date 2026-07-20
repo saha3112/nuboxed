@@ -1,6 +1,7 @@
 import csv
 import json
 from datetime import datetime, timedelta
+from urllib.parse import urlencode
 
 from django.utils import timezone
 from django.contrib import messages
@@ -10,11 +11,12 @@ from django.db.models import Case, F, IntegerField, Q, Value, When
 from django.db.models.functions import Coalesce
 from django.forms import modelform_factory
 from django.http import Http404, HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.generic import CreateView, FormView, TemplateView, UpdateView, View
 
 from apps.backoffice.forms import (
@@ -29,6 +31,7 @@ from apps.backoffice.forms import (
     BackofficeStoreForm,
     BackofficeUserCreateForm,
     BackofficeUserUpdateForm,
+    EmailSettingsForm,
     CourierPartnerForm,
     WarehouseForm,
 )
@@ -46,15 +49,20 @@ from apps.inventory.models import LowStockAlert, StockItem
 from apps.inventory.services import canonical_stock_items
 from apps.retailers.models import Retailer
 from apps.stores.models import Store, StoreRating
-from apps.orders.models import Order
-from apps.orders.forms import OrderStatusForm, OrderWorkflowSettingForm, EmailTemplateForm
-from apps.orders.services import update_order_status, generate_delivery_label, get_order_workflow_setting
-from apps.orders.models import OrderWorkflowSetting
-from apps.payments.models import Invoice
+from apps.orders.models import Coupon, Order
+from apps.orders.forms import OrderStatusForm, OrderWorkflowGlobalSettingForm, OrderWorkflowStoreOverrideForm, OrderWorkflowSettingForm, EmailTemplateForm
+from apps.orders.services import coupon_feature_enabled, update_order_status, generate_delivery_label, get_order_workflow_setting, build_order_timeline
+from apps.orders.models import OrderWorkflowGlobalSetting, OrderWorkflowStoreOverride, OrderWorkflowSetting
+from apps.payments.models import Invoice, PaymentTransaction
+from apps.payments.services import process_refund, amount_in_words
+from decimal import Decimal, InvalidOperation
 from apps.payments.services import generate_invoice_for_order
 from apps.settings_app.models import Setting
+from apps.settings_app.models import BrandSettings
 from apps.notifications.models import NotificationTemplate
 from apps.notifications.services import ensure_order_email_templates
+from apps.notifications.services import send_test_email
+from apps.common.security import build_public_url
 
 
 class SuperAdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
@@ -68,9 +76,6 @@ class SuperAdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
             if user:
                 return user
             self.request.session.pop(self.session_user_key, None)
-        user = self.request.user
-        if user.is_authenticated:
-            return user
         return None
 
     def dispatch(self, request, *args, **kwargs):
@@ -80,22 +85,16 @@ class SuperAdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
         return super().dispatch(request, *args, **kwargs)
 
     def test_func(self):
-        user = getattr(self, "portal_user", None) or self.request.user
+        user = getattr(self, "portal_user", None)
         return bool(user) and user.is_authenticated and (
             user.is_superuser
             or user.global_roles.filter(role__code=ROLE_SUPER_ADMIN, account_membership__isnull=True).exists()
         )
 
     def handle_no_permission(self):
-        user = self.request.user
-        if user.is_authenticated:
-            has_retailer_membership = user.account_memberships.filter(
-                status="active",
-                account__retailer_profile__isnull=False,
-            ).exists()
-            if has_retailer_membership:
-                return redirect("retailers:dashboard")
-        return super().handle_no_permission()
+        # The URL selects the portal. Never send an unauthenticated or
+        # retailer-session request from /admin/ to the retailer portal.
+        return redirect(self.login_url)
 
     def get_context_data(self, **kwargs):
         """Expose real, relevant notifications in every backoffice view."""
@@ -129,14 +128,6 @@ class BackofficeLoginView(LoginView):
             or portal_user.global_roles.filter(role__code=ROLE_SUPER_ADMIN, account_membership__isnull=True).exists()
         ):
             return redirect("backoffice:dashboard")
-        if request.user.is_authenticated:
-            is_super_admin = request.user.is_superuser or request.user.global_roles.filter(
-                role__code=ROLE_SUPER_ADMIN,
-                account_membership__isnull=True,
-            ).exists()
-            if is_super_admin:
-                request.session[self.session_user_key] = str(request.user.pk)
-                return redirect("backoffice:dashboard")
         return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
@@ -145,19 +136,9 @@ class BackofficeLoginView(LoginView):
         return redirect(self.get_success_url())
 
     def get_success_url(self):
-        user_id = self.request.session.get(self.session_user_key)
-        user = User.objects.filter(pk=user_id, is_active=True).first() if user_id else self.request.user
-        is_super_admin = user.is_superuser or user.global_roles.filter(
-            role__code=ROLE_SUPER_ADMIN,
-            account_membership__isnull=True,
-        ).exists()
-        if not is_super_admin:
-            has_retailer_membership = user.account_memberships.filter(
-                status="active",
-                account__retailer_profile__isnull=False,
-            ).exists()
-            if has_retailer_membership:
-                return reverse("retailers:dashboard")
+        # The admin portal must never redirect to the retailer portal.  An
+        # admin account may also have a retailer membership, but the portal
+        # selected by the login URL is authoritative.
         return reverse("backoffice:dashboard")
 
 
@@ -461,7 +442,7 @@ class BackofficeDashboardView(SuperAdminRequiredMixin, TemplateView):
                 "page_title": "Executive Dashboard",
                 "dashboard_cards": dashboard_cards,
                 "quick_panels": quick_panels,
-                "sidebar_groups": self.get_sidebar_groups(),
+                "sidebar_groups": grouped_modules(),
                 "module_key_active": None,
                 "active_group": "",
                 "activity_items": [
@@ -481,15 +462,123 @@ class BackofficeOrdersView(SuperAdminRequiredMixin, TemplateView):
     template_name = "backoffice/orders.html"
     def get_context_data(self, **kwargs):
         c = super().get_context_data(**kwargs)
-        c.update({"page_title": "Orders", "orders": Order.objects.select_related("customer", "retailer").order_by("-created_at"), "sidebar_groups": grouped_modules(), "module_key_active": None, "active_group": "Commerce"})
+        c.update({"page_title": "Orders", "orders": Order.objects.select_related("customer", "retailer").prefetch_related("timeline_entries__actor").order_by("-created_at"), "sidebar_groups": grouped_modules(), "module_key_active": None, "active_group": "Commerce"})
+        return c
+
+
+class BackofficeCouponSettingsView(SuperAdminRequiredMixin, View):
+    template_name = "backoffice/coupon_settings.html"
+
+    def get(self, request):
+        return render(request, self.template_name, self.context())
+
+    def post(self, request):
+        Setting.objects.update_or_create(
+            key="coupon_feature",
+            defaults={"value": {"enabled": request.POST.get("enabled") == "on"}, "is_active": True},
+        )
+        messages.success(request, "Coupon feature availability updated.")
+        return redirect("backoffice:coupon-settings")
+
+    def context(self):
+        return {
+            "page_title": "Coupon Feature Settings",
+            "coupon_enabled": coupon_feature_enabled(),
+            "sidebar_groups": grouped_modules(),
+            "module_key_active": "coupon-settings",
+            "active_group": "Commerce",
+        }
+
+
+class BackofficeOrderDetailView(SuperAdminRequiredMixin, TemplateView):
+    template_name = "orders/backoffice_detail.html"
+
+    def get_context_data(self, **kwargs):
+        c = super().get_context_data(**kwargs)
+        order = get_object_or_404(Order.objects.select_related("customer", "retailer", "address").prefetch_related(
+            "items__product__media_items", "items__product__phone_variant__phone_model", "items__warehouse",
+            "items__variant__attribute_values__attribute", "items__variant__attribute_values__option",
+            "timeline_entries", "payment_transactions__gateway", "payment_transactions__refunds", "invoices__items", "shipments__courier_partner",
+            "return_requests__timeline_entries", "return_requests__items__order_item__product",
+        ), pk=kwargs["pk"])
+        order_items = list(order.items.all())
+        cancellation_entry = order.timeline_entries.filter(status=Order.STATUS_CANCELLED).order_by("-occurred_at").first()
+        refund_transactions = [refund for transaction in order.payment_transactions.all() for refund in transaction.refunds.all()]
+        c.update({"page_title": f"Order {order.number}", "order": order, "portal": "admin", "order_detail_page": True, "order_item_count": len(order_items), "order_unit_count": sum(item.quantity for item in order_items), "order_can_cancel": order.status not in {Order.STATUS_CANCELLED, Order.STATUS_DELIVERED, Order.STATUS_RETURNED, Order.STATUS_REFUNDED}, "cancellation_entry": cancellation_entry, "refund_transactions": refund_transactions, "sidebar_groups": grouped_modules(), "module_key_active": None, "active_group": "Commerce"})
         return c
 
 
 class BackofficeOrderStatusView(SuperAdminRequiredMixin, View):
     def post(self, request, pk):
         order = get_object_or_404(Order, pk=pk); form = OrderStatusForm(request.POST)
-        if form.is_valid(): update_order_status(order, form.cleaned_data["status"], actor=getattr(self, "portal_user", request.user))
+        if form.is_valid():
+            updated_order = update_order_status(order, form.cleaned_data["status"], actor=getattr(self, "portal_user", request.user))
+            if getattr(updated_order, "_fulfillment_warning", ""):
+                messages.warning(request, f"Order status updated, but courier booking is pending: {updated_order._fulfillment_warning}")
         return redirect("backoffice:orders")
+
+
+class BackofficeOrderCancelView(SuperAdminRequiredMixin, View):
+    def post(self, request, pk):
+        order = get_object_or_404(Order, pk=pk)
+        if order.status in {Order.STATUS_CANCELLED, Order.STATUS_DELIVERED, Order.STATUS_RETURNED, Order.STATUS_REFUNDED}:
+            messages.error(request, "This order cannot be cancelled in its current status.")
+        else:
+            update_order_status(order, Order.STATUS_CANCELLED, actor=getattr(self, "portal_user", request.user), note=request.POST.get("cancellation_reason", "Customer requested"))
+            messages.success(request, f"Order {order.number} was cancelled successfully.")
+        return redirect("backoffice:order-detail", pk=order.pk)
+
+
+class BackofficeOrderTransactionView(SuperAdminRequiredMixin, View):
+    def get(self, request, pk):
+        order = get_object_or_404(Order, pk=pk)
+        transactions = PaymentTransaction.objects.filter(order=order).select_related("gateway").prefetch_related("refunds")
+        return JsonResponse({"order": order.number, "transactions": [{
+            "transaction_number": tx.transaction_number,
+            "status": tx.get_status_display(),
+            "gateway": tx.gateway.name,
+            "amount": str(tx.amount),
+            "currency": tx.currency,
+            "gateway_transaction_id": tx.gateway_transaction_id or "Not provided",
+            "captured_at": tx.captured_at.strftime("%d %b %Y, %H:%M") if tx.captured_at else "Not captured",
+            "refunds": [{"number": refund.refund_number, "amount": str(refund.amount), "status": refund.get_status_display(), "reason": refund.reason} for refund in tx.refunds.all()],
+        } for tx in transactions]})
+
+
+class BackofficeOrderRefundView(SuperAdminRequiredMixin, View):
+    def post(self, request, pk):
+        order = get_object_or_404(Order, pk=pk)
+        transaction = PaymentTransaction.objects.filter(order=order, status=PaymentTransaction.STATUS_CAPTURED).first()
+        try:
+            if not transaction:
+                raise ValueError("No captured payment transaction is available for this order.")
+            amount = Decimal(request.POST.get("amount", "0"))
+            if amount <= 0:
+                raise ValueError("Refund amount must be greater than zero.")
+            reason = request.POST.get("reason", "Customer request").strip() or "Customer request"
+            refund = process_refund(transaction, amount=amount, reason=reason, actor=getattr(self, "portal_user", request.user))
+            if transaction.status == PaymentTransaction.STATUS_REFUNDED:
+                update_order_status(order, Order.STATUS_REFUNDED, actor=getattr(self, "portal_user", request.user), note=f"Full payment refund {refund.refund_number} processed: {reason}")
+            else:
+                build_order_timeline(order, order.status, "Partial refund processed", f"Refund {refund.refund_number} of {amount} {transaction.currency} processed: {reason}", actor=getattr(self, "portal_user", request.user))
+            messages.success(request, f"Refund {refund.refund_number} processed successfully.")
+        except (ValueError, InvalidOperation) as exc:
+            messages.error(request, str(exc))
+        return redirect("backoffice:order-detail", pk=order.pk)
+
+
+class BackofficeOrderAddressUpdateView(SuperAdminRequiredMixin, View):
+    def post(self, request, pk):
+        order = get_object_or_404(Order, pk=pk)
+        fields = ["shipping_full_name", "shipping_phone", "shipping_address_line1", "shipping_address_line2", "shipping_city", "shipping_state", "shipping_postal_code", "shipping_country_code"]
+        for field in fields:
+            value = request.POST.get(field, "").strip()
+            if field == "shipping_country_code":
+                value = value.upper()[:2]
+            setattr(order, field, value)
+        order.save(update_fields=fields + ["updated_at"])
+        messages.success(request, "Shipping address updated successfully.")
+        return redirect("backoffice:order-detail", pk=order.pk)
 
 
 class BackofficeOrderInvoiceView(SuperAdminRequiredMixin, View):
@@ -502,16 +591,18 @@ class BackofficeOrderLabelView(SuperAdminRequiredMixin, View):
         order = get_object_or_404(Order, pk=pk); generate_delivery_label(order, actor=getattr(self, "portal_user", request.user)); return redirect("backoffice:order-label-print", pk=pk)
 
 
+@method_decorator(xframe_options_sameorigin, name="dispatch")
 class BackofficeOrderInvoicePrintView(SuperAdminRequiredMixin, TemplateView):
     template_name = "orders/invoice_print.html"
     def get_context_data(self, **kwargs):
-        c = super().get_context_data(**kwargs); order = get_object_or_404(Order, pk=kwargs["pk"]); c.update({"order": order, "invoice": Invoice.objects.filter(order=order).prefetch_related("items").first(), "invoice_design": Setting.objects.filter(key="invoice_design").values_list("value", flat=True).first() or {}}); return c
+        c = super().get_context_data(**kwargs); order = get_object_or_404(Order, pk=kwargs["pk"]); invoice = generate_invoice_for_order(order, actor=getattr(self, "portal_user", self.request.user)); shipment = order.shipments.order_by("-created_at").first(); invoice_access_url = build_public_url(self.request, reverse("storefront:invoice-access", kwargs={"invoice_number": invoice.invoice_number})); c.update({"order": order, "invoice": invoice, "invoice_design": Setting.objects.filter(key="invoice_design").values_list("value", flat=True).first() or {}, "tracking_number": getattr(shipment, "tracking_number", ""), "amount_in_words": amount_in_words(invoice.total_amount or order.total_amount, invoice.currency or order.currency_code), "invoice_url_json": json.dumps(invoice_access_url), "invoice_access_url": invoice_access_url}); return c
 
 
+@method_decorator(xframe_options_sameorigin, name="dispatch")
 class BackofficeOrderLabelPrintView(SuperAdminRequiredMixin, TemplateView):
     template_name = "orders/label_print.html"
     def get_context_data(self, **kwargs):
-        c = super().get_context_data(**kwargs); order = get_object_or_404(Order, pk=kwargs["pk"]); c.update({"order": order, "label": generate_delivery_label(order, actor=getattr(self, "portal_user", self.request.user))}); return c
+        c = super().get_context_data(**kwargs); order = get_object_or_404(Order, pk=kwargs["pk"]); label = generate_delivery_label(order, actor=getattr(self, "portal_user", self.request.user)); payload = dict(label.payload); verification_url = build_public_url(self.request, reverse("storefront:label-verify", kwargs={"label_number": label.label_number})); payload["tracking_url"] = verification_url; payload["barcode_value"] = verification_url; c.update({"order": order, "label": label, "verification_url": verification_url, "label_payload_json": json.dumps(payload)}); return c
 
 
 class BackofficeInvoiceDesignView(SuperAdminRequiredMixin, FormView):
@@ -534,14 +625,83 @@ class BackofficeOrderWorkflowSettingsView(SuperAdminRequiredMixin, TemplateView)
     template_name = "backoffice/order_workflow_settings.html"
     def get_context_data(self, **kwargs):
         c = super().get_context_data(**kwargs)
-        c.update({"page_title": "Order Workflow Settings", "workflow_rows": [(r, OrderWorkflowSettingForm(instance=get_order_workflow_setting(r))) for r in Retailer.objects.filter(is_active=True).order_by("display_name")], "sidebar_groups": grouped_modules(), "module_key_active": None, "active_group": "Commerce"})
+        global_setting, _ = OrderWorkflowGlobalSetting.objects.get_or_create(key="default")
+        stores = Store.objects.filter(retailer__is_active=True).select_related("retailer").order_by("retailer__display_name", "name")
+        selected_store_ids = self.request.GET.getlist("store")
+        selected_stores = stores.filter(pk__in=selected_store_ids)
+        override_rows = []
+        for store in selected_stores:
+            override = OrderWorkflowStoreOverride.objects.filter(store=store).first()
+            override_rows.append((store, OrderWorkflowStoreOverrideForm(instance=override, initial={"is_active": bool(override and override.is_active)})))
+        c.update({"page_title": "Order Workflow Settings", "global_form": OrderWorkflowGlobalSettingForm(instance=global_setting), "stores": stores, "selected_store_ids": [str(value) for value in selected_stores.values_list("pk", flat=True)], "workflow_rows": override_rows, "sidebar_groups": grouped_modules(), "module_key_active": None, "active_group": "Commerce"})
         return c
     def post(self, request, *args, **kwargs):
-        retailer = get_object_or_404(Retailer, pk=request.POST.get("retailer_id"))
-        form = OrderWorkflowSettingForm(request.POST, instance=get_order_workflow_setting(retailer))
-        if form.is_valid():
-            form.save(); messages.success(request, f"Workflow settings saved for {retailer.display_name}.")
+        if request.POST.get("scope") == "global":
+            setting, _ = OrderWorkflowGlobalSetting.objects.get_or_create(key="default")
+            form = OrderWorkflowGlobalSettingForm(request.POST, instance=setting)
+            if form.is_valid():
+                form.save(); messages.success(request, "Global order workflow settings saved. All stores now use these defaults.")
+        else:
+            store = get_object_or_404(Store, pk=request.POST.get("store_id"), retailer__is_active=True)
+            override = OrderWorkflowStoreOverride.objects.filter(store=store).first()
+            form = OrderWorkflowStoreOverrideForm(request.POST, instance=override)
+            if form.is_valid():
+                if form.cleaned_data.get("is_active"):
+                    saved = form.save(commit=False); saved.store = store; saved.is_active = True; saved.save()
+                    messages.success(request, f"Custom workflow saved for {store.name}.")
+                elif override:
+                    override.delete(); messages.success(request, f"{store.name} now uses the global workflow.")
+                else:
+                    messages.info(request, f"{store.name} is already using the global workflow.")
+            selected_ids = request.POST.getlist("selected_store_ids") or [str(store.pk)]
+            return redirect(f"{reverse('backoffice:order-workflow-settings')}?{urlencode([('store', value) for value in selected_ids])}")
         return redirect("backoffice:order-workflow-settings")
+
+
+class BackofficeEmailSettingsView(SuperAdminRequiredMixin, FormView):
+    template_name = "backoffice/email_settings.html"
+    form_class = EmailSettingsForm
+    success_url = reverse_lazy("backoffice:email-settings")
+
+    def get_current_settings(self):
+        return Setting.objects.filter(key="email_settings", is_active=True).values_list("value", flat=True).first() or {}
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs["current"] = self.get_current_settings()
+        return kwargs
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            "page_title": "Email / SMTP Settings",
+            "sidebar_groups": grouped_modules(),
+            "module_key_active": "email-settings",
+            "active_group": "Platform",
+        })
+        return context
+
+    def form_valid(self, form):
+        values = dict(form.cleaned_data)
+        current = self.get_current_settings()
+        if not values.get("password"):
+            values["password"] = current.get("password", "")
+        test_recipient = values.pop("test_recipient", "")
+        if self.request.POST.get("action") == "test":
+            if not test_recipient:
+                form.add_error("test_recipient", "Enter an email address to receive the test email.")
+                return self.render_to_response(self.get_context_data(form=form))
+            try:
+                brand = BrandSettings.objects.filter(is_active=True).first()
+                send_test_email(test_recipient, values, brand_name=brand.brand_name if brand else "Nuboxed")
+            except Exception as exc:
+                form.add_error(None, f"Test email failed: {exc}")
+                return self.render_to_response(self.get_context_data(form=form))
+            messages.success(self.request, f"Test email sent to {test_recipient}.")
+            return redirect(self.success_url)
+        Setting.objects.update_or_create(key="email_settings", defaults={"value": values, "is_active": True})
+        messages.success(self.request, "Email / SMTP settings saved successfully.")
+        return super().form_valid(form)
 
 
 class BackofficeEmailTemplateListView(SuperAdminRequiredMixin, TemplateView):
@@ -549,7 +709,14 @@ class BackofficeEmailTemplateListView(SuperAdminRequiredMixin, TemplateView):
     def get_context_data(self, **kwargs):
         ensure_order_email_templates()
         c = super().get_context_data(**kwargs)
-        c.update({"page_title": "Email Templates", "templates": NotificationTemplate.objects.filter(channel=NotificationTemplate.CHANNEL_EMAIL).order_by("event_name"), "sidebar_groups": grouped_modules(), "module_key_active": None, "active_group": "Platform"})
+        brand = BrandSettings.objects.filter(is_active=True).first()
+        brand_name = brand.brand_name if brand else "Nuboxed"
+        templates = list(NotificationTemplate.objects.filter(channel=NotificationTemplate.CHANNEL_EMAIL).order_by("event_name"))
+        for item in templates:
+            if item.subject_template:
+                item.subject_template = item.subject_template.replace("CommerceOS", brand_name)
+        c.update({"page_title": "Email Templates", "templates": templates, "email_brand_name": brand_name, "sidebar_groups": grouped_modules(), "module_key_active": None, "active_group": "Platform"})
+        return c
         return c
 
 
@@ -559,8 +726,21 @@ class BackofficeEmailTemplateUpdateView(SuperAdminRequiredMixin, UpdateView):
     form_class = EmailTemplateForm
     def get_queryset(self): return NotificationTemplate.objects.filter(channel=NotificationTemplate.CHANNEL_EMAIL)
     def get_success_url(self): return reverse("backoffice:email-templates")
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class)
+        # Older seeded templates contain the former product name literally.
+        # Show the dynamic placeholder in the editor so the active Brand
+        # Settings name is used when the email is sent.
+        for field_name in ("subject_template", "body_template"):
+            value = form.initial.get(field_name)
+            if value and "CommerceOS" in value:
+                form.initial[field_name] = value.replace("CommerceOS", "{{ brand_name }}")
+        return form
     def get_context_data(self, **kwargs):
-        c = super().get_context_data(**kwargs); c.update({"page_title": "Edit Email Template", "sidebar_groups": grouped_modules(), "module_key_active": None, "active_group": "Platform"}); return c
+        c = super().get_context_data(**kwargs)
+        brand = BrandSettings.objects.filter(is_active=True).first()
+        c.update({"page_title": "Edit Email Template", "email_brand_name": brand.brand_name if brand else "Nuboxed", "sidebar_groups": grouped_modules(), "module_key_active": None, "active_group": "Platform"})
+        return c
 
 
 class BackofficeNotificationsView(SuperAdminRequiredMixin, TemplateView):
@@ -715,12 +895,20 @@ class BackofficeModuleCreateView(SuperAdminRequiredMixin, RegistryMixin, CreateV
             sync_mixin.request = self.request
             sync_mixin.sync_product_assets(product, form)
             sync_mixin.sync_default_variant(product, form)
+            messages.success(self.request, "Product created successfully.")
             return redirect(self.get_success_url())
 
         response = super().form_valid(form)
         if module == "attributes":
             self.save_color_values(self.object, form.cleaned_data.get("color_values_payload"))
+        if module == "products":
+            messages.success(self.request, "Product created successfully.")
         return response
+
+    def form_invalid(self, form):
+        if self.kwargs.get("module") == "products":
+            messages.error(self.request, "Product could not be created. Please check the highlighted fields.")
+        return super().form_invalid(form)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -867,7 +1055,14 @@ class BackofficeModuleUpdateView(SuperAdminRequiredMixin, RegistryMixin, UpdateV
             self.object.phone_variant = form.resolve_phone_variant_from_payload()
             self.object.sync_phone_identity()
             self.object.save(update_fields=["phone_variant", "model_name", "name", "updated_at"])
+        if module == "products":
+            messages.success(self.request, "Product updated successfully.")
         return response
+
+    def form_invalid(self, form):
+        if self.kwargs.get("module") == "products":
+            messages.error(self.request, "Product could not be updated. Please check the highlighted fields.")
+        return super().form_invalid(form)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

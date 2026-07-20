@@ -59,6 +59,11 @@
         <div class="summary-row"><span>Tax</span><strong>{{ tax }}</strong></div>
         <div class="summary-row"><span>Shipping</span><strong>{{ shipping }}</strong></div>
         <div class="summary-row"><span>Coupon</span><strong>{{ coupon_code|default:"Ready" }}</strong></div>
+        {% if coupon_feature_enabled %}
+        <form method="post" action="{% url 'storefront:apply-coupon' %}" style="display:flex;gap:8px;margin:14px 0;">
+            {% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"><input type="text" name="coupon_code" value="{{ coupon_code }}" placeholder="Enter coupon code" style="flex:1;min-width:0;"><button type="submit" class="button-compact ghost">Apply</button>
+        </form>
+        {% endif %}
         <div class="summary-row total"><span>Total</span><strong>{{ total }}</strong></div>
         <a href="{% url 'storefront:checkout' %}" class="primary-link full-width-link">Proceed to checkout</a>
     </aside>

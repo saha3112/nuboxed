@@ -1,7 +1,159 @@
 {% extends "retailer/base.html" %}
+
 {% block content %}
-<div class="ra-page-head"><h1>Orders</h1><p>Manage customer orders, statuses, invoices and delivery labels.</p></div>
-<div class="ra-card"><div class="ra-table-wrap"><table class="ra-table"><thead><tr><th>Order</th><th>Customer</th><th>Total</th><th>Status</th><th>Actions</th></tr></thead><tbody>
-{% for order in orders %}<tr><td><strong>{{ order.number }}</strong><br><small>{{ order.created_at|date:"d M Y H:i" }}</small></td><td>{{ order.customer.email }}</td><td>{{ order.total_amount }} {{ order.currency_code }}</td><td><form method="post" action="{% url 'retailers:order-status' order.pk %}">{% csrf_token %}<select name="status" onchange="this.form.submit()">{% for value,label in order.STATUS_CHOICES %}<option value="{{ value }}" {% if order.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></form></td><td><form method="post" class="inline" action="{% url 'retailers:order-invoice' order.pk %}">{% csrf_token %}<button type="submit">Invoice</button></form> <form method="post" class="inline" action="{% url 'retailers:order-label' order.pk %}">{% csrf_token %}<button type="submit">Print label</button></form></td></tr>{% empty %}<tr><td colspan="5">No orders yet.</td></tr>{% endfor %}
-</tbody></table></div></div>
+<style>
+    .retailer-orders-page .orders-hero {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 24px;
+        margin-bottom: 24px;
+        padding: 28px 30px;
+        border: 1px solid rgba(224, 68, 32, .22);
+        border-radius: 18px;
+        background: linear-gradient(135deg, #fffaf8, #f8fbff);
+    }
+    .retailer-orders-page .orders-eyebrow {
+        margin: 0 0 7px;
+        color: #e04420;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: .12em;
+        text-transform: uppercase;
+    }
+    .retailer-orders-page .orders-hero h1 {
+        margin: 0;
+        color: #172235;
+        font-size: clamp(26px, 3vw, 36px);
+        line-height: 1.1;
+    }
+    .retailer-orders-page .orders-hero p,
+    .retailer-orders-page .orders-card-header p {
+        margin: 8px 0 0;
+        color: #6b7b91;
+        font-size: 14px;
+    }
+    .retailer-orders-page .orders-count {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        flex: 0 0 auto;
+        padding: 10px 14px;
+        border-radius: 999px;
+        color: #53657d;
+        background: #eef3f9;
+        font-size: 13px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+    .retailer-orders-page .orders-card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 22px 24px;
+        border-bottom: 1px solid #e8edf3;
+    }
+    .retailer-orders-page .orders-card-header h2 {
+        margin: 0;
+        color: #172235;
+        font-size: 20px;
+    }
+    .retailer-orders-page .orders-table select {
+        min-width: 150px;
+        padding: 8px 32px 8px 10px;
+        border: 1px solid #d7e0ea;
+        border-radius: 8px;
+        color: #25344a;
+        background: #fff;
+        font-size: 13px;
+    }
+    .retailer-orders-page .order-status-badge { display:inline-flex; align-items:center; padding:7px 10px; border-radius:999px; color:#b9381c; background:#fff1ec; font-size:12px; font-weight:700; white-space:nowrap; }
+    .retailer-orders-page .cancel-audit { display:block; margin-top:7px; color:#6b7b91; font-size:11px; line-height:1.45; }
+    .retailer-orders-page .orders-status-form,
+    .retailer-orders-page .orders-document-form { margin: 0; }
+    .retailer-orders-page .orders-documents {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 8px;
+        white-space: nowrap;
+    }
+    .retailer-orders-page .orders-documents .ra-btn { margin: 0; }
+    .retailer-orders-page .orders-documents .orders-document-form { display: flex; }
+    .retailer-orders-page .orders-documents > .ra-btn,
+    .retailer-orders-page .orders-documents .orders-document-form .ra-btn { width: 130px; min-width: 130px; height: 40px; min-height: 40px; padding: 0 12px; justify-content: center; }
+    .retailer-orders-page .orders-empty {
+        padding: 52px 20px;
+        text-align: center;
+        color: #6b7b91;
+    }
+    .retailer-orders-page .orders-empty i { color: #e04420; font-size: 42px; }
+    .retailer-orders-page .orders-empty h3 { margin: 12px 0 5px; color: #172235; }
+    .retailer-orders-page .orders-empty p { margin: 0; }
+    @media (max-width: 760px) {
+        .retailer-orders-page .orders-hero,
+        .retailer-orders-page .orders-card-header { flex-direction: column; align-items: stretch; }
+        .retailer-orders-page .orders-count { align-self: flex-start; }
+        .retailer-orders-page .orders-table { min-width: 780px; }
+    }
+</style>
+
+<div class="retailer-orders-page">
+    <section class="orders-hero">
+        <div>
+            <p class="orders-eyebrow">Control Center / Commerce</p>
+            <h1>Orders</h1>
+            <p>Monitor customer orders and generate the documents needed to complete delivery.</p>
+        </div>
+        <span class="orders-count"><i class="ph ph-receipt"></i> {{ orders|length }} orders</span>
+    </section>
+
+    <section class="ra-card">
+        <div class="orders-card-header">
+            <div>
+                <h2>Order processing</h2>
+                <p>Open an order to review details and update its fulfillment status.</p>
+            </div>
+        </div>
+        <div class="ra-table-wrap">
+            <table class="ra-table orders-table">
+                <thead>
+                    <tr>
+                        <th>Order</th>
+                        <th>Customer</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th style="text-align:right">Documents</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td><strong>{{ order.number }}</strong><small style="display:block">{{ order.created_at|date:"d M Y, H:i" }}</small></td>
+                        <td>{{ order.customer.email }}</td>
+                        <td><strong>{{ order.total_amount }}</strong> {{ order.currency_code }}</td>
+                        <td>
+                            <span class="order-status-badge">{{ order.get_status_display }}</span>
+                            {% if order.status == 'cancelled' %}{% for entry in order.timeline_entries.all %}{% if entry.status == 'cancelled' %}<small class="cancel-audit">By: {% if entry.actor %}{{ entry.actor.get_full_name|default:entry.actor.email }}{% else %}System{% endif %}<br>Reason: {{ entry.note|default:"Not specified" }}</small>{% endif %}{% endfor %}{% endif %}
+                        </td>
+                        <td>
+                            <div class="orders-documents"><a class="ra-btn ra-btn-outline ra-btn-sm" href="{% url 'retailers:order-detail' order.pk %}"><i class="ph ph-eye"></i>&nbsp; Details</a>
+                                <form method="post" class="orders-document-form" action="{% url 'retailers:order-invoice' order.pk %}">
+                                    {% csrf_token %}<button class="ra-btn ra-btn-outline ra-btn-sm" type="submit"><i class="ph ph-file-text"></i>&nbsp; Invoice</button>
+                                </form>
+                                <form method="post" class="orders-document-form" target="shipping_label_frame" onsubmit="return openShippingLabelModal(this);" action="{% url 'retailers:order-label' order.pk %}">
+                                    {% csrf_token %}<button class="ra-btn ra-btn-primary ra-btn-sm" type="submit"><i class="ph ph-printer"></i>&nbsp; Label</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5"><div class="orders-empty"><i class="ph ph-receipt"></i><h3>No orders yet</h3><p>New customer orders will appear here.</p></div></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
 {% endblock %}

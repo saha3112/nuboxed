@@ -2,11 +2,12 @@ from decimal import Decimal, ROUND_HALF_UP
 from uuid import uuid4
 
 from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 
 from apps.inventory.delivery import estimate_product_delivery, get_request_location_payload
 from apps.inventory.services import reserve_stock_for_order
-from apps.orders.models import Cart, CartItem, Order, OrderItem, OrderTimeline, OrderWorkflowSetting, DeliveryLabel
+from apps.orders.models import Cart, CartItem, Coupon, Order, OrderItem, OrderTimeline, OrderWorkflowGlobalSetting, OrderWorkflowStoreOverride, OrderWorkflowSetting, DeliveryLabel
 from apps.payments.models import Payment
 from apps.users.models import UserAddress
 from apps.notifications.services import send_notification_event
@@ -17,6 +18,52 @@ TWOPLACES = Decimal("0.01")
 
 def quantize_money(value):
     return Decimal(value).quantize(TWOPLACES, rounding=ROUND_HALF_UP)
+
+
+def coupon_feature_enabled():
+    from apps.settings_app.models import Setting
+    value = Setting.objects.filter(key="coupon_feature", is_active=True).values_list("value", flat=True).first() or {}
+    return bool(value.get("enabled", False))
+
+
+def get_valid_coupon(code, *, now=None):
+    if not coupon_feature_enabled() or not code:
+        return None
+    now = now or timezone.now()
+    coupon = Coupon.objects.filter(code=str(code).strip().upper(), is_active=True).first()
+    if not coupon or (coupon.starts_at and coupon.starts_at > now) or (coupon.ends_at and coupon.ends_at < now):
+        return None
+    if coupon.usage_limit is not None and coupon.used_count >= coupon.usage_limit:
+        return None
+    return coupon
+
+
+def coupon_discount_for_subtotal(coupon, subtotal):
+    if not coupon or subtotal < coupon.minimum_order_amount:
+        return Decimal("0.00")
+    if coupon.discount_type == Coupon.TYPE_FIXED:
+        discount = coupon.discount_value
+    else:
+        discount = subtotal * coupon.discount_value / Decimal("100")
+    if coupon.maximum_discount_amount is not None:
+        discount = min(discount, coupon.maximum_discount_amount)
+    return quantize_money(min(max(discount, Decimal("0.00")), subtotal))
+
+
+def apply_coupon_to_cart(cart, code):
+    coupon = get_valid_coupon(code)
+    if not coupon:
+        raise ValueError("This coupon is invalid, expired, or currently unavailable.")
+    if coupon.retailer_id and not cart.items.filter(product__retailer_id=coupon.retailer_id).exists():
+        raise ValueError("This coupon is not valid for the products in your cart.")
+    cart.coupon_code = coupon.code
+    cart.save(update_fields=["coupon_code", "updated_at"])
+    recalculate_cart(cart)
+    if cart.discount_amount <= 0:
+        cart.coupon_code = ""
+        cart.save(update_fields=["coupon_code", "updated_at"])
+        raise ValueError("Your cart does not meet this coupon's minimum order value.")
+    return cart
 
 
 def generate_order_number():
@@ -160,7 +207,13 @@ def recalculate_cart(cart, location_payload=None):
         tax_amount += item.line_tax
         shipping_amount += item.shipping_amount
     cart.subtotal_amount = quantize_money(subtotal)
-    cart.discount_amount = quantize_money("0.00")
+    coupon = get_valid_coupon(cart.coupon_code)
+    eligible_subtotal = subtotal
+    if coupon and coupon.retailer_id:
+        eligible_subtotal = sum(
+            item.line_subtotal for item in items if item.product.retailer_id == coupon.retailer_id
+        )
+    cart.discount_amount = coupon_discount_for_subtotal(coupon, quantize_money(eligible_subtotal))
     cart.tax_amount = quantize_money(tax_amount)
     cart.shipping_amount = quantize_money(shipping_amount)
     cart.total_amount = quantize_money(
@@ -239,9 +292,19 @@ def build_order_timeline(order, status, title, note="", actor=None):
     )
 
 
-def get_order_workflow_setting(retailer):
-    setting, _ = OrderWorkflowSetting.objects.get_or_create(retailer=retailer)
+def get_order_workflow_setting(retailer=None, store=None):
+    """Return a store override when enabled, otherwise the global default."""
+    if store is not None:
+        override = OrderWorkflowStoreOverride.objects.filter(store=store, is_active=True).first()
+        if override:
+            return override
+    setting, _ = OrderWorkflowGlobalSetting.objects.get_or_create(key="default")
     return setting
+
+
+def get_order_workflow_setting_for_order(order):
+    item = order.items.select_related("product__store").first()
+    return get_order_workflow_setting(order.retailer, getattr(getattr(item, "product", None), "store", None))
 
 
 def order_stakeholder_emails(order):
@@ -254,41 +317,78 @@ def order_stakeholder_emails(order):
 
 @transaction.atomic
 def generate_delivery_label(order, actor=None):
+    shipment = order.shipments.select_related("courier_partner").first()
+    invoice = order.invoices.order_by("-created_at").first()
+    retailer = order.retailer
+    tracking_number = shipment.tracking_number if shipment else f"NBX-{order.number}"
+    carrier = shipment.carrier if shipment and shipment.carrier else "Nuboxed Logistics"
+    service_level = "EXPRESS" if str(order.shipping_method).lower() in {"express", "next_day", "priority"} else "STANDARD"
+    destination_hub = (order.shipping_city or order.shipping_country_code or "HUB").upper().replace(" ", "-")[:10]
+    origin = (retailer.display_name or retailer.legal_name or "NUBOXED").upper()[:3]
+    address = ", ".join(filter(None, [order.shipping_address_line1, order.shipping_address_line2, order.shipping_city, order.shipping_state, order.shipping_postal_code, order.shipping_country_code]))
     payload = {
         "order_number": order.number, "customer": order.shipping_full_name or order.customer.get_full_name() or order.customer.email,
-        "phone": order.shipping_phone, "address": ", ".join(filter(None, [order.shipping_address_line1, order.shipping_address_line2, order.shipping_city, order.shipping_state, order.shipping_postal_code, order.shipping_country_code])),
-        "items": [{"name": item.product.name, "variant": item.variant.name if item.variant else "", "quantity": item.quantity} for item in order.items.select_related("product", "variant")],
+        "phone": order.shipping_phone, "address": address,
+        "items": [{"name": item.product.name, "variant": item.variant.name if item.variant else "", "sku": item.variant.sku if item.variant else item.product.sku, "quantity": item.quantity, "imei_numbers": item.imei_numbers or []} for item in order.items.select_related("product", "variant")],
+        "carrier": carrier, "service_level": service_level, "route_origin": origin,
+        "destination_hub": destination_hub, "zone": order.shipping_country_code or "INTL",
+        "sort_code": f"{destination_hub[:3]}-{str(order.number)[-3:]}", "tracking_number": tracking_number,
+        "tracking_url": f"/account/orders/{order.pk}/track/",
+        "invoice_number": invoice.invoice_number if invoice else f"INV-{order.number}",
+        "order_date": (order.placed_at or order.created_at).strftime("%d %b %Y"),
+        "payment_label": "PREPAID" if order.payment_status in {"paid", "authorized"} else "COD / PAY ON DELIVERY",
+        "declared_value": str(order.total_amount), "currency": order.currency_code, "package_count": "1 of 1",
+        "units": sum(item.quantity for item in order.items.all()), "return_address": retailer.business_address or retailer.display_name or retailer.legal_name,
+        "return_name": retailer.display_name or retailer.legal_name, "return_tax_id": retailer.vat_number or "Not specified",
+        "support_phone": retailer.support_phone or "Not specified", "weight": "Not declared", "dimensions": "Not declared",
+        "handling": "Standard handling", "reference": f"NBX-{str(order.number).replace('ORD-', '')}-{origin}",
     }
     label, _ = DeliveryLabel.objects.update_or_create(order=order, defaults={"label_number": f"LBL-{order.number}", "payload": payload, "generated_by": actor, "status": DeliveryLabel.STATUS_GENERATED, "printed_at": None})
     return label
 
 
 @transaction.atomic
-def update_order_status(order, status, actor=None):
+def update_order_status(order, status, actor=None, note=""):
     valid = {key for key, _ in Order.STATUS_CHOICES}
     if status not in valid:
         raise ValueError("Invalid order status.")
     if order.status == status:
         return order
     order.status = status
+    order._timeline_actor = actor
+    order._timeline_note = note
     updates = ["status", "updated_at"]
     if status == Order.STATUS_CONFIRMED and not order.confirmed_at:
         order.confirmed_at = timezone.now(); updates.append("confirmed_at")
     if status == Order.STATUS_CANCELLED:
         order.cancelled_at = timezone.now(); updates.append("cancelled_at")
     order.save(update_fields=updates)
-    build_order_timeline(order, status, f"Order {order.get_status_display()}", actor=actor)
+    fulfillment_warning = ""
     if status == Order.STATUS_CONFIRMED:
         from apps.shipments.services import build_fulfillment_for_order
-        build_fulfillment_for_order(order, actor=actor)
-    config = get_order_workflow_setting(order.retailer)
+        try:
+            build_fulfillment_for_order(order, actor=actor)
+        except ValueError as exc:
+            # The order status must remain usable even when operations has not
+            # configured a courier partner yet. Keep the fulfillment issue in
+            # the order timeline for admin/retailer follow-up.
+            fulfillment_warning = str(exc)
+            build_order_timeline(
+                order,
+                status=status,
+                title="Courier booking pending",
+                note=fulfillment_warning,
+                actor=actor,
+            )
+    config = get_order_workflow_setting_for_order(order)
     if config.notify_customer_status_changed:
         send_notification_event("order_status_changed", {"order_number": order.number, "status": order.get_status_display(), "amount": str(order.total_amount)}, user=order.customer, extra_recipients=order_stakeholder_emails(order))
+    order._fulfillment_warning = fulfillment_warning
     return order
 
 
 def apply_order_automation(order, actor=None):
-    config = get_order_workflow_setting(order.retailer)
+    config = get_order_workflow_setting_for_order(order)
     if config.auto_invoice:
         from apps.payments.services import generate_invoice_for_order
         generate_invoice_for_order(order, actor=actor)
@@ -315,7 +415,12 @@ def _create_order_for_items(*, request, cart, address, payment_method, note="", 
     subtotal_amount = quantize_money(sum(item.line_subtotal for item in cart_items))
     tax_amount = quantize_money(sum(item.line_tax for item in cart_items))
     shipping_amount = quantize_money(sum(item.shipping_amount for item in cart_items))
-    total_amount = quantize_money(subtotal_amount + tax_amount + shipping_amount)
+    coupon = get_valid_coupon(cart.coupon_code)
+    eligible_subtotal = subtotal_amount if not coupon or not coupon.retailer_id else quantize_money(
+        sum(item.line_subtotal for item in cart_items if item.product.retailer_id == coupon.retailer_id)
+    )
+    discount_amount = coupon_discount_for_subtotal(coupon, eligible_subtotal)
+    total_amount = quantize_money(subtotal_amount - discount_amount + tax_amount + shipping_amount)
     order = Order.objects.create(
         customer=request.user,
         retailer=first_item.product.retailer,
@@ -326,7 +431,7 @@ def _create_order_for_items(*, request, cart, address, payment_method, note="", 
         payment_method=payment_method,
         coupon_code=cart.coupon_code,
         subtotal_amount=subtotal_amount,
-        discount_amount=Decimal("0.00"),
+        discount_amount=discount_amount,
         tax_amount=tax_amount,
         shipping_amount=shipping_amount,
         total_amount=total_amount,
@@ -358,6 +463,9 @@ def _create_order_for_items(*, request, cart, address, payment_method, note="", 
     order.delivery_estimate_date = max([date for date in item_estimates if date], default=None)
     order.save(update_fields=["delivery_estimate_date", "updated_at"])
 
+    if coupon and discount_amount:
+        Coupon.objects.filter(pk=coupon.pk).update(used_count=F("used_count") + 1)
+
     reserve_stock_for_order(order)
     build_order_timeline(
         order,
@@ -374,7 +482,7 @@ def _create_order_for_items(*, request, cart, address, payment_method, note="", 
         status=Payment._meta.get_field("status").default,
     )
     
-    workflow = get_order_workflow_setting(order.retailer)
+    workflow = get_order_workflow_setting_for_order(order)
     if workflow.notify_customer_order_placed:
         send_notification_event(event_name="new_order", context={"order_number": order.number, "amount": str(order.total_amount)}, user=order.customer, extra_recipients=order_stakeholder_emails(order))
     apply_order_automation(order, actor=request.user)
@@ -430,7 +538,10 @@ def confirm_website_order(order, actor=None):
     )
     from apps.shipments.services import build_fulfillment_for_order
 
-    build_fulfillment_for_order(order, actor=actor)
+    try:
+        build_fulfillment_for_order(order, actor=actor)
+    except ValueError as exc:
+        build_order_timeline(order, status=Order.STATUS_CONFIRMED, title="Courier booking pending", note=str(exc), actor=actor)
     return order
 
 
@@ -451,7 +562,10 @@ def confirm_order(order, actor=None):
     )
     from apps.shipments.services import build_fulfillment_for_order
 
-    build_fulfillment_for_order(order, actor=actor)
+    try:
+        build_fulfillment_for_order(order, actor=actor)
+    except ValueError as exc:
+        build_order_timeline(order, status=Order.STATUS_CONFIRMED, title="Courier booking pending", note=str(exc), actor=actor)
     return order
 
 

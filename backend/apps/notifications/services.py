@@ -3,9 +3,10 @@ import re
 from typing import Dict, Any, List
 from django.db import transaction
 from django.utils import timezone
-from django.core.mail import send_mail
+from django.core.mail import get_connection, send_mail
 
 from apps.notifications.models import NotificationTemplate, Notification, NotificationDeliveryLog
+from apps.settings_app.models import BrandSettings, Setting
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,9 @@ def send_notification_event(event_name: str, context: Dict[str, Any], user=None,
     Dispatches notifications across all configured channels for a triggered event.
     Renders templates and enqueues individual Notification records.
     """
+    brand = BrandSettings.objects.filter(is_active=True).first()
+    brand_name = (brand.brand_name or "Nuboxed") if brand else "Nuboxed"
+    context = {**context, "brand_name": brand_name}
     templates = NotificationTemplate.objects.filter(event_name=event_name, is_active=True)
     created_notifications = []
     extra_recipients = [email for email in (extra_recipients or []) if email]
@@ -56,14 +60,14 @@ def send_notification_event(event_name: str, context: Dict[str, Any], user=None,
         subject = {
             "new_order": f"Order {context.get('order_number', '')} placed successfully",
             "order_status_changed": f"Order {context.get('order_number', '')} status updated",
-            "user_registered": "Welcome — your account is ready",
+            "user_registered": f"Welcome to {brand_name} — your account is ready",
             "retailer_registered": "A new retailer has registered",
             "return_request": f"Return request {context.get('return_number', '')} received",
         }.get(event_name, f"Event triggered: {event_name.replace('_', ' ').title()}")
         body = {
             "new_order": f"Your order {context.get('order_number', '')} was placed successfully. Total: {context.get('amount', '')}.",
             "order_status_changed": f"Your order {context.get('order_number', '')} is now {context.get('status', '')}.",
-            "user_registered": f"Welcome {context.get('name', '')}. Your account was created successfully.",
+            "user_registered": f"Welcome to {brand_name}, {context.get('name', '')}. Your account was created successfully.",
             "retailer_registered": f"Retailer {context.get('legal_name', '')} has been added.",
             "return_request": f"Return request {context.get('return_number', '')} has been placed.",
         }.get(event_name, f"An event of type '{event_name}' occurred. Context details: {str(context)}")
@@ -95,8 +99,8 @@ def send_notification_event(event_name: str, context: Dict[str, Any], user=None,
         created_notifications.append(n_inapp)
     else:
         for t in templates:
-            subject = render_template(t.subject_template, context)
-            body = render_template(t.body_template, context)
+            subject = render_template(t.subject_template, context).replace("CommerceOS", brand_name)
+            body = render_template(t.body_template, context).replace("CommerceOS", brand_name)
             
             # Resolve recipient based on channel
             target_recipient = recipient or ""
@@ -142,7 +146,28 @@ def dispatch_notification(notification: Notification) -> Notification:
         if channel == "email":
             logger.info(f"Sending Email to {notification.recipient}: {notification.subject}")
             if notification.recipient:
-                send_mail(notification.subject, notification.body, None, [notification.recipient], fail_silently=False)
+                mail_config = Setting.objects.filter(key="email_settings", is_active=True).values_list("value", flat=True).first() or {}
+                connection = None
+                if mail_config.get("host"):
+                    connection = get_connection(
+                        backend="django.core.mail.backends.smtp.EmailBackend",
+                        host=mail_config.get("host"),
+                        port=mail_config.get("port") or 587,
+                        username=mail_config.get("username") or None,
+                        password=mail_config.get("password") or None,
+                        use_tls=bool(mail_config.get("use_tls")),
+                        use_ssl=bool(mail_config.get("use_ssl")),
+                        timeout=mail_config.get("timeout") or 30,
+                        fail_silently=False,
+                    )
+                send_mail(
+                    notification.subject,
+                    notification.body,
+                    mail_config.get("default_from_email") or None,
+                    [notification.recipient],
+                    fail_silently=False,
+                    connection=connection,
+                )
         elif channel == "sms":
             logger.info(f"Sending SMS to {notification.recipient}: {notification.body}")
         elif channel == "whatsapp":
@@ -169,8 +194,6 @@ def dispatch_notification(notification: Notification) -> Notification:
         notification.status = Notification.STATUS_FAILED
         notification.error_message = str(e)
         notification.retry_count += 1
-        
-        # Backoff schedule: retry in 2 ^ retry_count minutes
         notification.run_at = timezone.now() + timezone.timedelta(minutes=2 ** notification.retry_count)
         notification.save(update_fields=["status", "error_message", "retry_count", "run_at", "updated_at"])
 
@@ -182,6 +205,30 @@ def dispatch_notification(notification: Notification) -> Notification:
 
     return notification
 
+
+def send_test_email(recipient: str, mail_config: Dict[str, Any], brand_name: str = "Nuboxed"):
+    """Send a one-off SMTP test without creating a notification record."""
+    connection = None
+    if mail_config.get("host"):
+        connection = get_connection(
+            backend="django.core.mail.backends.smtp.EmailBackend",
+            host=mail_config.get("host"),
+            port=mail_config.get("port") or 587,
+            username=mail_config.get("username") or None,
+            password=mail_config.get("password") or None,
+            use_tls=bool(mail_config.get("use_tls")),
+            use_ssl=bool(mail_config.get("use_ssl")),
+            timeout=mail_config.get("timeout") or 30,
+            fail_silently=False,
+        )
+    send_mail(
+        f"{brand_name} SMTP test email",
+        f"This is a test email from {brand_name}. Your SMTP settings are working.",
+        mail_config.get("default_from_email") or None,
+        [recipient],
+        fail_silently=False,
+        connection=connection,
+    )
 
 def retry_failed_notifications() -> List[Notification]:
     """
@@ -205,7 +252,7 @@ def seed_default_templates():
     Utility to initialize templates for required system events.
     """
     events = [
-        ("new_registration", "Welcome to CommerceOS! Your account {{ email }} has been created."),
+        ("new_registration", "Welcome to {{ brand_name }}! Your account {{ email }} has been created."),
         ("retailer_approval", "Your retailer account {{ legal_name }} has been approved."),
         ("product_upload", "Product {{ product_name }} (SKU: {{ sku }}) has been uploaded."),
         ("product_moderation", "Product {{ product_name }} status updated to {{ status }}."),
@@ -234,8 +281,8 @@ def seed_default_templates():
 def ensure_order_email_templates():
     """Create editable defaults once; never overwrite an administrator's copy."""
     defaults = {
-        "user_registered": ("Welcome to CommerceOS", "Welcome {{ name }}. Your account was created successfully."),
-        "new_registration": ("Welcome to CommerceOS", "Your retailer account for {{ email }} has been created."),
+        "user_registered": ("Welcome to {{ brand_name }}", "Welcome {{ name }}. Your {{ brand_name }} account was created successfully."),
+        "new_registration": ("Welcome to {{ brand_name }}", "Your retailer account for {{ email }} has been created on {{ brand_name }}."),
         "new_order": ("Order {{ order_number }} placed successfully", "Your order {{ order_number }} was placed successfully. Total: {{ amount }}."),
         "order_status_changed": ("Order {{ order_number }} status updated", "Your order {{ order_number }} is now {{ status }}."),
         "return_request": ("Return request {{ return_number }} received", "Return request {{ return_number }} has been placed."),

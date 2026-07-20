@@ -89,6 +89,9 @@
             display: flex;
             flex-direction: column;
             overflow-y: auto;
+            min-height: 0;
+            overscroll-behavior: contain;
+            scrollbar-gutter: stable;
             transition: transform .25s ease;
             z-index: 999;
         }
@@ -125,7 +128,7 @@
         }
 
         /* Sidebar nav */
-        .ra-nav { padding: 16px 12px; flex: 1; }
+        .ra-nav { padding: 16px 12px; flex: 1; min-height: 0; }
         .ra-nav-group-label {
             font-size: 10px;
             font-weight: 600;
@@ -350,7 +353,7 @@
             width: 16px;
             height: 16px;
             border-radius: 50%;
-            background: #fff;
+            background: var(--card-bg, #fff);
             transition: transform .2s;
         }
         .ra-dark-toggle-track.on .ra-dark-toggle-thumb { transform: translateX(18px); }
@@ -435,19 +438,11 @@
         .ra-breadcrumb a:hover { color: var(--primary); }
         .ra-breadcrumb .current { color: var(--primary); font-weight: 500; }
 
-        /* Flash messages */
-        .ra-flash-stack { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-        .ra-flash {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 16px;
-            border-radius: var(--radius);
-            background: #EFF6FF;
-            border-left: 4px solid var(--primary);
-            font-size: 13.5px;
-            color: #1E40AF;
-        }
+        /* Shared portal toast notifications */
+        .portal-toast-stack{position:fixed;top:88px;right:28px;z-index:3000;display:flex;flex-direction:column;gap:10px;pointer-events:none}
+        .portal-toast{display:flex;align-items:flex-start;gap:10px;min-width:300px;max-width:460px;padding:14px 18px;border-radius:12px;box-shadow:0 12px 30px rgba(15,23,42,.18);font-weight:700;line-height:1.45;pointer-events:auto;animation:portal-toast-in .2s ease-out}
+        .portal-toast i{font-size:21px;flex:0 0 auto;margin-top:1px}.portal-toast.success{color:#047857;background:#ecfdf3;border:1px solid #86efac}.portal-toast.error{color:#be123c;background:#fff1f2;border:1px solid #fda4af}.portal-toast.info{color:#b9381c;background:#fff7f3;border:1px solid #f2b9a8}.portal-toast.is-hiding{opacity:0;transform:translateY(-8px);transition:opacity .25s ease,transform .25s ease}@keyframes portal-toast-in{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+        @media(max-width:600px){.portal-toast-stack{top:72px;right:12px;left:12px}.portal-toast{min-width:0;max-width:none}}
 
         /* ─── Cards ─────────────────────────────────────── */
         .ra-card {
@@ -737,18 +732,24 @@
         }
         .ra-btn-outline:hover { background: var(--primary); color: #fff; }
         .ra-form-actions-sticky {
-            position: sticky;
+            position: fixed;
+            left: 260px;
+            right: 0;
             bottom: 0;
-            z-index: 30;
-            padding: 12px !important;
-            margin-left: -12px;
-            margin-right: -12px;
-            background: color-mix(in srgb, var(--surface) 94%, transparent);
-            border: 1px solid var(--border);
-            border-radius: 14px 14px 0 0;
-            box-shadow: 0 -12px 28px rgba(15, 23, 42, .08);
+            z-index: 1000;
+            padding: 14px 32px !important;
+            margin: 0 !important;
+            background: var(--card-bg, #fff);
+            border: 0;
+            border-top: 1px solid var(--border);
+            border-radius: 0;
+            box-shadow: 0 -10px 28px rgba(15, 23, 42, .12);
             backdrop-filter: blur(12px);
         }
+        .ra-form:has(.ra-form-actions-sticky) { padding-bottom: 86px; }
+        .ra-sidebar.collapsed ~ .ra-main .ra-form-actions-sticky { left: 92px; }
+        @media(max-width:1024px){.ra-form-actions-sticky,.ra-sidebar.collapsed ~ .ra-main .ra-form-actions-sticky{left:0}}
+        @media(max-width:600px){.ra-form-actions-sticky{padding:12px 16px !important}.ra-form-actions-sticky .ra-btn{flex:1;justify-content:center}}
         .ra-btn-ghost {
             background: var(--body-bg);
             color: var(--text-main);
@@ -1861,6 +1862,11 @@
             <a href="{% url 'retailers:orders' %}" class="ra-nav-link {% if 'retailer/orders' in request.path %}active{% endif %}">
                 <i class="ph ph-receipt"></i><span>Orders</span>
             </a>
+            {% if can_manage_coupons %}
+            <a href="{% url 'retailers:coupons' %}" class="ra-nav-link {% if 'retailer/coupons' in request.path %}active{% endif %}">
+                <i class="ph ph-ticket"></i><span>Coupons</span>
+            </a>
+            {% endif %}
 
             <a href="{% url 'catalog:retailer-products' %}" class="ra-nav-link {% if 'catalog/products' in request.path %}active{% endif %}">
                 <i class="ph ph-package"></i>
@@ -1899,11 +1905,6 @@
             <div class="ra-nav-separator" aria-hidden="true">•••</div>
         </nav>
 
-        <!-- Sidebar footer -->
-        <div class="ra-sidebar-footer">
-            <strong>Marketplace Connectors</strong>
-            <p>Amazon, Flipkart, Shopify connectors are Super Admin only.</p>
-        </div>
     </aside>
 
     <!-- ─── Main ────────────────────────────── -->
@@ -2032,28 +2033,37 @@
                 <nav class="ra-breadcrumb">
                     <a href="{% url 'retailers:dashboard' %}">Dashboard</a>
                     <i class="ph ph-caret-right" style="font-size:12px"></i>
-                    <span class="current">{{ page_title }}</span>
+                    <span class="current">{{ page_title }}</span>{% if order_detail_page %}
+                    <i class="ph ph-caret-right" style="font-size:12px"></i>
+                    <span class="current">Order Details</span>{% endif %}
                 </nav>
             </div>
 
-            <!-- Flash messages -->
+            <!-- Toast messages -->
             {% if messages %}
-            <div class="ra-flash-stack">
+            <div class="portal-toast-stack" aria-live="polite">
                 {% for message in messages %}
-                <div class="ra-flash">
-                    <i class="ph ph-info" style="font-size:18px; flex-shrink:0"></i>
-                    {{ message }}
+                <div class="portal-toast {% if 'error' in message.tags or 'danger' in message.tags %}error{% elif 'info' in message.tags %}info{% else %}success{% endif %}" role="alert" data-portal-toast>
+                    <i class="ph {% if 'error' in message.tags or 'danger' in message.tags %}ph-warning-circle{% elif 'info' in message.tags %}ph-info{% else %}ph-check-circle{% endif %}"></i>
+                    <span>{{ message }}</span>
                 </div>
                 {% endfor %}
             </div>
             {% endif %}
 
             <!-- Page block -->
-            {% include "shared/app_confirm.html" %}
-            {% block content %}{% endblock %}
+        {% include "shared/app_confirm.html" %}
+        {% include "orders/shipping_label_modal.html" %}
+        {% include "orders/invoice_modal.html" %}
+        {% block content %}{% endblock %}
         </main>
     </div>
 </div>
+<script>
+document.querySelectorAll('[data-portal-toast]').forEach(function (toast) {
+    window.setTimeout(function () { toast.classList.add('is-hiding'); window.setTimeout(function () { toast.remove(); }, 280); }, 2000);
+});
+</script>
 
     {% include "backoffice/media_library_modal.html" %}
     <script src="{% static 'backoffice/admin.js' %}"></script>

@@ -1,1 +1,17 @@
-{% extends "backoffice/base.html" %}{% block content %}<div class="bo-card"><h3>Invoice Design Template</h3><p>Admin-only platform template used by printable invoices. Retailers cannot change these fields.</p><form method="post">{% csrf_token %}{{ form.as_p }}<button class="primary-button" type="submit">Save invoice design</button></form></div>{% endblock %}
+{% extends "backoffice/base.html" %}
+{% block content %}
+<div class="page-shell">
+    <section class="hero-panel">
+        <div><p class="eyebrow">Platform presentation</p><h3>Invoice Design</h3><p class="subtle-copy">Create the single invoice style used across all retailers. This section is available only to administrators.</p></div>
+        <div class="hero-actions"><span class="status-pill success"><i class="ph ph-shield-check"></i>&nbsp; Admin only</span></div>
+    </section>
+    <section class="panel form-panel">
+        <div class="panel-header"><div><h3>Invoice template settings</h3><p class="subtle-copy">Set the company identity, footer note, and accent color shown on printable invoices.</p></div><i class="ph ph-file-text" style="font-size:28px;color:var(--accent)"></i></div>
+        <form method="post" class="admin-form two-column">
+            {% csrf_token %}
+            {% for field in form %}<div class="form-field {% if field.field.widget.input_type == 'checkbox' %}boolean-field{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{{ field.errors }}</div>{% endfor %}
+            <div class="form-actions"><a class="ghost-button" href="{% url 'backoffice:orders' %}">Back to orders</a><button class="primary-button" type="submit"><i class="ph ph-check"></i>&nbsp; Save invoice design</button></div>
+        </form>
+    </section>
+</div>
+{% endblock %}

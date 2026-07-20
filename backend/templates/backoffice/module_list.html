@@ -53,6 +53,24 @@
         flex: 1;
     }
 
+    /* Keep row actions in one stable line. The action cell used to become a
+       flex item, which made Edit/Delete wrap vertically on the Stores list. */
+    .data-table td.actions-cell {
+        display: table-cell !important;
+        width: 1%;
+        min-width: 150px;
+        white-space: nowrap !important;
+        vertical-align: middle;
+    }
+    .data-table td.actions-cell .ghost-button,
+    .data-table td.actions-cell .primary-button,
+    .data-table td.actions-cell .inline-form {
+        display: inline-flex;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+    .data-table td.actions-cell .inline-form { margin: 0; }
+
     @keyframes slideIn {
         from {
             transform: translateX(420px);

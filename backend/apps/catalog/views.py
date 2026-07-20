@@ -346,6 +346,10 @@ class RetailerProductCreateView(ProductAssetSyncMixin, RetailerPortalMixin, Crea
         messages.success(self.request, "Product created and approved.")
         return redirect(self.get_success_url())
 
+    def form_invalid(self, form):
+        messages.error(self.request, "Product could not be created. Please check the highlighted fields.")
+        return super().form_invalid(form)
+
     def get_success_url(self):
         if self.request.POST.get("save_action", "stay") == "exit":
             return reverse("catalog:retailer-products")
@@ -391,6 +395,10 @@ class RetailerProductEditView(ProductAssetSyncMixin, RetailerPortalMixin, Update
         self.sync_default_variant(product, form)
         messages.success(self.request, "Product updated.")
         return redirect(self.get_success_url())
+
+    def form_invalid(self, form):
+        messages.error(self.request, "Product could not be updated. Please check the highlighted fields.")
+        return super().form_invalid(form)
 
     def get_success_url(self):
         if self.request.POST.get("save_action", "stay") == "exit":

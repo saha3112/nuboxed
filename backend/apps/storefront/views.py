@@ -1,14 +1,18 @@
 from collections import defaultdict
 from decimal import Decimal, InvalidOperation
 from urllib.parse import quote_plus
+from datetime import timedelta
+import json
 
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth import update_session_auth_hash
 from django.contrib import messages
 from django.db.models import Avg, Count, F, Max, Min, Prefetch, Q, Sum, Value
 from django.db.models.functions import Coalesce
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
 from django.utils.text import slugify
+from django.utils import timezone
 from django.views import View
 from django.views.generic import TemplateView
 from django.http import JsonResponse
@@ -25,21 +29,30 @@ from apps.inventory.delivery import (
     set_request_location,
 )
 from apps.orders.forms import CheckoutSelectionForm, UserAddressForm, build_payment_method_choices
-from apps.orders.models import Order
+from .forms import CustomerPasswordChangeForm, CustomerProfileForm
+from apps.orders.models import DeliveryLabel, Order
+from apps.payments.models import Invoice
+from apps.payments.services import amount_in_words, generate_invoice_for_order
+from apps.returns_app.models import ReturnRequest
+from apps.returns_app.services import create_return_request
 from apps.orders.services import (
     add_product_to_cart,
+    apply_coupon_to_cart,
     cart_delivery_payload,
     confirm_order,
     create_orders_from_cart,
+    coupon_feature_enabled,
     ensure_request_cart,
     recalculate_cart,
     resolve_checkout_address,
     sync_session_cart_to_db,
     update_cart_item_quantity,
+    update_order_status,
 )
 from apps.retailers.models import Retailer
 from apps.stores.models import Store, StoreRating
 from apps.settings_app.models import StorefrontLocationMessages
+from apps.common.security import build_public_url
 
 
 def cart_session_key(product, variant=None):
@@ -262,6 +275,7 @@ class StorefrontBaseMixin:
             "shipping": cart.shipping_amount,
             "total": cart.total_amount,
             "coupon_code": cart.coupon_code,
+            "coupon_feature_enabled": coupon_feature_enabled(),
         }
 
     def with_delivery_context(self, context):
@@ -815,6 +829,17 @@ class CartPageView(StorefrontBaseMixin, TemplateView):
         return self.with_delivery_context(context)
 
 
+class ApplyCouponView(StorefrontBaseMixin, View):
+    def post(self, request):
+        cart = ensure_request_cart(request)
+        try:
+            apply_coupon_to_cart(cart, request.POST.get("coupon_code", ""))
+            messages.success(request, "Coupon applied successfully.")
+        except ValueError as exc:
+            messages.error(request, str(exc))
+        return redirect(request.POST.get("next") or reverse("storefront:cart"))
+
+
 class CheckoutPageView(StorefrontBaseMixin, TemplateView):
     template_name = "storefront/checkout.html"
 
@@ -905,8 +930,345 @@ class CustomerDashboardView(LoginRequiredMixin, StorefrontBaseMixin, TemplateVie
             .prefetch_related("items", "return_requests", "timeline_entries", "payments", "shipments")
             .order_by("-created_at")
         )
-        context.update({"page_title": "Customer Dashboard", "orders": orders})
+        addresses = self.request.user.addresses.filter(is_active=True).order_by("-is_default", "-updated_at")
+        context.update({
+            "page_title": "Your Account",
+            "orders": orders,
+            "addresses": addresses,
+            "default_address": addresses.filter(is_default=True).first(),
+        })
         return self.with_delivery_context(context)
+
+
+class CustomerOrdersView(CustomerDashboardView):
+    template_name = "storefront/account_orders.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        query = self.request.GET.get("q", "").strip()
+        status = self.request.GET.get("status", "").strip()
+        order_tab = self.request.GET.get("tab", "orders").strip() or "orders"
+        order_range = self.request.GET.get("range", "3m").strip() or "3m"
+        all_orders = context["orders"]
+        if order_tab == "buy_again":
+            all_orders = all_orders.filter(status=Order.STATUS_DELIVERED)
+        elif order_tab == "not_yet_shipped":
+            all_orders = all_orders.filter(status__in=[Order.STATUS_PENDING, Order.STATUS_CONFIRMED, Order.STATUS_PROCESSING])
+        now = timezone.now()
+        range_start = now - timedelta(days=90)
+        if order_range == "30d":
+            range_start = now - timedelta(days=30)
+        elif order_range.isdigit() and len(order_range) == 4:
+            range_start = now.replace(year=int(order_range), month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+            range_end = range_start.replace(year=int(order_range) + 1)
+        else:
+            range_end = None
+        range_orders = all_orders.filter(created_at__gte=range_start)
+        if "range_end" in locals() and range_end:
+            range_orders = range_orders.filter(created_at__lt=range_end)
+        order_period_count = range_orders.count()
+        orders = all_orders
+        if query:
+            orders = orders.filter(number__icontains=query)
+        if status:
+            orders = orders.filter(status=status)
+        orders = orders.filter(created_at__gte=range_start)
+        if "range_end" in locals() and range_end:
+            orders = orders.filter(created_at__lt=range_end)
+        context["page_title"] = "Your Orders"
+        context.update({"orders": orders, "order_query": query, "order_status": status, "order_tab": order_tab, "order_range": order_range, "order_period_count": order_period_count, "order_years": range(now.year, 2018, -1)})
+        return context
+
+
+class CustomerOrderCancelView(LoginRequiredMixin, StorefrontBaseMixin, View):
+    login_url = reverse_lazy("storefront:login")
+    cancellable_statuses = {Order.STATUS_PENDING, Order.STATUS_CONFIRMED, Order.STATUS_PROCESSING, Order.STATUS_ON_HOLD}
+
+    def post(self, request, order_id):
+        order = get_object_or_404(Order, pk=order_id, customer=request.user)
+        if order.status not in self.cancellable_statuses:
+            messages.error(request, "This order can no longer be cancelled because it has moved to fulfilment.")
+        else:
+            reason = request.POST.get("reason", "Customer requested").strip() or "Customer requested"
+            update_order_status(order, Order.STATUS_CANCELLED, actor=request.user, note=reason)
+            messages.success(request, f"Order {order.number} was cancelled successfully.")
+        return redirect("storefront:order-tracking", order_id=order.pk)
+
+
+class CustomerOrderTrackingView(LoginRequiredMixin, StorefrontBaseMixin, TemplateView):
+    template_name = "storefront/order_tracking.html"
+    login_url = reverse_lazy("storefront:login")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if kwargs.get("return_id"):
+            focused_return = get_object_or_404(
+                ReturnRequest.objects.filter(customer=self.request.user).select_related("order").prefetch_related("timeline_entries", "items__order_item__product"),
+                pk=kwargs["return_id"],
+            )
+            order = get_object_or_404(Order.objects.filter(customer=self.request.user).prefetch_related("items__product__media_items", "timeline_entries", "shipments", "return_requests"), pk=focused_return.order_id)
+        else:
+            focused_return = None
+            order = get_object_or_404(
+                Order.objects.filter(customer=self.request.user)
+                .prefetch_related("items__product__media_items", "timeline_entries", "shipments", "return_requests__timeline_entries", "return_requests__items__order_item__product"),
+                pk=kwargs["order_id"],
+            )
+        context.update({"page_title": f"Track Order {order.number}", "order": order, "returns": order.return_requests.all(), "focused_return": focused_return, "order_can_customer_cancel": order.status in CustomerOrderCancelView.cancellable_statuses})
+        return self.with_delivery_context(context)
+
+
+class ShippingLabelVerificationView(LoginRequiredMixin, TemplateView):
+    template_name = "orders/label_verify.html"
+    login_url = reverse_lazy("storefront:login")
+    redirect_field_name = "next"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        label = get_object_or_404(DeliveryLabel, label_number=kwargs["label_number"])
+        context.update({"label": label, "order": label.order, "page_title": f"Shipment {label.label_number}"})
+        return context
+
+
+class CustomerInvoiceAccessView(View):
+    """Email-gated invoice access used by the QR code on customer invoices."""
+    template_name = "orders/invoice_access.html"
+
+    def get_invoice(self):
+        return get_object_or_404(Invoice.objects.select_related("order", "customer", "retailer"), invoice_number=self.kwargs["invoice_number"])
+
+    def get(self, request, *args, **kwargs):
+        invoice = self.get_invoice()
+        return self.render_page(request, invoice)
+
+    def post(self, request, *args, **kwargs):
+        invoice = self.get_invoice()
+        submitted_email = request.POST.get("email", "").strip().casefold()
+        customer_email = (invoice.customer.email or "").strip().casefold()
+        if submitted_email and submitted_email == customer_email:
+            request.session[f"invoice_access_{invoice.pk}"] = True
+            request.session.modified = True
+            return redirect("storefront:invoice-download", invoice_number=invoice.invoice_number)
+        return self.render_page(request, invoice, "Enter the email address used for this order.")
+
+    def render_page(self, request, invoice, error=""):
+        return render(request, self.template_name, {"invoice": invoice, "order": invoice.order, "error": error})
+
+
+class CustomerInvoiceDownloadView(TemplateView):
+    template_name = "orders/invoice_print.html"
+
+    def dispatch(self, request, *args, **kwargs):
+        invoice = get_object_or_404(Invoice.objects.select_related("order", "customer", "retailer"), invoice_number=kwargs["invoice_number"])
+        if not request.session.get(f"invoice_access_{invoice.pk}"):
+            return redirect("storefront:invoice-access", invoice_number=invoice.invoice_number)
+        self.invoice = invoice
+        return super().dispatch(request, *args, **kwargs)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        invoice = generate_invoice_for_order(self.invoice.order)
+        order = invoice.order
+        shipment = order.shipments.order_by("-created_at").first()
+        access_url = build_public_url(self.request, reverse("storefront:invoice-access", kwargs={"invoice_number": invoice.invoice_number}))
+        context.update({"invoice": invoice, "order": order, "invoice_design": {}, "tracking_number": getattr(shipment, "tracking_number", ""), "amount_in_words": amount_in_words(invoice.total_amount or order.total_amount, invoice.currency or order.currency_code), "invoice_url_json": json.dumps(access_url), "invoice_access_url": access_url})
+        return context
+
+
+class CustomerReturnRequestView(LoginRequiredMixin, StorefrontBaseMixin, View):
+    template_name = "storefront/return_request.html"
+    login_url = reverse_lazy("storefront:login")
+
+    def get_order(self):
+        return get_object_or_404(
+            Order.objects.filter(customer=self.request.user).prefetch_related("items__product", "items__variant"),
+            pk=self.kwargs["order_id"],
+        )
+
+    def get_context_data(self, order):
+        return self.with_delivery_context({"page_title": f"Return Order {order.number}", "order": order})
+
+    def get(self, request, *args, **kwargs):
+        return self.render(request, self.get_order())
+
+    def render(self, request, order, status=200):
+        from django.shortcuts import render
+        return render(request, self.template_name, self.get_context_data(order), status=status)
+
+    def post(self, request, *args, **kwargs):
+        order = self.get_order()
+        reason = request.POST.get("reason", "").strip()
+        items = []
+        for item in order.items.all():
+            try:
+                quantity = int(request.POST.get(f"quantity_{item.pk}", "0") or 0)
+            except (TypeError, ValueError):
+                quantity = 0
+            if quantity > 0:
+                items.append({"order_item_id": item.pk, "quantity": quantity})
+        if order.status not in {Order.STATUS_DELIVERED, Order.STATUS_COMPLETED}:
+            messages.error(request, "A return can be requested after the order is delivered.")
+        elif not items:
+            messages.error(request, "Select at least one product to return.")
+        elif not reason:
+            messages.error(request, "Please tell us why you want to return the product.")
+        else:
+            try:
+                return_request = create_return_request(order=order, items_data=items, reason=reason, customer=request.user)
+                messages.success(request, f"Return request {return_request.return_number} submitted successfully.")
+                return redirect("storefront:return-tracking", return_id=return_request.pk)
+            except ValueError as exc:
+                messages.error(request, str(exc))
+        return self.render(request, order, status=400)
+
+
+class CustomerAddressBookView(LoginRequiredMixin, StorefrontBaseMixin, TemplateView):
+    template_name = "storefront/account_addresses.html"
+    login_url = reverse_lazy("storefront:login")
+
+    def get_address(self):
+        address_id = self.kwargs.get("address_id")
+        if not address_id:
+            return None
+        return get_object_or_404(
+            self.request.user.addresses.filter(is_active=True),
+            id=address_id,
+        )
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        address = self.get_address()
+        context.update({
+            "page_title": "Your Addresses",
+            "addresses": self.request.user.addresses.filter(is_active=True).order_by("-is_default", "-updated_at"),
+            "address_form": UserAddressForm(instance=address),
+            "editing_address": address,
+            "adding_address": self.request.path.rstrip("/").endswith("/new"),
+        })
+        return self.with_delivery_context(context)
+
+    def post(self, request, *args, **kwargs):
+        address = self.get_address()
+        form = UserAddressForm(request.POST, instance=address)
+        if form.is_valid():
+            saved_address = form.save(commit=False)
+            saved_address.user = request.user
+            has_default = request.user.addresses.filter(is_active=True, is_default=True).exclude(id=getattr(saved_address, "id", None)).exists()
+            if not has_default:
+                saved_address.is_default = True
+            saved_address.save()
+            messages.success(request, "Address saved successfully.")
+            return redirect("storefront:account-addresses")
+        context = self.get_context_data()
+        context["address_form"] = form
+        context["editing_address"] = address
+        return self.render_to_response(context)
+
+
+class CustomerAddressDefaultView(LoginRequiredMixin, View):
+    login_url = reverse_lazy("storefront:login")
+
+    def post(self, request, address_id):
+        address = get_object_or_404(request.user.addresses.filter(is_active=True), id=address_id)
+        request.user.addresses.filter(is_active=True).update(is_default=False)
+        address.is_default = True
+        address.save(update_fields=["is_default", "updated_at"])
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            return JsonResponse({"success": True, "address_id": str(address.id), "message": "Default address updated."})
+        messages.success(request, "Default address updated.")
+        return redirect(request.POST.get("next") or "storefront:account-addresses")
+
+
+class CustomerAddressDeleteView(LoginRequiredMixin, View):
+    login_url = reverse_lazy("storefront:login")
+
+    def post(self, request, address_id):
+        address = get_object_or_404(request.user.addresses.filter(is_active=True), id=address_id)
+        was_default = address.is_default
+        address.is_active = False
+        address.is_default = False
+        address.save(update_fields=["is_active", "is_default", "updated_at"])
+        if was_default:
+            replacement = request.user.addresses.filter(is_active=True).order_by("-updated_at").first()
+            if replacement:
+                replacement.is_default = True
+                replacement.save(update_fields=["is_default", "updated_at"])
+        messages.success(request, "Address removed.")
+        return redirect(request.POST.get("next") or "storefront:account-addresses")
+
+
+class CustomerAddressTrashView(CustomerAddressBookView):
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            "show_trash": True,
+            "addresses": self.request.user.addresses.filter(is_active=False).order_by("-updated_at"),
+            "editing_address": None,
+            "adding_address": False,
+        })
+        return context
+
+
+class CustomerAddressRestoreView(LoginRequiredMixin, View):
+    login_url = reverse_lazy("storefront:login")
+
+    def post(self, request):
+        ids = request.POST.getlist("address_ids")
+        deleted = request.user.addresses.filter(is_active=False, id__in=ids)
+        restored_ids = list(deleted.values_list("id", flat=True))
+        deleted.update(is_active=True)
+        if restored_ids and not request.user.addresses.filter(is_active=True, is_default=True).exists():
+            restored = request.user.addresses.filter(is_active=True, id__in=restored_ids).order_by("-updated_at").first()
+            if restored:
+                restored.is_default = True
+                restored.save(update_fields=["is_default", "updated_at"])
+        messages.success(request, "Selected address(es) restored.")
+        return redirect("storefront:account-address-trash")
+
+
+class CustomerAddressPermanentDeleteView(LoginRequiredMixin, View):
+    login_url = reverse_lazy("storefront:login")
+
+    def post(self, request):
+        ids = request.POST.getlist("address_ids")
+        deleted, _ = request.user.addresses.filter(is_active=False, id__in=ids).delete()
+        messages.success(request, "Selected address(es) permanently deleted.")
+        return redirect("storefront:account-address-trash")
+
+
+class CustomerSecurityView(LoginRequiredMixin, StorefrontBaseMixin, TemplateView):
+    template_name = "storefront/account_security.html"
+    login_url = reverse_lazy("storefront:login")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            "page_title": "Login & Security",
+            "profile_form": CustomerProfileForm(instance=self.request.user),
+            "password_form": CustomerPasswordChangeForm(self.request.user),
+        })
+        return self.with_delivery_context(context)
+
+    def post(self, request, *args, **kwargs):
+        action = request.POST.get("action")
+        if action == "profile":
+            form = CustomerProfileForm(request.POST, instance=request.user)
+            if form.is_valid():
+                form.save()
+                messages.success(request, "Your account details were updated.")
+                return redirect("storefront:account-security")
+            context = self.get_context_data()
+            context["profile_form"] = form
+        else:
+            form = CustomerPasswordChangeForm(request.user, request.POST)
+            if form.is_valid():
+                user = form.save()
+                update_session_auth_hash(request, user)
+                messages.success(request, "Your password was changed successfully.")
+                return redirect("storefront:account-security")
+            context = self.get_context_data()
+            context["password_form"] = form
+        return self.render_to_response(context)
 
 
 class ContactPageView(StorefrontBaseMixin, TemplateView):

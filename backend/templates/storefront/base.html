@@ -213,17 +213,24 @@
                 <a href="{% if user.is_authenticated %}{% url 'storefront:customer-dashboard' %}{% else %}{% url 'storefront:login' %}{% endif %}" class="header-support icon-stack" style="color: #fff;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 2px;"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
                     <span style="color: #fff;">Returns & Orders</span>
-                </a>
-                <div class="nav-dropdown">
-                    <a href="{% if user.is_authenticated and not user.is_staff and not user.is_superuser %}{% url 'storefront:customer-dashboard' %}{% else %}{% url 'storefront:login' %}{% endif %}" class="header-support icon-stack" style="color: #fff;">
+                    </a>
+                    <div class="nav-dropdown">
+                    <a href="{% if user.is_authenticated %}{% url 'storefront:customer-dashboard' %}{% else %}{% url 'storefront:login' %}{% endif %}" class="header-support icon-stack" style="color: #fff;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 2px;"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                         <span style="color: #fff;">Account <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline; margin-left: 2px;"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
                     </a>
                     <div class="dropdown-panel amazon-account-dropdown">
-                        <div class="dropdown-signin-header">
-                            <a href="{% url 'storefront:login' %}" class="btn-signin-yellow">Sign in</a>
-                            <p class="new-customer-text">New customer? <a href="{% url 'storefront:register' %}">Start here.</a></p>
-                        </div>
+                        {% if not user.is_authenticated %}
+                            <div class="dropdown-signin-header">
+                                <a href="{% url 'storefront:login' %}" class="btn-signin-yellow">Sign in</a>
+                                <p class="new-customer-text">New customer? <a href="{% url 'storefront:register' %}">Start here.</a></p>
+                            </div>
+                        {% else %}
+                            <div class="dropdown-signin-header account-welcome" style="background:#fff; color:#17212b;">
+                                <strong style="display:block; color:#17212b; font-size:15px; font-weight:700;">Hello, {{ user.get_full_name|default:user.email }}</strong>
+                                <small style="display:block; color:#64748b; font-size:12px; margin-top:3px;">Manage your account</small>
+                            </div>
+                        {% endif %}
                         <div class="dropdown-columns" style="display: block;">
                             <div class="dropdown-col account-col" style="padding-left: 0;">
                                 <h3>Your Account</h3>
@@ -231,7 +238,9 @@
                                     <li><a href="{% if user.is_authenticated %}{% url 'storefront:customer-dashboard' %}{% else %}{% url 'storefront:login' %}{% endif %}">Your Account</a></li>
                                     <li><a href="{% if user.is_authenticated %}{% url 'storefront:customer-dashboard' %}{% else %}{% url 'storefront:login' %}{% endif %}">Your Orders</a></li>
                                     <li><a href="{% url 'storefront:wishlist' %}">Your Wish List</a></li>
-                                    {% if user.is_authenticated and not user.is_staff and not user.is_superuser %}
+                                    {% if user.is_authenticated %}
+                                    <li><a href="{% url 'storefront:account-security' %}">Manage Profile</a></li>
+                                    <li><a href="{% url 'storefront:account-addresses' %}">Your Addresses</a></li>
                                     <li>
                                         <form action="{% url 'storefront:logout' %}" method="post" style="display:inline; margin:0; padding:0;">
                                             {% csrf_token %}

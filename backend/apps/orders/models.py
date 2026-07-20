@@ -67,14 +67,49 @@ class CartItem(BaseModel):
         return f"{self.product} x {self.quantity}"
 
 
+class Coupon(BaseModel):
+    TYPE_PERCENTAGE = "percentage"
+    TYPE_FIXED = "fixed"
+    TYPE_CHOICES = ((TYPE_PERCENTAGE, "Percentage"), (TYPE_FIXED, "Fixed amount"))
+
+    code = models.CharField(max_length=64, unique=True)
+    retailer = models.ForeignKey(
+        "retailers.Retailer", related_name="coupons", null=True, blank=True, on_delete=models.CASCADE
+    )
+    discount_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default=TYPE_PERCENTAGE)
+    discount_value = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    minimum_order_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    maximum_discount_amount = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    starts_at = models.DateTimeField(null=True, blank=True)
+    ends_at = models.DateTimeField(null=True, blank=True)
+    usage_limit = models.PositiveIntegerField(null=True, blank=True)
+    used_count = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ("-created_at",)
+
+    def __str__(self):
+        return self.code
+
+
 class Order(BaseModel):
     STATUS_DRAFT = "draft"
     STATUS_PENDING = "pending"
     STATUS_CONFIRMED = "confirmed"
     STATUS_PROCESSING = "processing"
+    STATUS_ON_HOLD = "on_hold"
+    STATUS_PACKED = "packed"
+    STATUS_READY_TO_SHIP = "ready_to_ship"
     STATUS_SHIPPED = "shipped"
+    STATUS_OUT_FOR_DELIVERY = "out_for_delivery"
     STATUS_DELIVERED = "delivered"
+    # Backwards-compatible name used by reporting code.
+    STATUS_COMPLETED = STATUS_DELIVERED
     STATUS_CANCELLED = "cancelled"
+    STATUS_FAILED = "failed"
+    STATUS_RETURN_REQUESTED = "return_requested"
+    STATUS_RETURNED = "returned"
+    STATUS_REFUNDED = "refunded"
 
     PAYMENT_PENDING = "pending"
     PAYMENT_AUTHORIZED = "authorized"
@@ -97,13 +132,21 @@ class Order(BaseModel):
     FULFILLMENT_OFFLINE = "offline_flow"
 
     STATUS_CHOICES = [
-        (STATUS_DRAFT, "Draft"),
-        (STATUS_PENDING, "Pending"),
-        (STATUS_CONFIRMED, "Confirmed"),
-        (STATUS_PROCESSING, "Processing"),
+        (STATUS_DRAFT, "Draft / Incomplete"),
+        (STATUS_PENDING, "Pending Payment"),
+        (STATUS_CONFIRMED, "Payment Confirmed"),
+        (STATUS_PROCESSING, "Processing Order"),
+        (STATUS_ON_HOLD, "On Hold"),
+        (STATUS_PACKED, "Packed"),
+        (STATUS_READY_TO_SHIP, "Ready to Ship"),
         (STATUS_SHIPPED, "Shipped"),
-        (STATUS_DELIVERED, "Delivered"),
+        (STATUS_OUT_FOR_DELIVERY, "Out for Delivery"),
+        (STATUS_DELIVERED, "Delivered / Completed"),
         (STATUS_CANCELLED, "Cancelled"),
+        (STATUS_FAILED, "Order Failed"),
+        (STATUS_RETURN_REQUESTED, "Return Requested"),
+        (STATUS_RETURNED, "Returned"),
+        (STATUS_REFUNDED, "Refunded"),
     ]
     PAYMENT_STATUS_CHOICES = [
         (PAYMENT_PENDING, "Pending"),
@@ -252,6 +295,7 @@ class OrderItem(BaseModel):
     shipping_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     delivery_estimate_date = models.DateField(null=True, blank=True)
     line_total = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    imei_numbers = models.JSONField(default=list, blank=True)
 
 
 class OrderTimeline(BaseModel):
@@ -275,8 +319,37 @@ class OrderTimeline(BaseModel):
         return f"{self.order.number} / {self.status}"
 
 
+class OrderWorkflowGlobalSetting(BaseModel):
+    """Platform-wide defaults used by every store unless a store overrides them."""
+    key = models.CharField(max_length=32, unique=True, default="default")
+    auto_invoice = models.BooleanField(default=True)
+    allow_manual_invoice = models.BooleanField(default=True)
+    auto_label = models.BooleanField(default=True)
+    allow_manual_label = models.BooleanField(default=True)
+    notify_customer_order_placed = models.BooleanField(default=True)
+    notify_customer_status_changed = models.BooleanField(default=True)
+
+    def __str__(self):
+        return "Global order workflow"
+
+
+class OrderWorkflowStoreOverride(BaseModel):
+    """Optional store-level settings. Global settings remain the default."""
+    store = models.OneToOneField("stores.Store", related_name="order_workflow_override", on_delete=models.CASCADE)
+    is_active = models.BooleanField(default=True)
+    auto_invoice = models.BooleanField(default=True)
+    allow_manual_invoice = models.BooleanField(default=True)
+    auto_label = models.BooleanField(default=True)
+    allow_manual_label = models.BooleanField(default=True)
+    notify_customer_order_placed = models.BooleanField(default=True)
+    notify_customer_status_changed = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"Store order workflow — {self.store}"
+
+
 class OrderWorkflowSetting(BaseModel):
-    """Retailer-owned operational switches for the shared order workflow."""
+    """Legacy retailer-scoped settings retained for backwards compatibility."""
     retailer = models.OneToOneField("retailers.Retailer", related_name="order_workflow_setting", on_delete=models.CASCADE)
     auto_invoice = models.BooleanField(default=True)
     allow_manual_invoice = models.BooleanField(default=True)

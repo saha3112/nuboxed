@@ -114,13 +114,15 @@
 .reference-shop-page .review-num{color:#777;font-size:13px}
 .reference-shop-page .price{margin-top:4px;font-size:18px;color:var(--primary);font-weight:700}
 .reference-shop-page .old{font-size:14px;color:#888;text-decoration:line-through;margin-right:5px;font-weight:400}
-.reference-shop-page .card-actions{position:absolute;left:50%;bottom:18px;transform:translate(-50%,12px);opacity:0;display:flex !important;flex-direction:row !important;flex-wrap:nowrap !important;gap:10px !important;transition:.2s;z-index:4}
-.reference-shop-page .product-card:hover .card-actions{opacity:1;transform:translate(-50%,0)}
+.reference-shop-page .card-actions{position:absolute;left:50%;bottom:16px;transform:translate(-50%,10px) scale(.96);opacity:0;display:flex !important;align-items:center !important;justify-content:center !important;flex-direction:row !important;flex-wrap:nowrap !important;gap:8px !important;width:max-content;transition:opacity .2s ease,transform .2s ease;z-index:4}
+.reference-shop-page .product-card:hover .card-actions,.reference-shop-page .product-card:focus-within .card-actions{opacity:1;transform:translate(-50%,0) scale(1)}
+.reference-shop-page .card-actions form{width:40px !important;height:40px !important;min-width:40px !important;margin:0 !important;padding:0 !important;border:0 !important;display:flex !important;align-items:center !important;justify-content:center !important}
 .reference-shop-page .card-actions button,
 .reference-shop-page .card-actions .quick-view{
-  border:0;width:42px;height:42px;border-radius:50%;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.16);cursor:pointer;display:grid;place-items:center
-}
-.reference-shop-page .card-actions form{margin:0 !important;display:inline-flex !important;padding:0 !important;border:none !important}
+  width:40px !important;height:40px !important;min-width:40px !important;min-height:40px !important;padding:0 !important;border:1px solid #e5e7eb !important;border-radius:50% !important;background:#fff !important;color:#334155 !important;box-shadow:0 6px 18px rgba(15,23,42,.18);cursor:pointer;display:grid !important;place-items:center !important;line-height:1 !important;font-size:16px !important;transition:background .18s ease,color .18s ease,border-color .18s ease,transform .18s ease}
+.reference-shop-page .card-actions button:hover{background:var(--primary) !important;border-color:var(--primary) !important;color:#fff !important;transform:translateY(-2px)}
+.reference-shop-page .card-actions button.selected{background:#fff1ed !important;border-color:var(--primary) !important;color:var(--primary) !important}
+.reference-shop-page .card-actions svg{display:block;width:17px;height:17px;margin:0 !important}
 
 /* List view styling */
 .reference-shop-page .product-grid.list-view{grid-template-columns:1fr}
@@ -131,6 +133,7 @@
 .reference-shop-page .product-grid.list-view .seller{font-size:11px}
 .reference-shop-page .product-grid.list-view .price{font-size:15px}
 .reference-shop-page .product-grid.list-view .card-actions{bottom:30px;left:auto;right:25px;transform:none;opacity:1}
+.reference-shop-page .product-grid.list-view .product-card:hover .card-actions{transform:none}
 
 /* Bottom content */
 .reference-shop-page .showing{font-size:14px;color:#666;margin:14px 0 30px}

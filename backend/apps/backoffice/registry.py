@@ -23,6 +23,7 @@ from apps.shipments.models import (
 )
 from apps.stores.models import Store
 from apps.users.models import User
+from apps.orders.models import Coupon
 
 
 MODULES = {
@@ -289,14 +290,6 @@ MODULES = {
         "status_field": "status",
         "group": "Operations",
     },
-    "marketplace-connectors": {
-        "title": "Marketplace Connectors",
-        "model": MarketplaceConnector,
-        "fields": ["name", "code", "connector_type", "status", "is_active"],
-        "search_fields": ["name", "code", "connector_type", "status"],
-        "status_field": "status",
-        "group": "Operations",
-    },
     "reports": {
         "title": "Reports",
         "model": ReportJob,
@@ -305,13 +298,14 @@ MODULES = {
         "status_field": "status",
         "group": "Intelligence",
     },
-    "settings": {
-        "title": "Settings",
+    "email-settings": {
+        "title": "Email / SMTP Settings",
         "model": Setting,
-        "fields": ["key", "updated_at", "is_active"],
-        "search_fields": ["key"],
-        "status_field": "is_active",
+        "fields": [],
+        "search_fields": [],
+        "status_field": None,
         "group": "Platform",
+        "custom_url": "backoffice:email-settings",
     },
     "brand-settings": {
         "title": "Brand Settings",
@@ -361,6 +355,23 @@ MODULES = {
         "search_fields": ["message", "retailer__display_name", "category__name"],
         "status_field": "is_active",
         "group": "Platform",
+    },
+    "coupons": {
+        "title": "Coupons",
+        "model": Coupon,
+        "fields": ["code", "retailer", "discount_type", "discount_value", "minimum_order_amount", "maximum_discount_amount", "starts_at", "ends_at", "usage_limit", "is_active"],
+        "search_fields": ["code", "retailer__display_name"],
+        "status_field": "is_active",
+        "group": "Commerce",
+    },
+    "coupon-settings": {
+        "title": "Coupon Feature Settings",
+        "model": Setting,
+        "fields": [],
+        "search_fields": [],
+        "status_field": None,
+        "group": "Commerce",
+        "custom_url": "backoffice:coupon-settings",
     },
     "megamenusettings": {
         "title": "Mega Menu Settings",

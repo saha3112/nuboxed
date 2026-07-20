@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Cart, CartItem, Order, OrderItem, OrderTimeline
+from .models import Cart, CartItem, Coupon, Order, OrderItem, OrderTimeline
 
 
 class CartItemInline(admin.TabularInline):
@@ -14,6 +14,13 @@ class CartAdmin(admin.ModelAdmin):
     list_filter = ("status", "currency_code")
     search_fields = ("customer__email", "session_key", "coupon_code")
     inlines = [CartItemInline]
+
+
+@admin.register(Coupon)
+class CouponAdmin(admin.ModelAdmin):
+    list_display = ("code", "retailer", "discount_type", "discount_value", "minimum_order_amount", "used_count", "usage_limit", "is_active")
+    list_filter = ("discount_type", "is_active", "retailer")
+    search_fields = ("code", "retailer__display_name")
 
 
 class OrderItemInline(admin.TabularInline):
