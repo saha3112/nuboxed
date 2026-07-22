@@ -47,11 +47,13 @@ from .views import (
     SetLocationView,
 )
 from django.contrib.auth.views import LogoutView, LoginView
+from apps.backoffice.dynamic_forms import DynamicFormPublicView
 
 app_name = "storefront"
 
 urlpatterns = [
     path("", HomePageView.as_view(), name="home"),
+    path("forms/<slug:slug>/", DynamicFormPublicView.as_view(), name="dynamic-form"),
     path("stores/", StoreListingPageView.as_view(), name="stores"),
     path("retailers/<slug:slug>/", RetailerShopPageView.as_view(), name="retailer-shop"),
     path("stores/<slug:slug>/rating/", StoreRatingSubmitView.as_view(), name="store-rating-submit"),

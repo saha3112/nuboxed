@@ -81,6 +81,7 @@ TEMPLATES = [
                 "django.contrib.messages.context_processors.messages",
                 "apps.storefront.context_processors.storefront_navigation",
                 "apps.settings_app.context_processors.global_brand_settings",
+                "apps.backoffice.context_processors.dynamic_forms_navigation",
             ],
         },
     },

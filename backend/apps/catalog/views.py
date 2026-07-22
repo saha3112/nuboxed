@@ -803,21 +803,13 @@ class ProductDetailPageView(DetailView):
         ]
 
     def get_related_products(self, product):
-        qs = Product.objects.filter(
+        return Product.objects.filter(
             status=Product.STATUS_APPROVED,
             is_active=True,
             retailer=product.retailer,
             store=product.store,
             category=product.category,
         ).exclude(id=product.id).prefetch_related("media_items")[:4]
-        if not qs:
-            qs = Product.objects.filter(
-                status=Product.STATUS_APPROVED,
-                is_active=True,
-                retailer=product.retailer,
-                store=product.store,
-            ).exclude(id=product.id).prefetch_related("media_items").order_by("?")[:4]
-        return qs
 
     def get_similar_products(self, product):
         family_key = product.phone_variant.phone_model.display_name if product.phone_variant and product.phone_variant.phone_model else product.model_name

@@ -29,6 +29,9 @@ from apps.backoffice.forms import (
     BackofficeRetailerCreateForm,
     BackofficeRetailerUpdateForm,
     BackofficeStoreForm,
+    BackofficeSliderForm,
+    BackofficeBrandSettingsForm,
+    HomePageSettingsForm, HomeTrustCardFormSet, HomeReviewCardFormSet,
     BackofficeUserCreateForm,
     BackofficeUserUpdateForm,
     EmailSettingsForm,
@@ -63,6 +66,7 @@ from apps.notifications.models import NotificationTemplate
 from apps.notifications.services import ensure_order_email_templates
 from apps.notifications.services import send_test_email
 from apps.common.security import build_public_url
+from apps.cms.models import HomePageSettings, HomeReviewCard, HomeTrustCard, Page
 
 
 class SuperAdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
@@ -109,6 +113,59 @@ class SuperAdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
             }
         )
         return context
+
+
+class BackofficeHomepageSettingsView(SuperAdminRequiredMixin, View):
+    template_name = "backoffice/homepage_settings.html"
+
+    def page_context(self, settings_form, trust_formset, review_formset):
+        return {
+            "settings_form": settings_form,
+            "trust_formset": trust_formset,
+            "review_formset": review_formset,
+            "module_key_active": "homepage-settings",
+            "active_group": "Page Settings",
+            "sidebar_groups": grouped_modules(),
+            "page_title": "Homepage Settings",
+        }
+
+    def get_settings(self):
+        settings, _ = HomePageSettings.objects.get_or_create(singleton_key="homepage")
+        return settings
+
+    def get(self, request, *args, **kwargs):
+        settings = self.get_settings()
+        return render(request, self.template_name, self.page_context(
+            HomePageSettingsForm(instance=settings),
+            HomeTrustCardFormSet(instance=settings, prefix="trust"),
+            HomeReviewCardFormSet(instance=settings, prefix="reviews"),
+        ))
+
+    def post(self, request, *args, **kwargs):
+        settings = self.get_settings()
+        bulk_action = request.POST.get("bulk_action", "")
+        bulk_kind, action = bulk_action.split(":", 1) if ":" in bulk_action else ("", "")
+        if action in {"delete", "restore", "permanent_delete"} and bulk_kind in {"trust", "reviews"}:
+            model = HomeTrustCard if bulk_kind == "trust" else HomeReviewCard
+            ids = request.POST.getlist("selected_items")
+            queryset = model.objects.filter(settings=settings, id__in=ids)
+            if action == "permanent_delete":
+                queryset.delete()
+                messages.success(request, f"{len(ids)} selected item(s) permanently deleted.")
+            else:
+                queryset.update(is_active=(action == "restore"))
+                messages.success(request, f"{len(ids)} selected item(s) {('restored' if action == 'restore' else 'moved to trash')}.")
+            return redirect("backoffice:homepage-settings")
+        settings_form = HomePageSettingsForm(request.POST, instance=settings)
+        trust_formset = HomeTrustCardFormSet(request.POST, request.FILES, instance=settings, prefix="trust")
+        review_formset = HomeReviewCardFormSet(request.POST, request.FILES, instance=settings, prefix="reviews")
+        if settings_form.is_valid() and trust_formset.is_valid() and review_formset.is_valid():
+            settings_form.save()
+            trust_formset.save()
+            review_formset.save()
+            messages.success(request, "Homepage settings saved successfully.")
+            return redirect("backoffice:homepage-settings")
+        return render(request, self.template_name, self.page_context(settings_form, trust_formset, review_formset))
 
 
 @method_decorator([never_cache, ensure_csrf_cookie], name="dispatch")
@@ -318,6 +375,10 @@ class RegistryMixin:
             return CourierPartnerForm
         if module == "warehouses":
             return WarehouseForm
+        if module == "sliders":
+            return BackofficeSliderForm
+        if module == "brand-settings":
+            return BackofficeBrandSettingsForm
         model = self.get_model()
         excluded = ["created_at", "updated_at"]
         return modelform_factory(model, exclude=excluded)
@@ -608,7 +669,7 @@ class BackofficeOrderLabelPrintView(SuperAdminRequiredMixin, TemplateView):
 class BackofficeInvoiceDesignView(SuperAdminRequiredMixin, FormView):
     template_name = "backoffice/invoice_design.html"
     def get_initial(self):
-        return Setting.objects.filter(key="invoice_design").values_list("value", flat=True).first() or {"company_name": "CommerceOS", "footer_text": "Thank you for your business.", "accent_color": "#e04420"}
+        return Setting.objects.filter(key="invoice_design").values_list("value", flat=True).first() or {"company_name": "Nuboxed", "footer_text": "Thank you for your business.", "accent_color": "#e04420"}
     def get_form_class(self):
         from django import forms
         return type("InvoiceDesignForm", (forms.Form,), {"company_name": forms.CharField(required=False), "footer_text": forms.CharField(required=False, widget=forms.Textarea), "accent_color": forms.CharField(required=False)})
@@ -619,6 +680,114 @@ class BackofficeInvoiceDesignView(SuperAdminRequiredMixin, FormView):
 
     def get_sidebar_groups(self):
         return grouped_modules()
+
+
+class BackofficeFooterSettingsView(SuperAdminRequiredMixin, View):
+    template_name = "backoffice/footer_settings.html"
+
+    def _defaults(self):
+        labels = ["All Products", "Best Sellers", "Trending Now", "Our Stores", "Contact Us", "Help Center", "Track Order", "Shipping & Delivery", "Returns & Refunds", "Contact Support", "About Nuboxed", "Our Stores", "Contact Us", "Top Deals", "Privacy Policy", "Terms & Conditions", "Cookie Policy", "Accessibility"]
+        targets = ["/products/", "/products/", "#n8-products", "/stores/", "/contact/", "/contact/", "/account/orders/", "/contact/", "/account/orders/", "/contact/", "/", "/stores/", "/contact/", "/products/", "/contact/", "/contact/", "/contact/", "/contact/"]
+        return {"links": [{"text": text, "target": target, "manual": ""} for text, target in zip(labels, targets)], "trust": [{"title": "Secure checkout", "subtitle": "Protected payments"}, {"title": "Fast delivery", "subtitle": "Reliable order updates"}, {"title": "Easy returns", "subtitle": "Simple return process"}, {"title": "Customer support", "subtitle": "Here when you need us"}], "brand_mode": "text", "brand_image": "", "trust_color": "#ffffff", "trust_muted_color": "#8f99aa", "trust_font": "Inter", "copyright": "© 2026 Nuboxed. All rights reserved.", "copyright_align": "left", "payment_images": [], "payment_width": 54, "payment_height": 32, "payment_fit": "contain"}
+
+    def get(self, request, *args, **kwargs):
+        setting = Setting.objects.filter(key="footer_customization", is_active=True).first()
+        values = self._defaults(); values.update(setting.value if setting else {})
+        pages = Page.objects.filter(is_active=True, is_published=True).order_by("title")
+        brand = BrandSettings.objects.filter(is_active=True).first()
+        return render(request, self.template_name, {"settings": values, "brand": brand, "fonts": HomePageSettings.FONT_CHOICES, "pages": pages, "sidebar_groups": grouped_modules(), "active_group": "Page Settings", "page_title": "Footer Settings"})
+
+    def post(self, request, *args, **kwargs):
+        links = []
+        for index in range(1, 51):
+            text = request.POST.get(f"link_text_{index}", "").strip()
+            target = request.POST.get(f"link_target_{index}", "").strip()
+            manual = request.POST.get(f"link_manual_{index}", "").strip()
+            if text:
+                links.append({"text": text, "target": target, "manual": manual})
+        trust = []
+        for index in range(1, 5):
+            title = request.POST.get(f"trust_title_{index}", "").strip()
+            subtitle = request.POST.get(f"trust_subtitle_{index}", "").strip()
+            if title or subtitle:
+                trust.append({"title": title, "subtitle": subtitle})
+        values = {"links": links, "trust": trust, "brand_mode": request.POST.get("brand_mode", "text"), "brand_image": request.POST.get("brand_image", "").strip(), "trust_color": request.POST.get("trust_color", "#ffffff"), "trust_muted_color": request.POST.get("trust_muted_color", "#8f99aa"), "trust_font": request.POST.get("trust_font", "Inter"), "copyright": request.POST.get("copyright", "").strip(), "copyright_align": request.POST.get("copyright_align", "left"), "payment_images": [x.strip() for x in request.POST.get("payment_images", "").splitlines() if x.strip()], "payment_width": max(24, min(int(request.POST.get("payment_width") or 54), 180)), "payment_height": max(20, min(int(request.POST.get("payment_height") or 32), 100)), "payment_fit": request.POST.get("payment_fit", "contain")}
+        brand = BrandSettings.objects.filter(is_active=True).first()
+        if brand:
+            brand.brand_name = request.POST.get("brand_name", brand.brand_name).strip() or brand.brand_name
+            brand.footer_top_title = request.POST.get("footer_top_title", brand.footer_top_title).strip()
+            brand.footer_top_subtitle = request.POST.get("footer_top_subtitle", brand.footer_top_subtitle).strip()
+            brand.footer_description = request.POST.get("footer_description", brand.footer_description).strip()
+            brand.footer_font_family = request.POST.get("footer_font_family", brand.footer_font_family)
+            brand.footer_heading_color = request.POST.get("footer_heading_color", brand.footer_heading_color)
+            brand.footer_text_color = request.POST.get("footer_text_color", brand.footer_text_color)
+            brand.footer_link_color = request.POST.get("footer_link_color", brand.footer_link_color)
+            brand.save(update_fields=["brand_name", "footer_top_title", "footer_top_subtitle", "footer_description", "footer_font_family", "footer_heading_color", "footer_text_color", "footer_link_color", "updated_at"])
+        Setting.objects.update_or_create(key="footer_customization", defaults={"value": values, "is_active": True})
+        messages.success(request, "Footer settings saved successfully.")
+        return redirect("backoffice:footer-settings")
+
+
+class BackofficeContactSettingsView(SuperAdminRequiredMixin, View):
+    template_name = "backoffice/contact_settings.html"
+
+    def defaults(self):
+        return {
+            "hero_eyebrow": "We are here to help", "hero_title": "Let’s start a conversation.",
+            "hero_description": "Questions about an order, product, partnership or your Nuboxed account? Reach the right team and receive clear, friendly support.",
+            "info_heading": "Contact information", "info_description": "Choose the fastest channel for your enquiry. Our team will guide you from there.",
+            "form_heading": "Send us a message", "form_description": "Share a few details and the appropriate Nuboxed specialist will contact you.",
+            "submit_text": "Send message", "form_note": "By submitting, you agree to our privacy policy and contact terms.",
+            "support_eyebrow": "Quick assistance", "support_heading": "Find the right support faster", "support_description": "Use one of these dedicated support paths for common ecommerce enquiries.",
+            "support_1_title": "Orders & delivery", "support_1_text": "Track your shipment, update delivery details or report an issue with an order.", "support_2_title": "Returns & refunds", "support_2_text": "Start a return, check refund status or understand our return eligibility policy.", "support_3_title": "Business enquiries", "support_3_text": "Connect with us about retail partnerships, marketplace selling or corporate orders.",
+            "faq_eyebrow": "FAQ", "faq_heading": "Before you contact us", "faq_description": "Answers to a few common questions that may save you time.",
+            "brand_color": "#e04420", "dark_color": "#5b241b", "icon_color": "#e04420", "heading_weight": "800", "heading_underline": "none", "body_font_size": "16",
+            "hero_text_color": "#ffffff", "info_text_color": "#ffffff", "form_text_color": "#111827", "support_text_color": "#111827", "faq_text_color": "#111827", "hero_font": "Inter", "info_font": "Inter", "form_font": "Inter", "support_font": "Inter", "faq_font": "Inter", "info_icon": "fa-solid fa-envelope", "info_phone_icon": "fa-solid fa-phone", "info_location_icon": "fa-solid fa-location-dot", "support_icon_1": "fa-solid fa-box", "support_icon_2": "fa-solid fa-rotate-left", "support_icon_3": "fa-solid fa-handshake", "info_icon_svg": "", "info_icon_image": "", "support_icon_svg_1": "", "support_icon_svg_2": "", "support_icon_svg_3": "", "support_icon_image_1": "", "support_icon_image_2": "", "support_icon_image_3": "",
+            "page_bg_color": "#f6f7fb", "hero_bg_mode": "gradient", "hero_bg_color": "#111827", "hero_bg_image": "", "hero_bg_opacity": "72", "hero_bg_blend": "normal", "card_bg_color": "#ffffff", "map_bg_image": "",
+            "info_bg_mode": "gradient", "info_bg_color": "#e04420", "info_bg_gradient_color": "#b9381d", "info_bg_image": "", "form_bg_color": "#ffffff", "form_bg_image": "", "support_bg_color": "#ffffff", "support_bg_image": "", "faq_bg_color": "#ffffff", "faq_bg_image": "",
+            "faq_items": [{"question": "How quickly will I receive a response?", "answer": "Most messages receive a response within two business hours during support hours. Complex order or payment cases may require additional verification."}, {"question": "What information should I include?", "answer": "Include your order number, registered email or phone number, and a clear description of the issue."}, {"question": "Can I contact you about a partnership?", "answer": "Yes. Select Business partnership in the form or email business@nuboxed.com so the enquiry reaches the appropriate team."}],
+            "hero_eyebrow_color": "#ffffff", "hero_eyebrow_font": "Inter", "hero_eyebrow_size": "12", "hero_title_color": "#ffffff", "hero_title_font": "Manrope", "hero_title_size": "72", "hero_description_color": "#d0d5dd", "hero_description_font": "Inter", "hero_description_size": "18", "info_heading_color": "#ffffff", "info_heading_font": "Manrope", "info_heading_size": "30", "info_description_color": "#e7e5ff", "info_description_font": "Inter", "info_description_size": "16", "form_heading_color": "#111827", "form_heading_font": "Manrope", "form_heading_size": "30", "form_description_color": "#667085", "form_description_font": "Inter", "form_description_size": "16", "support_eyebrow_color": "#e04420", "support_eyebrow_font": "Inter", "support_eyebrow_size": "12", "support_heading_color": "#111827", "support_heading_font": "Manrope", "support_heading_size": "46", "support_description_color": "#667085", "support_description_font": "Inter", "support_description_size": "16", "support_card_title_color": "#111827", "support_card_title_font": "Manrope", "support_card_title_size": "19", "support_card_text_color": "#667085", "support_card_text_font": "Inter", "support_card_text_size": "14", "faq_eyebrow_color": "#e04420", "faq_eyebrow_font": "Inter", "faq_eyebrow_size": "12", "faq_heading_color": "#111827", "faq_heading_font": "Manrope", "faq_heading_size": "46", "faq_description_color": "#667085", "faq_description_font": "Inter", "faq_description_size": "16", "faq_question_color": "#111827", "faq_question_font": "Inter", "faq_question_size": "16", "faq_answer_color": "#667085", "faq_answer_font": "Inter", "faq_answer_size": "16",
+        }
+
+    def get(self, request, *args, **kwargs):
+        values = self.defaults()
+        values.update(Setting.objects.filter(key="contact_page_customization", is_active=True).values_list("value", flat=True).first() or {})
+        icons = ["fa-solid fa-envelope", "fa-solid fa-phone", "fa-solid fa-location-dot", "fa-solid fa-box", "fa-solid fa-truck-fast", "fa-solid fa-rotate-left", "fa-solid fa-handshake", "fa-solid fa-headset", "fa-solid fa-circle-question", "fa-solid fa-comments", "fa-solid fa-shield-halved", "fa-solid fa-house", "fa-solid fa-user", "fa-solid fa-users", "fa-solid fa-cart-shopping", "fa-solid fa-bag-shopping", "fa-solid fa-gift", "fa-solid fa-tag", "fa-solid fa-tags", "fa-solid fa-bolt", "fa-solid fa-fire", "fa-solid fa-check", "fa-solid fa-circle-info", "fa-solid fa-lock", "fa-solid fa-star", "fa-solid fa-heart", "fa-solid fa-circle-check", "fa-solid fa-credit-card", "fa-solid fa-wallet", "fa-solid fa-receipt", "fa-solid fa-store", "fa-solid fa-shop", "fa-solid fa-magnifying-glass", "fa-solid fa-arrow-right", "fa-solid fa-chevron-down", "fa-solid fa-calendar", "fa-solid fa-clock", "fa-solid fa-globe", "fa-solid fa-map-pin", "fa-solid fa-image", "fa-solid fa-camera", "fa-solid fa-video", "fa-solid fa-music", "fa-brands fa-facebook", "fa-brands fa-instagram", "fa-brands fa-youtube", "fa-brands fa-linkedin", "fa-brands fa-whatsapp"]
+        return render(request, self.template_name, {"settings": values, "fonts": HomePageSettings.FONT_CHOICES, "icons": icons, "sidebar_groups": grouped_modules(), "active_group": "Page Settings", "page_title": "Contact Page Settings"})
+
+    def post(self, request, *args, **kwargs):
+        values = {key: request.POST.get(key, "").strip() for key in self.defaults()}
+        values["faq_items"] = [{"question": request.POST.get(f"faq_question_{index}", "").strip(), "answer": request.POST.get(f"faq_answer_{index}", "").strip()} for index in range(1, 51) if request.POST.get(f"faq_question_{index}", "").strip() or request.POST.get(f"faq_answer_{index}", "").strip()]
+        values["heading_weight"] = request.POST.get("heading_weight", "800")
+        values["heading_underline"] = request.POST.get("heading_underline", "none")
+        values["body_font_size"] = request.POST.get("body_font_size", "16")
+        Setting.objects.update_or_create(key="contact_page_customization", defaults={"value": values, "is_active": True})
+        messages.success(request, "Contact page settings saved successfully.")
+        return redirect("backoffice:contact-settings")
+
+
+class BackofficeProductPageSettingsView(SuperAdminRequiredMixin, View):
+    template_name = "backoffice/product_page_settings.html"
+
+    def defaults(self):
+        return {
+            "visit_store_prefix": "Visit the", "reviews_label": "Reviews", "highlight_1": "Verified product data from Nuboxed", "highlight_2": "Store-aware delivery estimate and seller comparison", "highlight_3": "Shop confidently from verified retailers.", "sale_countdown": "Hurry up! Sale ends in:", "delivery_label": "Est. Delivery Time", "add_to_cart": "ADD TO CART", "buy_now": "BUY NOW", "add_wishlist": "Add to Wishlist", "add_compare": "Add to Compare", "share_label": "Share", "policy_1": "Free Shipping & Returns: Available on all orders over $99.", "policy_2": "Estimated Delivery: Orders are typically dispatched within 24 hours.", "policy_3": "Security Policy: Ensuring top-level security for your data and transactions.", "description_tab": "Description", "details_tab": "Product Details", "description_heading": "Its much more than mobile product", "description_fallback": "Shop the most popular featured products.", "description_note": "Your trusted marketplace page, wired to admin product data and structured for fast comparison, clear pricing, and clean buying actions.", "specifications_heading": "PRODUCT DETAILS", "related_heading": "You might also like", "category_heading_suffix": "in the same category:", "comments_heading": "Comments", "grade_label": "Grade", "write_review": "WRITE YOUR REVIEW", "view_all_comments": "View all comments", "customer_voice": "Customer voice", "all_comments": "All comments", "review_modal_heading": "Write your review", "review_title_label": "Title", "review_name_label": "Your name", "review_text_label": "Review", "review_terms": "I agree to the terms and the privacy policy", "required_note": "* Required fields", "cancel_button": "CANCEL", "send_button": "SEND", "review_success": "Thank you. Your review has been submitted successfully.", "quick_brand_fallback": "Store", "quick_delivery": "Est. Delivery Time 2-3 Days", "quick_reviews": "Reviews", "quick_point_1": "Verified product data from Nuboxed", "quick_point_2": "Store-aware delivery estimate and seller comparison", "quick_ram_label": "RAM:", "quick_storage_label": "Internal Storage:", "quick_color_label": "Color:", "quick_add_to_cart": "ADD TO CART", "quick_buy_now": "BUY NOW", "quick_wishlist": "Add to Wishlist", "quick_compare": "Add to Compare", "quick_stock": "Available Stock", "quick_share": "Share", "quick_save_prefix": "Save",
+        }
+
+    def get(self, request, *args, **kwargs):
+        values = self.defaults()
+        values.update(Setting.objects.filter(key="product_page_customization", is_active=True).values_list("value", flat=True).first() or {})
+        values.setdefault("show_share_icons", "1")
+        values.setdefault("share_platforms", ["facebook", "x", "linkedin", "pinterest", "email"])
+        return render(request, self.template_name, {"settings": values, "sidebar_groups": grouped_modules(), "active_group": "Page Settings", "page_title": "Product Page Settings"})
+
+    def post(self, request, *args, **kwargs):
+        values = {key: request.POST.get(key, "").strip() for key in self.defaults()}
+        values["show_share_icons"] = "1" if request.POST.get("show_share_icons") == "1" else "0"
+        values["share_platforms"] = [item for item in request.POST.getlist("share_platforms") if item in {"facebook", "x", "linkedin", "pinterest", "email"}]
+        Setting.objects.update_or_create(key="product_page_customization", defaults={"value": values, "is_active": True})
+        messages.success(request, "Product page settings saved successfully.")
+        return redirect("backoffice:product-page-settings")
 
 
 class BackofficeOrderWorkflowSettingsView(SuperAdminRequiredMixin, TemplateView):
@@ -1519,12 +1688,29 @@ class ProductAttributesAPIView(SuperAdminRequiredMixin, View):
                 "sizes": result.get("size", []),
                 "custom": [v for k, v in result.items() if k not in ["color", "size"] for item in v],
             })
-
         except Product.DoesNotExist:
             return JsonResponse({"error": "Product not found"}, status=404)
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
 
+
+class SliderProductsAPIView(SuperAdminRequiredMixin, View):
+    """Return approved products only after a retailer is selected in slider editor."""
+    def get(self, request):
+        retailer_id = request.GET.get("retailer_id")
+        if not retailer_id:
+            return JsonResponse({"products": []})
+        products = Product.objects.filter(
+            retailer_id=retailer_id,
+            is_active=True,
+            status=Product.STATUS_APPROVED,
+        ).order_by("name")
+        return JsonResponse({
+            "products": [
+                {"id": str(product.id), "label": f"{product.name} · {product.sku}"}
+                for product in products
+            ]
+        })
 
 # ─── Phone Model Management Views ─────────────────────────────────────────────
 

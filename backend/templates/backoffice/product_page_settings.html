@@ -1,0 +1,65 @@
+{% extends "backoffice/base.html" %}
+{% block content %}
+<style>
+.product-page-settings{max-width:1180px;margin:auto;padding:30px 28px 60px}.pps-hero,.pps-card{border:1px solid var(--border);border-radius:18px;background:var(--surface);box-shadow:0 10px 26px rgba(15,23,42,.06)}.pps-hero{padding:28px 30px;margin-bottom:20px}.pps-hero h1{margin:0 0 8px}.pps-hero p,.pps-card>p{margin:0;color:var(--muted);line-height:1.6}.pps-card{padding:24px 28px;margin-bottom:18px}.pps-card h2{margin:0 0 6px;font-size:18px}.pps-card>p{margin-bottom:20px;font-size:13px}.pps-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.pps-field{display:flex;flex-direction:column;gap:7px}.pps-field.full{grid-column:1/-1}.pps-field label{font-size:13px;font-weight:800;color:var(--text-main)}.pps-field input,.pps-field textarea{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text-main);font:inherit}.pps-field textarea{min-height:76px;resize:vertical}.pps-check{display:flex;align-items:center;gap:10px;padding:13px 14px;border:1px solid var(--border);border-radius:10px;background:#fff8f5;color:var(--text-main);font-size:13px;font-weight:800}.pps-check input{width:17px;height:17px;accent-color:#e04420}.pps-share-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-top:4px}.pps-share-grid .pps-check{background:var(--surface);justify-content:center}.pps-share-grid i{color:#e04420;font-size:15px}@media(max-width:760px){.product-page-settings{padding:20px 14px 40px}.pps-grid{grid-template-columns:1fr}.pps-field.full{grid-column:auto}.pps-share-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+<section class="product-page-settings">
+  <div class="pps-hero"><p class="eyebrow">Storefront Content / Product</p><h1>Product Page Settings</h1><p>Edit the text, labels and buying actions shared by the product detail page and Quick View.</p></div>
+  <form method="post">{% csrf_token %}
+    <section class="pps-card"><h2>Product detail page</h2><p>Control the main product-page labels, highlights, policies, tabs and review copy.</p><div class="pps-grid">
+      <div class="pps-field"><label>Visit store prefix</label><input name="visit_store_prefix" value="{{ settings.visit_store_prefix }}"></div>
+      <div class="pps-field"><label>Reviews label</label><input name="reviews_label" value="{{ settings.reviews_label }}"></div>
+      <div class="pps-field full"><label>Highlight 1</label><input name="highlight_1" value="{{ settings.highlight_1 }}"></div>
+      <div class="pps-field full"><label>Highlight 2</label><input name="highlight_2" value="{{ settings.highlight_2 }}"></div>
+      <div class="pps-field full"><label>Highlight 3</label><input name="highlight_3" value="{{ settings.highlight_3 }}"></div>
+      <div class="pps-field"><label>Sale countdown label</label><input name="sale_countdown" value="{{ settings.sale_countdown }}"></div>
+      <div class="pps-field full"><label>Social sharing</label><label class="pps-check"><input type="checkbox" name="show_share_icons" value="1" {% if settings.show_share_icons != "0" %}checked{% endif %}> Show social share icons on product pages</label><div class="pps-share-grid"><label class="pps-check"><input type="checkbox" name="share_platforms" value="facebook" {% if "facebook" in settings.share_platforms %}checked{% endif %}> <i class="fa-brands fa-facebook-f"></i> Facebook</label><label class="pps-check"><input type="checkbox" name="share_platforms" value="x" {% if "x" in settings.share_platforms %}checked{% endif %}> <i class="fa-brands fa-x-twitter"></i> X</label><label class="pps-check"><input type="checkbox" name="share_platforms" value="linkedin" {% if "linkedin" in settings.share_platforms %}checked{% endif %}> <i class="fa-brands fa-linkedin-in"></i> LinkedIn</label><label class="pps-check"><input type="checkbox" name="share_platforms" value="pinterest" {% if "pinterest" in settings.share_platforms %}checked{% endif %}> <i class="fa-brands fa-pinterest-p"></i> Pinterest</label><label class="pps-check"><input type="checkbox" name="share_platforms" value="email" {% if "email" in settings.share_platforms %}checked{% endif %}> <i class="fa-solid fa-envelope"></i> Email</label></div></div>
+      <div class="pps-field"><label>Add to Cart button</label><input name="add_to_cart" value="{{ settings.add_to_cart }}"></div>
+      <div class="pps-field"><label>Buy Now button</label><input name="buy_now" value="{{ settings.buy_now }}"></div>
+      <div class="pps-field"><label>Wishlist text</label><input name="add_wishlist" value="{{ settings.add_wishlist }}"></div>
+      <div class="pps-field"><label>Compare text</label><input name="add_compare" value="{{ settings.add_compare }}"></div>
+      <div class="pps-field"><label>Share label</label><input name="share_label" value="{{ settings.share_label }}"></div>
+      <div class="pps-field"><label>Description tab</label><input name="description_tab" value="{{ settings.description_tab }}"></div>
+      <div class="pps-field"><label>Product details tab</label><input name="details_tab" value="{{ settings.details_tab }}"></div>
+      <div class="pps-field"><label>Description heading</label><input name="description_heading" value="{{ settings.description_heading }}"></div>
+      <div class="pps-field"><label>Specifications heading</label><input name="specifications_heading" value="{{ settings.specifications_heading }}"></div>
+      <div class="pps-field full"><label>Description fallback</label><textarea name="description_fallback">{{ settings.description_fallback }}</textarea></div>
+      <div class="pps-field full"><label>Description supporting text</label><textarea name="description_note">{{ settings.description_note }}</textarea></div>
+      <div class="pps-field"><label>Related products heading</label><input name="related_heading" value="{{ settings.related_heading }}"></div>
+      <div class="pps-field"><label>Category heading suffix</label><input name="category_heading_suffix" value="{{ settings.category_heading_suffix }}"></div>
+      <div class="pps-field"><label>Comments heading</label><input name="comments_heading" value="{{ settings.comments_heading }}"></div>
+      <div class="pps-field"><label>Grade label</label><input name="grade_label" value="{{ settings.grade_label }}"></div>
+      <div class="pps-field"><label>Write review button</label><input name="write_review" value="{{ settings.write_review }}"></div>
+      <div class="pps-field"><label>View all comments button</label><input name="view_all_comments" value="{{ settings.view_all_comments }}"></div>
+      <div class="pps-field"><label>Review modal eyebrow</label><input name="customer_voice" value="{{ settings.customer_voice }}"></div>
+      <div class="pps-field"><label>Review modal heading</label><input name="all_comments" value="{{ settings.all_comments }}"></div>
+      <div class="pps-field"><label>Write review modal title</label><input name="review_modal_heading" value="{{ settings.review_modal_heading }}"></div>
+      <div class="pps-field"><label>Cancel button</label><input name="cancel_button" value="{{ settings.cancel_button }}"></div>
+      <div class="pps-field"><label>Send button</label><input name="send_button" value="{{ settings.send_button }}"></div>
+      <div class="pps-field"><label>Required note</label><input name="required_note" value="{{ settings.required_note }}"></div>
+      <div class="pps-field full"><label>Review terms</label><input name="review_terms" value="{{ settings.review_terms }}"></div>
+      <div class="pps-field full"><label>Review success message</label><textarea name="review_success">{{ settings.review_success }}</textarea></div>
+      <div class="pps-field full"><label>Policy 1</label><textarea name="policy_1">{{ settings.policy_1 }}</textarea></div>
+      <div class="pps-field full"><label>Policy 2</label><textarea name="policy_2">{{ settings.policy_2 }}</textarea></div>
+      <div class="pps-field full"><label>Policy 3</label><textarea name="policy_3">{{ settings.policy_3 }}</textarea></div>
+    </div></section>
+    <section class="pps-card"><h2>Quick View</h2><p>Control the Quick View modal labels and purchase actions.</p><div class="pps-grid">
+      <div class="pps-field"><label>Fallback brand</label><input name="quick_brand_fallback" value="{{ settings.quick_brand_fallback }}"></div>
+      <div class="pps-field"><label>Reviews label</label><input name="quick_reviews" value="{{ settings.quick_reviews }}"></div>
+      <div class="pps-field"><label>Discount prefix</label><input name="quick_save_prefix" value="{{ settings.quick_save_prefix }}"></div>
+      <div class="pps-field"><label>Stock text</label><input name="quick_stock" value="{{ settings.quick_stock }}"></div>
+      <div class="pps-field full"><label>Point 1</label><input name="quick_point_1" value="{{ settings.quick_point_1 }}"></div>
+      <div class="pps-field full"><label>Point 2</label><input name="quick_point_2" value="{{ settings.quick_point_2 }}"></div>
+      <div class="pps-field"><label>RAM label</label><input name="quick_ram_label" value="{{ settings.quick_ram_label }}"></div>
+      <div class="pps-field"><label>Storage label</label><input name="quick_storage_label" value="{{ settings.quick_storage_label }}"></div>
+      <div class="pps-field"><label>Color label</label><input name="quick_color_label" value="{{ settings.quick_color_label }}"></div>
+      <div class="pps-field"><label>Add to Cart button</label><input name="quick_add_to_cart" value="{{ settings.quick_add_to_cart }}"></div>
+      <div class="pps-field"><label>Buy Now button</label><input name="quick_buy_now" value="{{ settings.quick_buy_now }}"></div>
+      <div class="pps-field"><label>Wishlist text</label><input name="quick_wishlist" value="{{ settings.quick_wishlist }}"></div>
+      <div class="pps-field"><label>Compare text</label><input name="quick_compare" value="{{ settings.quick_compare }}"></div>
+      <div class="pps-field"><label>Share label</label><input name="quick_share" value="{{ settings.quick_share }}"></div>
+    </div></section>
+    <div class="pps-actions"><a class="ghost-button" href="{% url 'backoffice:dashboard' %}">Cancel</a><button class="primary-button" type="submit"><i class="ph ph-floppy-disk"></i> Save product page settings</button></div>
+  </form>
+</section>
+{% endblock %}

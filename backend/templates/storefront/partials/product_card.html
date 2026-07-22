@@ -17,6 +17,7 @@
     data-qv-description="{{ product.short_description|default:product.description|striptags|truncatewords:26|escape }}"
     data-qv-stock="{{ product.storefront_stock_label }}"
     data-qv-stock-class="{{ product.storefront_stock_tone }}"
+    data-qv-delivery="{{ product.store.average_delivery_days|default:'3' }} Days"
     data-qv-ram-labels="{{ product.quickview_rams|join:'|'|escape }}"
     data-qv-storage-labels="{{ product.quickview_variant_labels|join:'|'|escape }}"
     data-qv-images="{{ product.quickview_image_urls|join:'|'|escape }}"

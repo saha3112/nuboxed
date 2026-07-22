@@ -4,8 +4,10 @@ from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.password_validation import validate_password
 from django.db.models import Q
 from django.db import transaction
+from django.forms import inlineformset_factory
 from apps.catalog.forms import ProductAttributeForm, ProductForm
 from apps.catalog.models import Category, Product, ProductAttribute
+from apps.cms.models import HomePageSettings, HomeReviewCard, HomeTrustCard, Page, Slider
 from apps.retailers.forms import StoreForm
 from apps.retailers.models import Retailer
 from apps.retailers.services import unique_slug
@@ -19,6 +21,267 @@ from apps.stores.models import Store
 from apps.users.models import User
 from apps.shipments.models import CourierPartner
 from apps.inventory.models import Warehouse
+from apps.settings_app.models import BrandSettings
+
+
+class BackofficeBrandSettingsForm(forms.ModelForm):
+    class Meta:
+        model = BrandSettings
+        fields = "__all__"
+        widgets = {
+            "footer_heading_color": forms.TextInput(attrs={"type": "color"}),
+            "footer_text_color": forms.TextInput(attrs={"type": "color"}),
+            "footer_link_color": forms.TextInput(attrs={"type": "color"}),
+            "footer_font_family": forms.Select(choices=HomePageSettings.FONT_CHOICES),
+        }
+
+
+class BackofficeSliderForm(forms.ModelForm):
+    class Meta:
+        model = Slider
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        destination_choices = [
+            ("", "Select a destination"),
+            ("/", "Homepage"),
+            ("/products/", "Products"),
+            ("#n8-categories", "Shop by category section"),
+            ("/stores/", "Stores"),
+            ("/contact/", "Contact"),
+            ("/cart/", "Cart"),
+            ("/checkout/", "Checkout"),
+            ("/wishlist/", "Wishlist"),
+            ("/compare/", "Compare"),
+            ("/account/orders/", "Customer orders"),
+        ]
+        destination_choices.extend(
+            (f"/pages/{page.slug}/", f"Page: {page.title}")
+            for page in Page.objects.filter(is_active=True, is_published=True).order_by("title")
+        )
+        self.fields["cta_url"].widget = forms.HiddenInput()
+        self.fields["secondary_cta_url"].widget = forms.HiddenInput()
+        self.fields["image"].widget = forms.HiddenInput()
+        self.fields["cta_target"] = forms.ChoiceField(label="First button destination", choices=destination_choices + [("__manual__", "Manual URL")], required=False, help_text="Choose a built-in/CMS page or select Manual URL below.")
+        self.fields["cta_manual_url"] = forms.CharField(label="First button manual URL", required=False, widget=forms.URLInput(attrs={"placeholder": "https://example.com/page or /custom-page/"}), help_text="Used only when First button destination is Manual URL.")
+        self.fields["product_link_label"].label = "Right product button label"
+        self.fields["product_link_url"].label = "Right product manual URL"
+        self.fields["secondary_cta_target"] = forms.ChoiceField(
+            label="Second button destination",
+            choices=destination_choices + [("__manual__", "Manual URL")],
+            required=False,
+            help_text="Choose a built-in/CMS page or select Manual URL below.",
+        )
+        self.fields["secondary_cta_manual_url"] = forms.CharField(
+            label="Manual URL",
+            required=False,
+            widget=forms.URLInput(attrs={"placeholder": "https://example.com/page or /custom-page/"}),
+            help_text="Used only when Second button destination is Manual URL.",
+        )
+        cta_fields = {"cta_target", "cta_manual_url", "secondary_cta_label", "secondary_cta_target", "secondary_cta_manual_url", "product_link_label", "product_link_url"}
+        remaining = [name for name in self.fields if name not in cta_fields]
+        insert_at = remaining.index("cta_label") + 1 if "cta_label" in remaining else len(remaining)
+        self.order_fields(remaining[:insert_at] + ["cta_target", "cta_manual_url", "secondary_cta_label", "secondary_cta_target", "secondary_cta_manual_url", "product_link_label", "product_link_url"] + remaining[insert_at:])
+        current_primary_url = getattr(self.instance, "cta_url", "") or ""
+        if current_primary_url in {value for value, _ in destination_choices}:
+            self.initial["cta_target"] = current_primary_url
+        else:
+            self.initial["cta_target"] = "__manual__" if current_primary_url else ""
+            self.initial["cta_manual_url"] = current_primary_url
+        current_url = getattr(self.instance, "secondary_cta_url", "") or ""
+        known_urls = {value for value, _ in destination_choices}
+        if current_url in known_urls:
+            self.initial["secondary_cta_target"] = current_url
+        else:
+            self.initial["secondary_cta_target"] = "__manual__" if current_url else ""
+            self.initial["secondary_cta_manual_url"] = current_url
+        self.fields["eyebrow"].label = "Eyebrow / small heading"
+        self.fields["meta_primary_title"].label = "Trust point 1 title"
+        self.fields["meta_primary_text"].label = "Trust point 1 text"
+        self.fields["meta_secondary_title"].label = "Trust point 2 title"
+        self.fields["meta_secondary_text"].label = "Trust point 2 text"
+        self.fields["right_image"].label = "Right-side image override"
+        self.fields["retailer"].queryset = Retailer.objects.filter(
+            is_active=True, status=Retailer.STATUS_APPROVED
+        ).order_by("display_name", "legal_name")
+        products = Product.objects.filter(
+            is_active=True, status=Product.STATUS_APPROVED
+        ).select_related("retailer").order_by("name")
+        retailer_id = self.data.get("retailer") or getattr(self.instance, "retailer_id", None)
+        if retailer_id:
+            products = products.filter(retailer_id=retailer_id)
+        else:
+            products = products.none()
+        self.fields["product"].queryset = products
+
+    def clean(self):
+        cleaned = super().clean()
+        primary_destination = cleaned.get("cta_target")
+        primary_manual_url = (cleaned.get("cta_manual_url") or "").strip()
+        cleaned["cta_url"] = primary_manual_url if primary_destination == "__manual__" else (primary_destination or "")
+        destination = cleaned.get("secondary_cta_target")
+        manual_url = (cleaned.get("secondary_cta_manual_url") or "").strip()
+        cleaned["secondary_cta_url"] = manual_url if destination == "__manual__" else (destination or "")
+        retailer = cleaned.get("retailer")
+        product = cleaned.get("product")
+        if product and retailer and product.retailer_id != retailer.id:
+            self.add_error("product", "Select a product belonging to the selected retailer.")
+        if product and not retailer:
+            cleaned["retailer"] = product.retailer
+        return cleaned
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.cta_url = self.cleaned_data.get("cta_url", "")
+        instance.secondary_cta_url = self.cleaned_data.get("secondary_cta_url", "")
+        if commit:
+            instance.save()
+            self.save_m2m()
+        return instance
+
+
+class HomePageSettingsForm(forms.ModelForm):
+    font_family = forms.CharField(
+        label="Google font",
+        required=True,
+        widget=forms.Select(choices=HomePageSettings.FONT_CHOICES),
+    )
+
+    class Meta:
+        model = HomePageSettings
+        exclude = ("singleton_key",)
+        widgets = {
+            "heading_color": forms.TextInput(attrs={"type": "color"}),
+            "body_color": forms.TextInput(attrs={"type": "color"}),
+            "accent_color": forms.TextInput(attrs={"type": "color"}),
+            "trust_title_color": forms.TextInput(attrs={"type": "color"}),
+            "trust_text_color": forms.TextInput(attrs={"type": "color"}),
+            "trust_icon_color": forms.TextInput(attrs={"type": "color"}),
+            "trending_title_color": forms.TextInput(attrs={"type": "color"}),
+            "trending_text_color": forms.TextInput(attrs={"type": "color"}),
+            "trending_price_color": forms.TextInput(attrs={"type": "color"}),
+            "reviews_quote_color": forms.TextInput(attrs={"type": "color"}),
+            "reviews_name_color": forms.TextInput(attrs={"type": "color"}),
+            "reviews_role_color": forms.TextInput(attrs={"type": "color"}),
+            "trending_view_all_url": forms.URLInput(attrs={"placeholder": "/products/"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        choices = [("", "Select a destination"), ("/products/", "Products"), ("#n8-products", "Trending products section"), ("/stores/", "Stores"), ("/cart/", "Cart"), ("/checkout/", "Checkout")]
+        choices += [(f"/pages/{page.slug}/", f"Page: {page.title}") for page in Page.objects.filter(is_active=True, is_published=True).order_by("title")]
+        self.fields["trending_view_all_url"].widget = forms.HiddenInput()
+        self.fields["trust_font_family"] = forms.CharField(
+            label="Text font family",
+            required=True,
+            widget=forms.Select(choices=HomePageSettings.FONT_CHOICES),
+        )
+        for name, label in (
+            ("trending_font_family", "Product card font family"),
+            ("reviews_font_family", "Review card font family"),
+        ):
+            self.fields[name] = forms.CharField(
+                label=label,
+                required=True,
+                widget=forms.Select(choices=HomePageSettings.FONT_CHOICES),
+            )
+        self.fields["trending_view_all_target"] = forms.ChoiceField(label="View all destination", choices=choices + [("__manual__", "Manual URL")], required=False)
+        self.fields["trending_view_all_manual_url"] = forms.CharField(label="Manual URL", required=False, widget=forms.TextInput(attrs={"placeholder": "https://example.com or /custom-page/"}))
+        current = self.instance.trending_view_all_url if self.instance and self.instance.pk else "/products/"
+        known = {value for value, _ in choices}
+        if current in known:
+            self.initial["trending_view_all_target"] = current
+        else:
+            self.initial["trending_view_all_target"] = "__manual__" if current else ""
+            self.initial["trending_view_all_manual_url"] = current
+
+    def clean(self):
+        cleaned = super().clean()
+        target = cleaned.get("trending_view_all_target")
+        manual = (cleaned.get("trending_view_all_manual_url") or "").strip()
+        cleaned["trending_view_all_url"] = manual if target == "__manual__" else (target or "")
+        return cleaned
+
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.trending_view_all_url = self.cleaned_data.get("trending_view_all_url", "")
+        if commit:
+            instance.save()
+        return instance
+
+
+class HomeTrustCardForm(forms.ModelForm):
+    icon_svg_library_id = forms.CharField(required=False, widget=forms.HiddenInput())
+    font_family = forms.CharField(
+        label="Font family",
+        required=True,
+        widget=forms.Select(choices=HomePageSettings.FONT_CHOICES),
+    )
+
+    class Meta:
+        model = HomeTrustCard
+        exclude = ("settings",)
+        widgets = {
+            "icon_color": forms.TextInput(attrs={"type": "color"}),
+            "title_color": forms.TextInput(attrs={"type": "color"}),
+            "text_color": forms.TextInput(attrs={"type": "color"}),
+            "icon_svg_file": forms.ClearableFileInput(attrs={"accept": ".svg,image/svg+xml"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["icon"].required = False
+        self.fields["fontawesome_icon"].required = False
+        self.order_fields([
+            "title", "title_color", "text", "text_color", "icon", "icon_color",
+            "icon_mode", "fontawesome_icon", "custom_svg", "icon_svg_file",
+            "use_manual_style", "font_family", "title_font_size", "text_font_size", "icon_size",
+            "sort_order", "is_active",
+        ])
+
+    def save(self, commit=True):
+        card = super().save(commit=False)
+        library_id = self.cleaned_data.get("icon_svg_library_id")
+        if library_id:
+            from apps.catalog.models import MediaLibrary
+            asset = MediaLibrary.objects.filter(id=library_id).first()
+            if asset and asset.file:
+                card.icon_svg_file = asset.file
+        if commit:
+            card.save()
+        return card
+
+
+class HomeReviewCardForm(forms.ModelForm):
+    font_family = forms.CharField(
+        label="Font family",
+        required=True,
+        widget=forms.Select(choices=HomePageSettings.FONT_CHOICES),
+    )
+
+    class Meta:
+        model = HomeReviewCard
+        exclude = ("settings",)
+        widgets = {
+            "avatar_color": forms.TextInput(attrs={"type": "color"}),
+            "text_color": forms.TextInput(attrs={"type": "color"}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.order_fields([
+            "quote", "text_color", "reviewer_name", "avatar_color", "role",
+            "rating", "font_family", "sort_order", "is_active",
+        ])
+
+
+HomeTrustCardFormSet = inlineformset_factory(
+    HomePageSettings, HomeTrustCard, form=HomeTrustCardForm, extra=1, can_delete=True
+)
+HomeReviewCardFormSet = inlineformset_factory(
+    HomePageSettings, HomeReviewCard, form=HomeReviewCardForm, extra=1, can_delete=True
+)
 
 
 class EmailSettingsForm(forms.Form):
@@ -308,7 +571,11 @@ class BackofficeProductAttributeForm(ProductAttributeForm):
 class BackofficeCategoryForm(forms.ModelForm):
     class Meta:
         model = Category
-        fields = ["name", "slug", "parent", "sort_order", "description", "seo_title", "seo_description", "is_featured", "is_active"]
+        fields = [
+            "name", "slug", "parent", "sort_order", "description",
+            "category_image_desktop", "category_image_tablet", "category_image_mobile",
+            "category_image_alt", "seo_title", "seo_description", "is_featured", "is_active",
+        ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

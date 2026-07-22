@@ -5,8 +5,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ page_title|default:"CommerceOS Marketplace" }}</title>
-    <link rel="stylesheet" href="{% static 'storefront/storefront.css' %}?v=20260716-comments1">
+    <title>{{ page_title|default:"Nuboxed Marketplace" }}</title>
+    <link rel="stylesheet" href="{% static 'storefront/storefront.css' %}?v=20260722-header-sticky2">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     {% if global_mega_menu_settings %}
     <link href="https://fonts.googleapis.com/css2?family={{ global_mega_menu_settings.font_family|urlencode }}:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -42,7 +42,7 @@
         <div class="icon-container"><i class="loader"></i></div>
     </div>
 
-    <header class="site-header">
+    <header class="site-header{% if request.resolver_match.url_name == 'store-detail' %} site-header--no-sticky{% endif %}" data-global-site-header>
         <div class="header-shell">
             <a href="{% url 'storefront:home' %}" class="logo-mark">
                 {% if global_site_logo and global_site_logo.logo_image %}
@@ -342,11 +342,18 @@
         {% block content %}{% endblock %}
     </main>
 
-    <footer class="site-footer">
+    <footer class="site-footer" style="display:none" aria-hidden="true">
+        <style>
+            .site-footer .footer-grid h4{color:var(--footer-heading);font-size:var(--footer-heading-size)}
+            .site-footer .footer-grid p{color:{{ global_brand_settings.footer_text_color|default:'#b8b8b8' }};font-size:var(--footer-text-size)}
+            .site-footer .footer-grid a{color:var(--footer-link);font-size:var(--footer-link-size);text-decoration:var(--footer-decoration)}
+            .site-footer .footer-grid a:hover{color:var(--footer-link)}
+        </style>
+        {% if global_brand_settings.footer_link_decoration == 'hover' %}<style>.site-footer .footer-grid a:hover{text-decoration:underline}</style>{% endif %}
         <div class="footer-grid">
             <div>
-                <h4>Nuboxed</h4>
-                <p>Curated electronics, verified retailers, transparent delivery, and smarter product discovery.</p>
+                <h4 style="color:var(--footer-heading);font-size:var(--footer-heading-size)">{{ global_brand_settings.brand_name|default:'Nuboxed' }}</h4>
+                <p style="font-size:var(--footer-text-size)">{{ global_brand_settings.footer_description|default:'Curated electronics, verified retailers, transparent delivery, and smarter product discovery.' }}</p>
                 {% if global_social_links %}
                     <div class="footer-social-links">
                         {% for social_link in global_social_links %}
@@ -358,7 +365,7 @@
                 {% endif %}
             </div>
             <div>
-                <h4>Explore</h4>
+                <h4 style="color:var(--footer-heading);font-size:var(--footer-heading-size)">{{ global_brand_settings.footer_explore_title|default:'Explore' }}</h4>
                                 {% for menu_item in global_menu_items %}
                     {% if menu_item.title|lower == "store" or menu_item.title|lower == "stores" %}
                         <div class="nav-dropdown mega-dropdown-sm">
@@ -490,15 +497,59 @@
                 {% endfor %}
             </div>
             <div>
-                <h4>Support</h4>
-                <a href="{% url 'storefront:contact' %}">Contact</a>
-                <a href="{% url 'storefront:cart' %}">Cart</a>
-                <a href="{% url 'storefront:checkout' %}">Checkout</a>
+                <h4 style="color:var(--footer-heading);font-size:var(--footer-heading-size)">{{ global_brand_settings.footer_support_title|default:'Support' }}</h4>
+                <a style="font-size:var(--footer-link-size);color:var(--footer-link);text-decoration:var(--footer-decoration)" href="{% url 'storefront:contact' %}">{% if global_brand_settings.footer_show_icons %}<i class="fa-solid fa-headset" aria-hidden="true"></i> {% endif %}Contact</a>
+                <a style="font-size:var(--footer-link-size);color:var(--footer-link);text-decoration:var(--footer-decoration)" href="{% url 'storefront:cart' %}">{% if global_brand_settings.footer_show_icons %}<i class="fa-solid fa-cart-shopping" aria-hidden="true"></i> {% endif %}Cart</a>
+                <a style="font-size:var(--footer-link-size);color:var(--footer-link);text-decoration:var(--footer-decoration)" href="{% url 'storefront:checkout' %}">{% if global_brand_settings.footer_show_icons %}<i class="fa-solid fa-lock" aria-hidden="true"></i> {% endif %}Checkout</a>
             </div>
         </div>
     </footer>
-    <script src="{% static 'storefront/storefront.js' %}?v=20260715-2"></script>
+    <style>
+      .n9-footer{position:relative;overflow:hidden;margin-top:0;color:#fff;background:radial-gradient(circle at 12% 10%,rgba(91,77,247,.22),transparent 28%),radial-gradient(circle at 92% 22%,rgba(255,122,69,.13),transparent 24%),#0b1220;font-family:'{{ global_brand_settings.footer_font_family|default:'Inter' }}',Inter,Arial,sans-serif}.n9-footer:before{content:"";position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:44px 44px;mask-image:linear-gradient(to bottom,rgba(0,0,0,.75),transparent 82%)}.n9-footer-inner{position:relative;z-index:1;width:min(1180px,calc(100% - 40px));margin:auto}.n9-footer-top{display:grid;grid-template-columns:1.1fr .9fr;align-items:center;gap:42px;padding:64px 0 42px;border-bottom:1px solid rgba(255,255,255,.1)}.n9-footer-top h3{margin:0 0 10px;max-width:620px;color:#fff;font-size:clamp(28px,3vw,44px);line-height:1.08;letter-spacing:-1.5px}.n9-footer-top p{margin:0;color:#a7b0c0;line-height:1.7}.n9-footer-subscribe{display:flex;gap:10px;padding:8px;border:1px solid rgba(255,255,255,.12);border-radius:18px;background:rgba(255,255,255,.07);backdrop-filter:blur(14px)}.n9-footer-subscribe input{min-width:0;flex:1;padding:0 16px;color:#fff;border:0;outline:0;background:transparent}.n9-footer-subscribe input::placeholder{color:#8993a5}.n9-footer-subscribe button{min-height:48px;padding:0 22px;border:0;border-radius:12px;color:#fff;font-weight:800;cursor:pointer;background:#e04420;box-shadow:0 12px 28px rgba(224,68,32,.28)}.n9-footer-grid{display:grid;grid-template-columns:1.5fr repeat(4,.72fr);gap:42px;padding:52px 0 44px}.n9-footer-brand h4,.n9-footer-col h4{margin:0 0 20px;color:{{ global_brand_settings.footer_heading_color|default:'#ffffff' }};font-size:{{ global_brand_settings.footer_heading_font_size|default:16 }}px;letter-spacing:.08em;text-transform:uppercase}.n9-footer-brand p{max-width:350px;margin:18px 0 24px;color:{{ global_brand_settings.footer_text_color|default:'#98a2b3' }};font-size:{{ global_brand_settings.footer_text_font_size|default:14 }}px;line-height:1.75}.n9-footer-col a{display:block;width:fit-content;margin:13px 0;color:{{ global_brand_settings.footer_text_color|default:'#98a2b3' }};font-size:{{ global_brand_settings.footer_link_font_size|default:14 }}px;text-decoration:{% if global_brand_settings.footer_link_decoration == 'always' %}underline{% else %}none{% endif %};transition:color .2s ease,transform .2s ease}.n9-footer-col a:hover{color:#fff;transform:translateX(4px)}.n9-footer-social{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}.n9-footer-social a{display:grid;width:42px;height:42px;place-items:center;border:1px solid rgba(255,255,255,.12);border-radius:12px;color:#fff!important;background:rgba(255,255,255,.05);text-decoration:none!important;transition:transform .2s ease,background .2s ease}.n9-footer-social a:hover{transform:translateY(-3px);background:rgba(255,255,255,.11)}.n9-footer-trust{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:0 0 30px}.n9-footer-trust-item{display:flex;align-items:center;gap:12px;padding:15px 16px;border:1px solid rgba(255,255,255,.1);border-radius:15px;background:rgba(255,255,255,.045)}.n9-footer-trust-item>i{font-size:20px;color:#ff7a45}.n9-footer-trust-item strong{display:block;font-size:13px}.n9-footer-trust-item small{display:block;margin-top:3px;color:#8f99aa}.n9-footer-bottom{display:flex;align-items:center;justify-content:space-between;gap:22px;padding:24px 0;color:#8993a5;border-top:1px solid rgba(255,255,255,.1);font-size:13px}.n9-payment-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:8px}.n9-payment{padding:8px 11px;border:1px solid rgba(255,255,255,.12);border-radius:9px;color:#d5dae3;background:rgba(255,255,255,.06);font-weight:700;font-size:11px}@media(max-width:900px){.n9-footer-top{grid-template-columns:1fr}.n9-footer-grid{grid-template-columns:repeat(3,1fr)}.n9-footer-brand{grid-column:1/-1}.n9-footer-trust{grid-template-columns:repeat(2,1fr)}}@media(max-width:640px){.n9-footer-inner{width:calc(100% - 24px)}.n9-footer-top{padding-top:46px}.n9-footer-subscribe{flex-direction:column;padding:10px}.n9-footer-subscribe input{min-height:46px}.n9-footer-grid{grid-template-columns:1fr;gap:22px;padding-top:38px}.n9-footer-brand{grid-column:auto}.n9-footer-trust{grid-template-columns:1fr}.n9-footer-bottom{align-items:flex-start;flex-direction:column}.n9-payment-row{justify-content:flex-start}}
+    </style>
+    <footer class="n9-footer{% if request.resolver_match.url_name == 'store-detail' %} store-detail-footer{% endif %}" id="footer"><div class="n9-footer-inner n9-footer-top"><div><h3>{{ global_brand_settings.footer_top_title|default:'Good products. Better prices. A simpler way to shop.' }}</h3><p>{{ global_brand_settings.footer_top_subtitle|default:'Get product launches, members-only offers and shopping updates delivered to your inbox.' }}</p></div><form class="n9-footer-subscribe" data-n9-footer-subscribe><input type="email" aria-label="Email address" placeholder="Enter your email address" required><button type="submit">Subscribe</button></form></div><div class="n9-footer-inner n9-footer-grid"><div class="n9-footer-brand"><h4>{{ global_brand_settings.brand_name|default:'Nuboxed' }}</h4><p>{{ global_brand_settings.footer_description|default:'A modern ecommerce destination for curated products and everyday essentials.' }}</p>{% if global_social_links %}<div class="n9-footer-social" aria-label="Social media links">{% for social_link in global_social_links %}<a href="{{ social_link.url }}" target="_blank" rel="noopener noreferrer" aria-label="{{ social_link.platform }}"><i class="{{ social_link.icon_class }}" aria-hidden="true"></i></a>{% endfor %}</div>{% endif %}</div><div class="n9-footer-col"><h4>Shop</h4><a href="{% url 'storefront:products' %}">All Products</a><a href="{% url 'storefront:products' %}">Best Sellers</a><a href="#n8-products">Trending Now</a><a href="{% url 'storefront:stores' %}">Our Stores</a><a href="{% url 'storefront:contact' %}">Contact Us</a></div><div class="n9-footer-col"><h4>Customer Care</h4><a href="{% url 'storefront:contact' %}">Help Center</a><a href="{% url 'storefront:customer-dashboard' %}">Track Order</a><a href="{% url 'storefront:contact' %}">Shipping &amp; Delivery</a><a href="{% url 'storefront:customer-dashboard' %}">Returns &amp; Refunds</a><a href="{% url 'storefront:contact' %}">Contact Support</a></div><div class="n9-footer-col"><h4>Company</h4><a href="{% url 'storefront:home' %}">About Nuboxed</a><a href="{% url 'storefront:stores' %}">Our Stores</a><a href="{% url 'storefront:contact' %}">Contact Us</a><a href="{% url 'storefront:products' %}">Top Deals</a></div><div class="n9-footer-col"><h4>Legal</h4><a href="{% url 'storefront:contact' %}">Privacy Policy</a><a href="{% url 'storefront:contact' %}">Terms &amp; Conditions</a><a href="{% url 'storefront:contact' %}">Cookie Policy</a><a href="{% url 'storefront:contact' %}">Accessibility</a></div></div><div class="n9-footer-inner n9-footer-trust"><div class="n9-footer-trust-item"><i class="fa-solid fa-lock"></i><div><strong>Secure checkout</strong><small>Protected payments</small></div></div><div class="n9-footer-trust-item"><i class="fa-solid fa-truck-fast"></i><div><strong>Fast delivery</strong><small>Reliable order updates</small></div></div><div class="n9-footer-trust-item"><i class="fa-solid fa-rotate-left"></i><div><strong>Easy returns</strong><small>Simple return process</small></div></div><div class="n9-footer-trust-item"><i class="fa-solid fa-headset"></i><div><strong>Customer support</strong><small>Here when you need us</small></div></div></div><div class="n9-footer-inner n9-footer-bottom"><span>© 2026 {{ global_brand_settings.brand_name|default:'Nuboxed' }}. All rights reserved.</span><div class="n9-payment-row" aria-label="Accepted payment methods"><span class="n9-payment">VISA</span><span class="n9-payment">Mastercard</span><span class="n9-payment">RuPay</span><span class="n9-payment">UPI</span><span class="n9-payment">COD</span></div></div></footer><script>document.querySelector('[data-n9-footer-subscribe]')?.addEventListener('submit',function(event){event.preventDefault();const button=event.currentTarget.querySelector('button');button.textContent='Subscribed ✓';event.currentTarget.reset();});</script>
+    <style>
+      /* Keep footer content aligned with the header's logo and location edges. */
+      .n9-footer .n9-footer-inner{width:calc(100% - clamp(30px,4vw,60px));max-width:none}
+      @media(max-width:640px){.n9-footer .n9-footer-inner{width:calc(100% - 30px)}}
+      .n9-footer.store-detail-footer{margin-top:70px}
+    </style>
+    <script src="{% static 'storefront/storefront.js' %}?v=20260722-product-settings1"></script>
     {% block extra_scripts %}{% endblock %}
+
+    {% if request.resolver_match.url_name != 'store-detail' %}
+    <style>
+        .site-header[data-global-site-header]{position:relative;top:auto;z-index:auto}
+        .site-header[data-global-site-header].global-nav-active{padding-bottom:var(--global-nav-height,58px)}
+        .site-header[data-global-site-header].global-nav-active .nav-shell{position:fixed;top:0;left:0;right:0;width:100%;max-width:none;margin:0;padding-left:clamp(15px,calc((100vw - 1630px)/2),80px);padding-right:clamp(15px,calc((100vw - 1630px)/2),80px);z-index:70;background:var(--global-nav-background,transparent);box-shadow:0 8px 22px rgb(15 23 42 / .12)}
+    </style>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const header = document.querySelector('[data-global-site-header]');
+        const nav = header?.querySelector('.nav-shell');
+        if (!header || !nav) return;
+        let navThreshold = nav.getBoundingClientRect().top + window.scrollY;
+        const navStyle = window.getComputedStyle(nav);
+        const headerStyle = window.getComputedStyle(header);
+        const normalBackground = navStyle.backgroundColor === 'rgba(0, 0, 0, 0)' ? headerStyle.backgroundColor : navStyle.backgroundColor;
+        header.style.setProperty('--global-nav-background', normalBackground);
+        const updateGlobalNav = function () {
+            const shouldStick = window.scrollY >= navThreshold;
+            if (shouldStick && !header.classList.contains('global-nav-active')) {
+                header.style.setProperty('--global-nav-height', nav.offsetHeight + 'px');
+            }
+            header.classList.toggle('global-nav-active', shouldStick);
+        };
+        updateGlobalNav();
+        window.addEventListener('scroll', updateGlobalNav, {passive:true});
+        window.addEventListener('resize', function () {
+            if (!header.classList.contains('global-nav-active')) navThreshold = nav.getBoundingClientRect().top + window.scrollY;
+            header.style.setProperty('--global-nav-height', nav.offsetHeight + 'px');
+            updateGlobalNav();
+        });
+    });
+    </script>
+    {% endif %}
 
 
 
@@ -672,6 +723,52 @@ document.addEventListener("submit", function(e) {
     }
 });
 </script>
+
+{% if global_brand_settings and global_brand_settings.location_prompt_enabled %}
+<style>
+  .location-permission-overlay{position:fixed;inset:0;z-index:10000;display:grid;place-items:center;padding:24px;background:rgba(15,23,42,.48);backdrop-filter:blur(6px)}
+  .location-permission-overlay[hidden]{display:none!important}
+  .location-permission-card{width:min(440px,100%);padding:32px;border:1px solid #e5e7eb;border-radius:24px;background:#fff;box-shadow:0 24px 70px rgba(15,23,42,.22);text-align:center}
+  .location-permission-icon{display:grid;width:58px;height:58px;margin:0 auto 18px;place-items:center;border-radius:18px;color:#e04420;background:#fff0eb;font-size:24px}
+  .location-permission-card h3{margin:0;color:#172033;font-size:25px;line-height:1.2}
+  .location-permission-card p{margin:12px 0 24px;color:#667085;font-size:15px;line-height:1.6}
+  .location-permission-actions{display:flex;gap:10px;justify-content:center}
+  .location-permission-actions button{min-height:44px;padding:0 18px;border-radius:10px;font-weight:700;cursor:pointer}
+  .location-permission-allow{border:1px solid #e04420;color:#fff;background:#e04420}
+  .location-permission-skip{border:1px solid #d9dee8;color:#344054;background:#fff}
+  @media(max-width:480px){.location-permission-card{padding:26px 20px}.location-permission-actions{flex-direction:column}.location-permission-actions button{width:100%}}
+</style>
+<div id="locationPermissionPrompt" class="location-permission-overlay" hidden role="dialog" aria-modal="true" aria-labelledby="locationPermissionTitle">
+  <div class="location-permission-card">
+    <div class="location-permission-icon" aria-hidden="true"><i class="fa-solid fa-location-dot"></i></div>
+    <h3 id="locationPermissionTitle">Find stores near you</h3>
+    <p>Allow location access to show nearby stores and make your shopping experience more relevant.</p>
+    <div class="location-permission-actions">
+      <button type="button" class="location-permission-allow" id="allowLocationPrompt">Allow location</button>
+      <button type="button" class="location-permission-skip" id="skipLocationPrompt">Not now</button>
+    </div>
+  </div>
+</div>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const prompt = document.getElementById('locationPermissionPrompt');
+    if (!prompt) return;
+    const storageKey = 'nuboxed-location-prompt-v1';
+    const closePrompt = function (choice) {
+      try { window.localStorage.setItem(storageKey, choice); } catch (error) {}
+      prompt.hidden = true;
+    };
+    try {
+      if (!window.localStorage.getItem(storageKey)) prompt.hidden = false;
+    } catch (error) { prompt.hidden = false; }
+    document.getElementById('skipLocationPrompt').addEventListener('click', function () { closePrompt('dismissed'); });
+    document.getElementById('allowLocationPrompt').addEventListener('click', function () {
+      closePrompt('allowed');
+      if (typeof window.useLiveLocation === 'function') window.useLiveLocation();
+    });
+  });
+</script>
+{% endif %}
 <script src="{% static 'common/password-toggle.js' %}"></script>
 <!-- Custom Alert Modal -->
 <div id="custom-alert-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); z-index: 99999; justify-content: center; align-items: center; opacity: 0; transition: opacity 0.3s ease;">
@@ -738,6 +835,39 @@ document.addEventListener("submit", function(e) {
             tone: tags.includes('success') ? 'success' : 'default'
         });
     });
+</script>
+{{ global_footer_settings|json_script:"global-footer-settings" }}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const config = JSON.parse(document.getElementById('global-footer-settings').textContent || '{}');
+    const footer = document.querySelector('.n9-footer');
+    if (!footer) return;
+    const brand = footer.querySelector('.n9-footer-brand h4');
+    if (brand && config.brand_mode === 'image' && config.brand_image) { const image = document.createElement('img'); image.src = config.brand_image; image.alt = 'Brand logo'; image.style.maxWidth = '190px'; image.style.maxHeight = '58px'; image.style.objectFit = 'contain'; brand.replaceWith(image); }
+    (config.links || []).forEach(function (item, index) {
+        const link = footer.querySelectorAll('.n9-footer-col a')[index];
+        if (!link || !item.text) return;
+        link.textContent = item.text;
+        link.href = item.target === '__manual__' ? (item.manual || '#') : (item.target || '#');
+    });
+    (config.trust || []).forEach(function (item, index) {
+        const card = footer.querySelectorAll('.n9-footer-trust-item')[index];
+        if (!card) return;
+        if (item.title) card.querySelector('strong').textContent = item.title;
+        if (item.subtitle) card.querySelector('small').textContent = item.subtitle;
+        if (config.trust_color) card.querySelector('strong').style.color = config.trust_color;
+        if (config.trust_muted_color) card.querySelector('small').style.color = config.trust_muted_color;
+        if (config.trust_font) card.style.fontFamily = config.trust_font;
+    });
+    const copyright = footer.querySelector('.n9-footer-bottom>span');
+    if (copyright && config.copyright) copyright.textContent = config.copyright;
+    if (copyright) copyright.style.textAlign = config.copyright_align || 'left';
+    const paymentRow = footer.querySelector('.n9-payment-row');
+    if (paymentRow && (config.payment_images || []).length) {
+        paymentRow.innerHTML = '';
+        config.payment_images.forEach(function (src) { const image = document.createElement('img'); image.src = src; image.alt = 'Payment method'; image.style.width = (config.payment_width || 54) + 'px'; image.style.height = (config.payment_height || 32) + 'px'; image.style.objectFit = config.payment_fit || 'contain'; paymentRow.appendChild(image); });
+    }
+});
 </script>
 
 </body>

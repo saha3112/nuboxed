@@ -1,0 +1,36 @@
+<main style="max-width:760px;margin:50px auto;padding:24px"><section style="background:#fff;border:1px solid #e5e7eb;border-radius:20px;padding:30px;box-shadow:0 16px 40px rgba(16,24,40,.08)">{% if dynamic_form.show_heading %}<h1>{{ dynamic_form.name }}</h1><p>{{ dynamic_form.description }}</p>{% endif %}{% if success %}<p style="padding:13px;border-radius:10px;background:#e8f8f0;color:#16734f">{{ success }}</p>{% endif %}{% if error %}<p style="padding:13px;border-radius:10px;background:#fff0ed;color:#b9381e">{{ error }}</p>{% endif %}<form method="post" enctype="multipart/form-data">{% csrf_token %}{% for field in fields %}<div style="margin-top:18px;text-align:{{ field.alignment }}">{% if field.show_label %}<label style="display:block;margin-bottom:7px;font-weight:700">{{ field.label }}{% if field.required %} *{% endif %}</label>{% endif %}{% if field.field_type == 'textarea' %}<textarea name="{{ field.key }}" placeholder="{{ field.placeholder }}" {% if field.required %}required{% endif %} style="width:100%;min-height:110px;padding:11px;border:1px solid #d8dee8;border-radius:9px;box-sizing:border-box"></textarea>{% elif field.field_type == 'select' %}<select name="{{ field.key }}" {% if field.required %}required{% endif %} style="width:100%;padding:11px;border:1px solid #d8dee8;border-radius:9px"><option value="">{{ field.placeholder|default:'Choose an option' }}</option>{% for option in field.options %}<option>{{ option }}</option>{% endfor %}</select>{% elif field.field_type == 'radio' or field.field_type == 'checkbox' %}{% for option in field.options %}<label style="display:inline-flex;gap:6px;margin:5px 12px 5px 0"><input type="{{ field.field_type }}" name="{{ field.key }}" value="{{ option }}" {% if field.required %}required{% endif %}> {{ option }}</label>{% endfor %}{% elif field.field_type == 'date' %}<input class="dynamic-date-field" type="date" name="{{ field.key }}" min="{% now 'Y-m-d' %}" data-allowed-dates="{% if field.options %}{{ field.options|join:',' }}{% endif %}" {% if field.required %}required{% endif %} style="width:100%;padding:11px;border:1px solid #d8dee8;border-radius:9px;box-sizing:border-box">{% elif field.field_type == 'hidden' %}<input type="hidden" name="{{ field.key }}" value="{{ field.default_value }}">{% else %}<input type="{{ field.field_type }}" name="{{ field.key }}" placeholder="{{ field.placeholder }}" value="{{ field.default_value }}" {% if field.required %}required{% endif %} style="width:100%;padding:11px;border:1px solid #d8dee8;border-radius:9px;box-sizing:border-box">{% endif %}{% if field.help_text %}<small style="display:block;margin-top:5px;color:#667085">{{ field.help_text }}</small>{% endif %}{% if field.field_type == 'date' and field.options %}<small style="display:block;margin-top:5px;color:#667085">Please choose one of the available dates.</small>{% elif field.field_type == 'date' %}<small style="display:block;margin-top:5px;color:#667085">Previous dates are unavailable.</small>{% endif %}</div>{% endfor %}<div style="text-align:{{ dynamic_form.submit_button_alignment }};margin-top:24px"><button style="border:0;border-radius:10px;padding:12px 20px;background:#e04420;color:white;font-weight:800">{{ dynamic_form.submit_button_text }}</button></div></form></section></main>
+<style>
+.dynamic-date-field{min-height:48px;background:#fff7f3!important;border:1px solid #f1c8b9!important;border-radius:11px!important;color:#263247;font-weight:700;cursor:pointer}
+.dynamic-date-field:focus{outline:none;border-color:#e04420!important;box-shadow:0 0 0 4px rgba(224,68,32,.12)}
+.dynamic-date-field::-webkit-calendar-picker-indicator{padding:7px;border-radius:7px;background-color:#ffe8df;cursor:pointer;opacity:1}
+</style>
+<script>
+const dynamicDateRules = {
+    {% for field in fields %}{% if field.field_type == 'date' %}
+    "{{ field.key }}": {minimum: "{{ field.date_minimum }}", maximum: "{{ field.date_maximum }}", blockWeekends: {{ field.date_block_weekends|yesno:'true,false' }}, specific: [{% for item in field.date_specific_dates %}"{{ item }}"{% if not forloop.last %},{% endif %}{% endfor %}]},
+    {% endif %}{% endfor %}
+};
+document.querySelectorAll('.dynamic-date-field').forEach(function (input) {
+    input.addEventListener('keydown', function (event) { event.preventDefault(); });
+    input.addEventListener('paste', function (event) { event.preventDefault(); });
+    const rules = dynamicDateRules[input.name] || {};
+    if (rules.minimum) input.min = rules.minimum;
+    if (rules.maximum) input.max = rules.maximum;
+    const allowed = (rules.specific && rules.specific.length ? rules.specific : (input.dataset.allowedDates || '').split(',')).map(function (value) { return value.trim(); }).filter(Boolean);
+    if (rules.blockWeekends) input.addEventListener('change', function () { if (input.value && [0, 6].includes(new Date(input.value + 'T00:00:00').getDay())) input.setCustomValidity('Weekend dates are not available.'); else if (!allowed.length) input.setCustomValidity(''); });
+    if (!allowed.length) return;
+    input.addEventListener('change', function () {
+        if (input.value && !allowed.includes(input.value)) {
+            input.setCustomValidity('Please choose one of the available dates.');
+        } else {
+            input.setCustomValidity('');
+        }
+    });
+});
+</script>
+<script>
+const formFieldGap = {{ dynamic_form.field_gap|default:18 }};
+document.querySelectorAll('form>div[style*="margin-top:18px"]').forEach(function (field) {
+    field.style.marginTop = formFieldGap + 'px';
+});
+</script>

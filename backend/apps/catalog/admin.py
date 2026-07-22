@@ -17,9 +17,49 @@ from .models import (
 
 @admin.register(Category)
 class CategoryAdmin(admin.ModelAdmin):
-    list_display = ("name", "parent", "sort_order", "is_featured", "is_active")
+    list_display = ("name", "parent", "sort_order", "is_featured", "is_active", "category_image_status")
     search_fields = ("name", "slug", "description")
     list_filter = ("is_featured", "is_active")
+    readonly_fields = ("category_image_preview",)
+    fieldsets = (
+        (None, {"fields": ("name", "slug", "parent", "description")}),
+        (
+            "Homepage category card images",
+            {
+                "description": "Upload separate images for each device. Tablet and mobile fall back to the desktop image when left empty.",
+                "fields": (
+                    "category_image_desktop",
+                    "category_image_tablet",
+                    "category_image_mobile",
+                    "category_image_alt",
+                    "category_image_preview",
+                ),
+            },
+        ),
+        ("Visibility and ordering", {"fields": ("is_active", "is_featured", "sort_order")}),
+        ("SEO", {"fields": ("seo_title", "seo_description")}),
+    )
+
+    @admin.display(description="Card image")
+    def category_image_status(self, obj):
+        return "Configured" if obj.category_image_desktop else "Product fallback"
+
+    @admin.display(description="Current previews")
+    def category_image_preview(self, obj):
+        images = (
+            ("Desktop", obj.category_image_desktop),
+            ("Tablet", obj.category_image_tablet),
+            ("Mobile", obj.category_image_mobile),
+        )
+        previews = []
+        for label, image in images:
+            if image:
+                previews.append(
+                    f'<div style="display:inline-flex;flex-direction:column;gap:6px;margin:0 14px 12px 0;vertical-align:top;">'
+                    f'<strong>{label}</strong><img src="{image.url}" alt="{label} preview" style="width:150px;height:95px;object-fit:cover;border-radius:8px;border:1px solid #d9e1ea;">'
+                    f'</div>'
+                )
+        return mark_safe("".join(previews) or "No category card images uploaded yet.")
 
 
 @admin.register(Brand)

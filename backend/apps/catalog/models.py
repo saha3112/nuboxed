@@ -22,6 +22,22 @@ class Category(BaseModel):
     )
     seo_title = models.CharField(max_length=255, blank=True)
     seo_description = models.CharField(max_length=320, blank=True)
+    category_image_desktop = models.ImageField(
+        upload_to="categories/desktop/", blank=True,
+        help_text="Homepage category card image for desktop screens.",
+    )
+    category_image_tablet = models.ImageField(
+        upload_to="categories/tablet/", blank=True,
+        help_text="Optional homepage category card image for tablet screens.",
+    )
+    category_image_mobile = models.ImageField(
+        upload_to="categories/mobile/", blank=True,
+        help_text="Optional homepage category card image for mobile screens.",
+    )
+    category_image_alt = models.CharField(
+        max_length=255, blank=True,
+        help_text="Accessible alt text for the homepage category image.",
+    )
 
     @property
     def children_with_products(self):

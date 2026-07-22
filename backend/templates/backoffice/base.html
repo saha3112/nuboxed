@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ page_title|default:"CommerceOS Super Admin" }}</title>
+    <title>{{ page_title|default:"Nuboxed Super Admin" }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -61,7 +61,7 @@
                             <img src="{{ global_brand_settings.logo_small.url }}" alt="Logo" class="bo-brand-logo-small">
                         {% else %}
                             <div class="bo-brand-icon">
-                                {{ global_brand_settings.brand_name|default:"CommerceOS"|slice:":2"|upper }}
+                                {{ global_brand_settings.brand_name|default:"Nuboxed"|slice:":2"|upper }}
                             </div>
                         {% endif %}
                     </div>
@@ -73,11 +73,11 @@
                                 <img src="{{ global_brand_settings.logo_small.url }}" alt="Logo" class="bo-brand-logo-small">
                             {% else %}
                                 <div class="bo-brand-icon">
-                                    {{ global_brand_settings.brand_name|default:"CommerceOS"|slice:":2"|upper }}
+                                    {{ global_brand_settings.brand_name|default:"Nuboxed"|slice:":2"|upper }}
                                 </div>
                             {% endif %}
                             <div>
-                                <div class="bo-brand-name">{{ global_brand_settings.brand_name|default:"CommerceOS" }}</div>
+                                <div class="bo-brand-name">{{ global_brand_settings.brand_name|default:"Nuboxed" }}</div>
                                 <div class="bo-brand-copy">{{ global_brand_settings.brand_tagline|default:"Super Admin" }}</div>
                             </div>
                         {% endif %}
@@ -148,6 +148,8 @@
                                 <i class="ph ph-lock-key"></i>
                                 {% elif group_name == "Storefront Content" %}
                                 <i class="ph ph-browser"></i>
+                                {% elif group_name == "Page Settings" %}
+                                <i class="ph ph-sliders-horizontal"></i>
                                 {% else %}
                                 <i class="ph ph-stack"></i>
                                 {% endif %}
@@ -162,6 +164,22 @@
                             {% elif group_name == "Platform" %}
                             <a class="bo-nav-link bo-subnav-link" href="{% url 'backoffice:invoice-design' %}"><span class="bo-nav-link-left"><i class="ph ph-file-text"></i><span>Invoice Design (Admin only)</span></span></a>
                             <a class="bo-nav-link bo-subnav-link" href="{% url 'backoffice:email-templates' %}"><span class="bo-nav-link-left"><i class="ph ph-envelope"></i><span>Email Templates</span></span></a>
+                            {% elif group_name == "Page Settings" %}
+                            <a class="bo-nav-link bo-subnav-link {% if request.resolver_match.url_name == 'homepage-settings' %}active{% endif %}" href="{% url 'backoffice:homepage-settings' %}"><span class="bo-nav-link-left"><i class="ph ph-house"></i><span>Homepage Settings</span></span></a>
+                            <a class="bo-nav-link bo-subnav-link {% if request.resolver_match.url_name == 'footer-settings' %}active{% endif %}" href="{% url 'backoffice:footer-settings' %}"><span class="bo-nav-link-left"><i class="ph ph-layout"></i><span>Footer Settings</span></span></a>
+                            <a class="bo-nav-link bo-subnav-link {% if request.resolver_match.url_name == 'contact-settings' %}active{% endif %}" href="{% url 'backoffice:contact-settings' %}"><span class="bo-nav-link-left"><i class="ph ph-chats-circle"></i><span>Contact Page Settings</span></span></a>
+                            <a class="bo-nav-link bo-subnav-link {% if request.resolver_match.url_name == 'product-page-settings' %}active{% endif %}" href="{% url 'backoffice:product-page-settings' %}"><span class="bo-nav-link-left"><i class="ph ph-shopping-bag-open"></i><span>Product Page Settings</span></span></a>
+                            {% elif group_name == "Storefront Content" %}
+                            <div class="bo-nav-group bo-nav-group-dynamic-forms" style="margin:0" x-data="{open: {% if request.resolver_match.url_name == 'dynamic-form-submissions' %}true{% else %}false{% endif %}}">
+                                <div class="bo-nav-link bo-subnav-link {% if request.resolver_match.url_name == 'dynamic-forms' or request.resolver_match.url_name == 'dynamic-form-edit' %}active{% endif %}"><a href="{% url 'backoffice:dynamic-forms' %}" style="display:flex;align-items:center;flex:1"><span class="bo-nav-link-left"><i class="ph ph-textbox"></i><span>Dynamic Forms</span></span></a><button type="button" @click="open=!open" :aria-expanded="open.toString()" aria-label="Toggle Dynamic Forms submissions" style="margin-left:auto;border:0;background:transparent;color:inherit;cursor:pointer;padding:4px"><i class="ph ph-caret-down" x-show="open" x-cloak></i><i class="ph ph-caret-right" x-show="!open" x-cloak></i></button></div>
+                                <div class="bo-subnav" x-show="open" x-transition style="padding-left:16px">
+                                    <a class="bo-nav-link bo-subnav-link" href="{% url 'backoffice:dynamic-forms' %}"><span class="bo-nav-link-left"><i class="ph ph-list"></i><span>All Forms</span></span></a>
+                                    <a class="bo-nav-link bo-subnav-link" href="{% url 'backoffice:dynamic-form-new' %}"><span class="bo-nav-link-left"><i class="ph ph-plus-circle"></i><span>Add New Form</span></span></a>
+                                    {% for nav_form in backoffice_dynamic_forms %}
+                                    <a class="bo-nav-link bo-subnav-link {% if request.resolver_match.url_name == 'dynamic-form-submissions' and request.resolver_match.kwargs.pk == nav_form.pk|stringformat:'s' %}active{% endif %}" href="{% url 'backoffice:dynamic-form-submissions' pk=nav_form.pk %}"><span class="bo-nav-link-left"><i class="ph ph-list-checks"></i><span>{{ nav_form.name }} submissions</span></span></a>
+                                    {% endfor %}
+                                </div>
+                            </div>
                             {% endif %}
                             {% for module_key, module in modules %}
                                 <a class="bo-nav-link bo-subnav-link {% if module_key == module_key_active %}active{% endif %}" href="{% if module.custom_url %}{% url module.custom_url %}{% else %}{% url 'backoffice:module-list' module=module_key %}{% endif %}">
@@ -233,10 +251,6 @@
                 {% endfor %}
             </nav>
 
-            <div class="bo-sidebar-card">
-                <strong>Control Layer</strong>
-                <p>Access catalog, commerce, storefront, and platform controls from one place.</p>
-            </div>
         </aside>
 
         <main class="bo-main">
@@ -412,6 +426,45 @@
             },
         };
     }
+    </script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.bo-nav-group-dynamic-forms a').forEach(function (link) {
+            if (link.textContent.trim() === 'Footer Newsletter Subscription submissions') link.querySelector('span:last-child').textContent = 'Forms Lead Data';
+        });
+    });
+    </script>
+    {{ global_footer_settings|json_script:"global-footer-settings" }}
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const config = JSON.parse(document.getElementById('global-footer-settings').textContent || '{}');
+        const footer = document.querySelector('.n9-footer');
+        if (!footer) return;
+        const links = config.links || [];
+        footer.querySelectorAll('.n9-footer-col a').forEach(function (link, index) {
+            const item = links[index];
+            if (!item || !item.text) return;
+            link.textContent = item.text;
+            link.href = item.target === '__manual__' ? (item.manual || '#') : (item.target || '#');
+        });
+        const trust = config.trust || [];
+        footer.querySelectorAll('.n9-footer-trust-item').forEach(function (card, index) {
+            const item = trust[index];
+            if (!item) return;
+            const title = card.querySelector('strong');
+            const subtitle = card.querySelector('small');
+            if (title && item.title) title.textContent = item.title;
+            if (subtitle && item.subtitle) subtitle.textContent = item.subtitle;
+        });
+        const copyright = footer.querySelector('.n9-footer-bottom>span');
+        if (copyright && config.copyright) copyright.textContent = config.copyright;
+        if (copyright) copyright.style.textAlign = config.copyright_align || 'left';
+        const paymentRow = footer.querySelector('.n9-payment-row');
+        if (paymentRow && Array.isArray(config.payment_images) && config.payment_images.length) {
+            paymentRow.innerHTML = '';
+            config.payment_images.forEach(function (src) { const image = document.createElement('img'); image.className = 'n9-payment-image'; image.src = src; image.alt = 'Payment method'; image.style.width = (config.payment_width || 54) + 'px'; image.style.height = (config.payment_height || 32) + 'px'; image.style.objectFit = config.payment_fit || 'contain'; paymentRow.appendChild(image); });
+        }
+    });
     </script>
     {% include "backoffice/media_library_modal.html" %}
 </body>

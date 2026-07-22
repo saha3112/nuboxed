@@ -1,5 +1,5 @@
 from apps.catalog.models import Brand, Category, Product, ProductAttribute, ProductReview
-from apps.cms.models import FeaturedBanner, Slider
+from apps.cms.models import FeaturedBanner, HomePageSettings, Slider
 from apps.inventory.models import LowStockAlert, StockItem, Warehouse
 from apps.marketplace.models import MarketplaceConnector
 from apps.payments.models import PaymentGateway
@@ -27,6 +27,15 @@ from apps.orders.models import Coupon
 
 
 MODULES = {
+    "homepage-settings": {
+        "title": "Homepage Settings",
+        "model": HomePageSettings,
+        "fields": [],
+        "search_fields": [],
+        "status_field": None,
+        "group": "Page Settings",
+        "custom_url": "backoffice:homepage-settings",
+    },
     "retailers": {
         "title": "Retailers",
         "model": Retailer,
@@ -165,10 +174,10 @@ MODULES = {
     "sliders": {
         "title": "Sliders",
         "model": Slider,
-        "fields": ["title", "status", "sort_order", "is_active"],
-        "search_fields": ["title", "subtitle", "status"],
+        "fields": ["title", "retailer", "product", "status", "sort_order", "is_active"],
+        "search_fields": ["title", "subtitle", "status", "retailer__legal_name", "retailer__display_name", "product__name", "product__sku"],
         "status_field": "status",
-        "group": "Merchandising",
+        "group": "Storefront Content",
     },
     "featured-banners": {
         "title": "Featured Banners",
@@ -310,7 +319,14 @@ MODULES = {
     "brand-settings": {
         "title": "Brand Settings",
         "model": BrandSettings,
-        "fields": ["brand_name", "brand_tagline", "notification_empty_image", "is_active"],
+        "fields": [
+            "brand_name", "brand_tagline", "notification_empty_image",
+            "footer_description", "footer_top_title", "footer_top_subtitle", "footer_explore_title", "footer_support_title",
+            "footer_font_family", "footer_heading_color", "footer_text_color", "footer_link_color",
+            "footer_heading_font_size", "footer_text_font_size", "footer_link_font_size",
+            "footer_link_decoration", "footer_show_icons", "is_active",
+            "location_prompt_enabled",
+        ],
         "search_fields": ["brand_name"],
         "status_field": "is_active",
         "group": "Platform",

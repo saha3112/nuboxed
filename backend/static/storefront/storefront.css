@@ -3715,6 +3715,21 @@ body.cart-drawer-open .cart-drawer-overlay {
 .store-menu-shell.is-stuck .store-menu-identity {
     display: inline-flex;
 }
+
+/* Keep the storefront navigation available while browsing. The retailer detail
+   page has its own store menu, so the global header stays in normal flow there. */
+.site-header {
+    position: sticky;
+    top: 0;
+    z-index: 70;
+}
+
+.site-header.site-header--no-sticky {
+    position: relative;
+    top: auto;
+    z-index: auto;
+}
+
 .store-menu-identity img,
 .store-menu-logo-fallback {
     width: 44px;

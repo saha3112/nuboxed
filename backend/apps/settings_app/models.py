@@ -47,8 +47,26 @@ class BrandSettings(BaseModel):
         null=True,
         help_text="Custom image displayed when there are no notifications."
     )
-    brand_name = models.CharField(max_length=100, default="CommerceOS")
+    brand_name = models.CharField(max_length=100, default="Nuboxed")
     brand_tagline = models.CharField(max_length=100, default="Super Admin", blank=True)
+    footer_description = models.CharField(max_length=255, default="Curated electronics, verified retailers, transparent delivery, and smarter product discovery.", blank=True)
+    footer_top_title = models.CharField(max_length=180, default="Good products. Better prices. A simpler way to shop.")
+    footer_top_subtitle = models.CharField(max_length=255, default="Get product launches, members-only offers and shopping updates delivered to your inbox.")
+    footer_explore_title = models.CharField(max_length=100, default="Explore")
+    footer_support_title = models.CharField(max_length=100, default="Support")
+    footer_font_family = models.CharField(max_length=80, default="Inter")
+    footer_heading_color = models.CharField(max_length=9, default="#ffffff")
+    footer_text_color = models.CharField(max_length=9, default="#b8b8b8")
+    footer_link_color = models.CharField(max_length=9, default="#ffffff")
+    footer_heading_font_size = models.PositiveIntegerField(default=16)
+    footer_text_font_size = models.PositiveIntegerField(default=14)
+    footer_link_font_size = models.PositiveIntegerField(default=14)
+    footer_link_decoration = models.CharField(max_length=12, choices=[("none", "No underline"), ("hover", "Underline on hover"), ("always", "Always underline")], default="none")
+    footer_show_icons = models.BooleanField(default=True)
+    location_prompt_enabled = models.BooleanField(
+        default=True,
+        help_text="Show the one-time storefront location permission prompt to visitors.",
+    )
 
     class Meta:
         verbose_name = "Brand Settings"

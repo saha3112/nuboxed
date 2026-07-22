@@ -1,0 +1,155 @@
+{% extends "backoffice/base.html" %}
+{% block content %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=Lato:wght@400;700;900&family=Merriweather:wght@400;700&family=Montserrat:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&family=Nunito+Sans:wght@400;600;700;800&family=Nunito:wght@400;600;700;800&family=Open+Sans:wght@400;600;700;800&family=Oswald:wght@400;500;600;700&family=Playfair+Display:wght@400;600;700&family=Poppins:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Raleway:wght@400;500;600;700;800&family=Roboto:wght@400;500;700;900" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<style>
+.hp-page{padding:32px;max-width:1400px;margin:auto;background:var(--bg);min-height:100vh}.hp-hero,.hp-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;box-shadow:0 8px 24px rgba(16,24,40,.06)}.hp-hero{padding:28px 32px;margin-bottom:22px}.hp-hero h1{margin:0 0 7px;color:var(--text-main);font-size:28px}.hp-hero p{margin:0;color:var(--muted)}.hp-card{padding:24px;margin-bottom:22px}.hp-card h2{margin:0 0 5px;color:var(--text-main);font-size:20px}.hp-card>p{margin:0 0 20px;color:var(--muted);font-size:13px}.hp-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.hp-field{display:flex;flex-direction:column;gap:7px}.hp-field label{font-size:12px;font-weight:700;color:var(--text-main)}.hp-field input,.hp-field select,.hp-field textarea{width:100%;border:1px solid var(--border);border-radius:10px;padding:11px 12px;background:var(--surface);color:var(--text-main);font:inherit}.hp-field textarea{min-height:76px;resize:vertical}.hp-check{display:flex;flex-direction:row;align-items:center;gap:10px;padding:12px 14px;border:1px solid var(--border);border-radius:10px;color:var(--text-main);font-size:13px;min-height:46px}.hp-check label{order:2;margin:0;line-height:1.2}.hp-check input{order:1;width:17px;height:17px;margin:0;accent-color:#ef4b23}.hp-row{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.hp-repeat{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}.hp-item{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;padding:17px;border:1px solid var(--border);border-radius:14px;background:color-mix(in srgb,var(--surface) 94%,var(--bg))}.hp-item h3,.hp-item .hp-check,.hp-item .hp-field:has(textarea[name*="custom_svg"]),.hp-item .hp-field:has(input[type=file]){grid-column:1/-1}.hp-item .hp-field{min-width:0}.hp-item h3{font-size:14px;margin:0 0 14px;color:var(--text-main)}.hp-delete{color:#b42318;font-size:12px}.hp-actions{display:flex;justify-content:flex-end;gap:12px}.hp-btn{border:0;border-radius:10px;padding:12px 20px;font-weight:700;cursor:pointer}.hp-btn-primary{background:#ef4b23;color:#fff}.hp-btn-muted{background:var(--bg);color:var(--text-main);border:1px solid var(--border)}.hp-error{color:#b42318;font-size:12px}@media(max-width:1100px){.hp-repeat{grid-template-columns:repeat(2,1fr)}}@media(max-width:700px){.hp-page{padding:18px}.hp-grid,.hp-repeat{grid-template-columns:1fr}.hp-hero,.hp-card{padding:20px}.hp-check{padding-top:12px}.hp-item{grid-template-columns:1fr}}
+</style>
+<style>
+.hp-bulk{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 16px;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:color-mix(in srgb,var(--surface) 92%,var(--bg));color:var(--muted);font-size:12px}.hp-bulk label{display:flex;align-items:center;gap:7px;margin-right:auto}.hp-bulk input[type=checkbox],.hp-select input[type=checkbox]{width:16px;height:16px;accent-color:#ef4b23}.hp-bulk .hp-btn{padding:8px 12px;font-size:12px}.hp-btn-danger{background:#b42318;color:#fff}.hp-select{display:flex;align-items:center;gap:8px;cursor:pointer}.hp-item:has(input[data-item-group]:checked){border-color:#ef4b23;box-shadow:0 0 0 2px rgba(239,75,35,.1)}.hp-field:has(input[type=color]){display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:12px}.hp-field:has(input[type=color]) label{flex:0 0 auto}.hp-field:has(input[type=color]) input[type=color]{appearance:none;-webkit-appearance:none;width:40px!important;height:40px!important;min-width:40px;padding:3px!important;border:1px solid var(--border);border-radius:50%!important;overflow:hidden;cursor:pointer;box-shadow:0 2px 7px rgba(16,24,40,.14);transition:transform .2s,box-shadow .2s}.hp-field:has(input[type=color]) input[type=color]:hover{transform:scale(1.08);box-shadow:0 4px 12px rgba(16,24,40,.22)}.hp-field:has(input[type=color]) input[type=color]::-webkit-color-swatch-wrapper{padding:0;border-radius:50%}.hp-field:has(input[type=color]) input[type=color]::-webkit-color-swatch{border:0;border-radius:50%}.hp-field:has(input[type=color]) input[type=color]::-moz-color-swatch{border:0;border-radius:50%}
+.hp-item .hp-icon-preview{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;background:var(--bg);font-size:20px}.hp-item .hp-icon-preview img{width:28px;height:28px;object-fit:contain}
+.hp-font-status{display:block;margin-top:5px;color:var(--muted);font-size:11px}
+.hp-global-panel{margin:18px 0 20px;padding:18px;border:1px solid var(--border);border-radius:14px;background:color-mix(in srgb,var(--surface) 88%,var(--bg));}.hp-global-panel h3{margin:0 0 4px;color:var(--text-main);font-size:15px}.hp-global-panel p{margin:0 0 15px;color:var(--muted);font-size:12px}.hp-global-panel .hp-grid{grid-template-columns:repeat(3,minmax(0,1fr))}@media(max-width:700px){.hp-global-panel .hp-grid{grid-template-columns:1fr}}
+.hp-style-set{display:grid;gap:14px}.hp-style-set-title{margin:0;color:var(--text-main);font-size:11px;font-weight:800;letter-spacing:.04em;text-transform:uppercase}.hp-style-set .hp-grid{margin:0}.hp-style-set + .hp-style-set{padding-top:14px;border-top:1px solid var(--border)}
+.hp-upload-label{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:42px;padding:0 14px;border:1px dashed #ef4b23;border-radius:10px;background:rgba(239,75,35,.06);color:#d83d1d;font-size:12px;font-weight:700;cursor:pointer;transition:.2s}.hp-upload-label:hover{background:rgba(239,75,35,.12);transform:translateY(-1px)}.hp-file-input{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none}
+.hp-item .hp-field:has(select[name$="-icon_mode"]),.hp-item .hp-field:has(select[name$="-fontawesome_icon"]){grid-column:1/-1}.hp-fa-picker{display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:8px;margin-top:4px;max-height:420px;overflow-y:auto;padding:2px}.hp-fa-option{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-width:0;min-height:70px;padding:8px 4px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text-main);font-size:10px;line-height:1.15;text-align:center;cursor:pointer;transition:.2s;overflow:hidden}.hp-fa-option i{flex:0 0 auto;font-size:20px;color:#ef4b23}.hp-fa-option span{display:block;width:100%;min-width:0;overflow-wrap:anywhere;word-break:break-word}.hp-fa-option:hover,.hp-fa-option.active{border-color:#ef4b23;background:rgba(239,75,35,.08);box-shadow:0 3px 10px rgba(239,75,35,.12)}.hp-fa-search{width:100%;margin-top:8px}.hp-fa-search input{width:100%;padding:9px 11px;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text-main)}@media(max-width:700px){.hp-fa-picker{grid-template-columns:repeat(3,minmax(0,1fr));max-height:360px}}
+</style>
+<div class="hp-page">
+  <div class="hp-hero"><h1>Homepage Settings</h1><p>Control homepage content, presentation and product visibility from one place.</p></div>
+  <form method="post" enctype="multipart/form-data">{% csrf_token %}
+    <section class="hp-card"><h2>Global homepage style</h2><p>Set the common font, colors and category section content.</p><div class="hp-grid">{% for field in settings_form %}{% if field.name == 'is_active' or field.name == 'font_family' or field.name == 'heading_color' or field.name == 'body_color' or field.name == 'accent_color' or field.name == 'category_title' or field.name == 'category_subtitle' or field.name == 'category_card_count' or field.name == 'category_image_fit' %}<div class="hp-field{% if field.field.widget.input_type == 'checkbox' %} hp-check{% endif %}">{{ field.label_tag }}{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{% for error in field.errors %}<span class="hp-error">{{ error }}</span>{% endfor %}</div>{% endif %}{% endfor %}</div></section>
+    <section class="hp-card"><div class="hp-row"><div><h2>Trust cards</h2><p>Global style is selected by default. Enable manual styling on a card only when it needs its own text size, color, font or icon size.</p></div></div><div class="hp-global-panel"><h3>Global trust card style</h3><p>These values apply to every trust card unless that card has “Use manual style” enabled.</p><div class="hp-grid">{% for field in settings_form %}{% if field.name == 'trust_font_family' or field.name == 'trust_title_color' or field.name == 'trust_text_color' or field.name == 'trust_icon_color' or field.name == 'trust_title_font_size' or field.name == 'trust_text_font_size' or field.name == 'trust_icon_size' %}<div class="hp-field">{{ field.label_tag }}{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{% for error in field.errors %}<span class="hp-error">{{ error }}</span>{% endfor %}</div>{% endif %}{% endfor %}</div></div><div class="hp-bulk"><label><input type="checkbox" data-select-all="trust"> Select all</label><button type="submit" name="bulk_action" value="trust:restore" formnovalidate class="hp-btn hp-btn-muted">Restore</button><button type="submit" name="bulk_action" value="trust:delete" formnovalidate class="hp-btn hp-btn-muted">Move to trash</button><button type="submit" name="bulk_action" value="trust:permanent_delete" formnovalidate>Permanent delete</button></div>{{ trust_formset.management_form }}<div class="hp-repeat">{% for form in trust_formset %}<div class="hp-item"><h3><label class="hp-select"><input type="checkbox" name="selected_items" value="{{ form.instance.pk }}" data-item-group="trust"> Trust card {{ forloop.counter }}</label></h3>{% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}{% for field in form.visible_fields %}<div class="hp-field{% if field.field.widget.input_type == 'checkbox' %} hp-check{% endif %}{% if field.name == 'font_family' or field.name == 'title_font_size' or field.name == 'text_font_size' or field.name == 'icon_size' or field.name == 'title_color' or field.name == 'text_color' or field.name == 'icon_color' %} hp-manual-style-field{% endif %}">{{ field.label_tag }}{{ field }}{% for error in field.errors %}<span class="hp-error">{{ error }}</span>{% endfor %}</div>{% endfor %}</div>{% endfor %}</div></section>
+    <section class="hp-card"><h2>Trending products</h2><p>Choose how many products visitors see, configure product-card controls and set the section typography.</p><div class="hp-global-panel"><h3>Global trending style</h3><p>All trending section typography and colors are managed together here.</p><div class="hp-style-set"><h4 class="hp-style-set-title">Product colors</h4><div class="hp-grid">{% for field in settings_form %}{% if field.name == 'trending_title_color' or field.name == 'trending_text_color' or field.name == 'trending_price_color' %}<div class="hp-field">{{ field.label_tag }}{{ field }}{% for error in field.errors %}<span class="hp-error">{{ error }}</span>{% endfor %}</div>{% endif %}{% endfor %}</div></div><div class="hp-style-set"><h4 class="hp-style-set-title">Trending typography</h4><div class="hp-grid">{% for field in settings_form %}{% if field.name == 'trending_font_family' or field.name == 'trending_heading_font_size' or field.name == 'trending_subtitle_font_size' or field.name == 'trending_title_font_size' or field.name == 'trending_meta_font_size' or field.name == 'trending_price_font_size' %}<div class="hp-field">{{ field.label_tag }}{{ field }}{% for error in field.errors %}<span class="hp-error">{{ error }}</span>{% endfor %}</div>{% endif %}{% endfor %}</div></div></div><div class="hp-grid">{% for field in settings_form %}{% if field.name == 'trending_title' or field.name == 'trending_subtitle' or field.name == 'trending_product_count' or field.name == 'trending_view_all_label' or field.name == 'trending_view_all_url' or field.name == 'trending_view_all_target' or field.name == 'trending_view_all_manual_url' or 'show_product_' in field.name %}<div class="hp-field{% if field.field.widget.input_type == 'checkbox' %} hp-check{% endif %}">{{ field.label_tag }}{{ field }}</div>{% endif %}{% endfor %}</div></section>
+    <section class="hp-card"><h2>Loved by our customers</h2><p>Manage heading, subtitle, review count, review source and review-card presentation.</p><div class="hp-global-panel"><h3>Global review style</h3><p>All review typography and colors are managed together here.</p><div class="hp-style-set"><h4 class="hp-style-set-title">Review colors</h4><div class="hp-grid">{% for field in settings_form %}{% if field.name == 'reviews_quote_color' or field.name == 'reviews_name_color' or field.name == 'reviews_role_color' %}<div class="hp-field">{{ field.label_tag }}{{ field }}{% for error in field.errors %}<span class="hp-error">{{ error }}</span>{% endfor %}</div>{% endif %}{% endfor %}</div></div><div class="hp-style-set"><h4 class="hp-style-set-title">Review typography</h4><div class="hp-grid">{% for field in settings_form %}{% if field.name == 'reviews_font_family' or field.name == 'reviews_heading_font_size' or field.name == 'reviews_subtitle_font_size' or field.name == 'reviews_quote_font_size' or field.name == 'reviews_name_font_size' or field.name == 'reviews_role_font_size' %}<div class="hp-field">{{ field.label_tag }}{{ field }}{% for error in field.errors %}<span class="hp-error">{{ error }}</span>{% endfor %}</div>{% endif %}{% endfor %}</div></div></div><div class="hp-grid">{% for field in settings_form %}{% if field.name == 'reviews_title' or field.name == 'reviews_subtitle' or field.name == 'review_card_count' or field.name == 'review_source' %}<div class="hp-field">{{ field.label_tag }}{{ field }}</div>{% endif %}{% endfor %}</div><div style="height:18px"></div><div class="hp-bulk"><label><input type="checkbox" data-select-all="reviews"> Select all</label><button type="submit" name="bulk_action" value="reviews:restore" formnovalidate class="hp-btn hp-btn-muted">Restore</button><button type="submit" name="bulk_action" value="reviews:delete" formnovalidate class="hp-btn hp-btn-muted">Move to trash</button><button type="submit" name="bulk_action" value="reviews:permanent_delete" formnovalidate class="hp-btn hp-btn-danger">Permanent delete</button></div>{{ review_formset.management_form }}<div class="hp-repeat">{% for form in review_formset %}<div class="hp-item"><h3><label class="hp-select"><input type="checkbox" name="selected_items" value="{{ form.instance.pk }}" data-item-group="reviews"> Review card {{ forloop.counter }}</label></h3>{% for hidden in form.hidden_fields %}{{ hidden }}{% endfor %}{% for field in form.visible_fields %}<div class="hp-field{% if field.field.widget.input_type == 'checkbox' %} hp-check{% endif %}">{{ field.label_tag }}{{ field }}{% for error in field.errors %}<span class="hp-error">{{ error }}</span>{% endfor %}</div>{% endfor %}</div>{% endfor %}</div></section>
+    <div class="hp-actions"><button class="hp-btn hp-btn-muted" type="reset">Reset</button><button class="hp-btn hp-btn-primary" type="submit">Save homepage settings</button></div>
+  </form>
+</div>
+<script>
+document.querySelectorAll('[data-select-all]').forEach(function(master){
+  master.addEventListener('change', function(){
+    document.querySelectorAll('[data-item-group="'+master.dataset.selectAll+'"]').forEach(function(item){ item.checked=master.checked; });
+  });
+});
+document.querySelectorAll('button[value$="permanent_delete"]').forEach(function(button){
+  button.addEventListener('click', function(event){
+    if(!confirm('Permanently delete the selected items? This cannot be undone.')) event.preventDefault();
+  });
+});
+const destination=document.getElementById('id_trending_view_all_target');
+const manualField=document.getElementById('id_trending_view_all_manual_url');
+function syncDestination(){if(!destination||!manualField)return;const box=manualField.closest('.hp-field');if(box)box.style.display=destination.value==='__manual__'?'flex':'none';}
+destination?.addEventListener('change',syncDestination);syncDestination();
+document.querySelectorAll('input[name$="-use_manual_style"]').forEach(function(toggle){
+  function syncManualStyle(){
+    const item=toggle.closest('.hp-item');
+    item?.querySelectorAll('.hp-manual-style-field').forEach(function(field){field.style.display=toggle.checked?'flex':'none';});
+  }
+  toggle.addEventListener('change',syncManualStyle);syncManualStyle();
+});
+// Google publishes a continuously changing catalog. Load the complete list
+// into each native select while retaining a local fallback if the catalog is
+// temporarily unavailable.
+(function hydrateGoogleFontDropdowns(){
+  const selects=Array.from(document.querySelectorAll('select[name$="-font_family"],#id_font_family'));
+  if(!selects.length)return;
+  const url='https://fonts.google.com/metadata/fonts';
+  fetch(url,{headers:{'Accept':'application/json'}}).then(function(response){
+    if(!response.ok)throw new Error('font catalog unavailable');
+    return response.json();
+  }).then(function(payload){
+    const catalog=Array.isArray(payload)?payload:(payload.familyMetadataList||payload.fonts||[]);
+    const families=catalog.map(function(item){return typeof item==='string'?item:item.family;}).filter(Boolean).sort(function(a,b){return a.localeCompare(b);});
+    if(!families.length)throw new Error('empty font catalog');
+    selects.forEach(function(select){
+      const selected=select.value;
+      const values=new Set(Array.from(select.options).map(function(option){return option.value;}));
+      families.forEach(function(family){
+        if(values.has(family))return;
+        select.add(new Option(family,family));
+      });
+      if(selected)select.value=selected;
+      select.dataset.catalogLoaded='true';
+      const status=document.createElement('small');status.className='hp-font-status';status.textContent=families.length+' Google Fonts available';
+      select.closest('.hp-field')?.appendChild(status);
+    });
+  }).catch(function(){
+    selects.forEach(function(select){
+      const status=document.createElement('small');status.className='hp-font-status';status.textContent='Common Google Fonts loaded';
+      select.closest('.hp-field')?.appendChild(status);
+    });
+  });
+})();
+document.querySelectorAll('select[name$="-fontawesome_icon"]').forEach(function(select){
+  select.classList.add('hp-native-fa-select');
+  const field=select.closest('.hp-field');
+  if(!field)return;
+  select.style.display='none';
+  const searchWrap=document.createElement('div');searchWrap.className='hp-fa-search';
+  searchWrap.innerHTML='<input type="search" placeholder="Search icons..." aria-label="Search Font Awesome icons"><select aria-label="Filter icon group"><option value="all">All groups</option><option value="solid">Solid / Bold</option><option value="regular">Regular / Thin</option><option value="brands">Brands</option><option value="commerce">Commerce</option><option value="communication">Communication</option><option value="navigation">Navigation</option><option value="media">Media</option><option value="interface">Interface</option></select>';
+  const grid=document.createElement('div');grid.className='hp-fa-picker';
+  const options=Array.from(select.options).map(function(option){return {value:option.value,label:option.textContent};});
+  function groupFor(item){
+    const value=item.value.toLowerCase(), label=item.label.toLowerCase();
+    if(value.includes('brands'))return 'brands'; if(value.includes('regular'))return 'regular'; if(value.includes('solid')){
+      if(/truck|cart|bag|box|gift|tag|credit|wallet|receipt|invoice|store|shop|money|coins|warehouse|percent/.test(value+' '+label))return 'commerce';
+      if(/phone|envelope|comment|message|headset|user|users|whatsapp|facebook|instagram|youtube|telegram|linkedin/.test(value+' '+label))return 'communication';
+      if(/arrow|chevron|location|map|house|home|globe|pin/.test(value+' '+label))return 'navigation';
+      if(/image|camera|video|music|photo/.test(value+' '+label))return 'media';
+      return 'solid';
+    } return 'interface';
+  }
+  function render(filter,group){
+    grid.innerHTML='';
+    options.filter(function(item){const itemGroup=groupFor(item), style=item.value.toLowerCase();const matchesGroup=group==='all'||(group==='solid'&&style.includes('fa-solid'))||(group==='regular'&&style.includes('fa-regular'))||(group==='brands'&&style.includes('fa-brands'))||itemGroup===group;return (!filter||item.label.toLowerCase().includes(filter)||item.value.toLowerCase().includes(filter))&&matchesGroup;}).forEach(function(item){
+      const button=document.createElement('button');button.type='button';button.className='hp-fa-option'+(select.value===item.value?' active':'');button.dataset.value=item.value;
+      button.innerHTML='<i class="'+item.value+'" aria-hidden="true"></i><span>'+item.label+'</span>';
+      button.addEventListener('click',function(){select.value=item.value;select.dispatchEvent(new Event('change',{bubbles:true}));render(searchWrap.querySelector('input').value.toLowerCase(),searchWrap.querySelector('select').value);});grid.appendChild(button);
+    });
+  }
+  searchWrap.querySelector('input').addEventListener('input',function(){render(this.value.toLowerCase(),searchWrap.querySelector('select').value);});
+  searchWrap.querySelector('select').addEventListener('change',function(){render(searchWrap.querySelector('input').value.toLowerCase(),this.value);});
+  field.appendChild(searchWrap);field.appendChild(grid);render('','all');
+});
+document.querySelectorAll('select[name$="-icon_mode"]').forEach(function(mode){
+  function syncIconFields(){
+    const prefix=mode.name.replace(/icon_mode$/, '');
+    const groups={
+      text:[prefix+'icon'],
+      fontawesome:[prefix+'fontawesome_icon'],
+      svg:[prefix+'custom_svg',prefix+'icon_svg_file']
+    };
+    Object.keys(groups).forEach(function(type){
+      groups[type].forEach(function(name){
+        const input=document.getElementsByName(name)[0];
+        const field=input?.closest('.hp-field');
+        if(field) field.style.display=mode.value===type?'flex':'none';
+      });
+    });
+  }
+  mode.addEventListener('change',syncIconFields);syncIconFields();
+});
+document.querySelectorAll('input[type="file"]').forEach(function(input){
+  input.classList.add('hp-file-input');
+  const label=document.createElement('label');
+  label.className='hp-upload-label';
+  label.htmlFor=input.id;
+  label.innerHTML='<i class="fa-solid fa-cloud-arrow-up"></i><span>Upload from gallery</span>';
+  input.closest('.hp-field')?.insertBefore(label,input);
+  label.addEventListener('click',function(event){
+    event.preventDefault();
+    if(typeof window.openMediaLibrary!=='function'){input.click();return;}
+    window.openMediaLibrary(function(asset){
+      const libraryInput=document.getElementsByName(input.name.replace('icon_svg_file','icon_svg_library_id'))[0];
+      if(libraryInput) libraryInput.value=asset.id||'';
+      label.querySelector('span').textContent=asset.filename||'Selected from gallery';
+    });
+  });
+  input.addEventListener('change',function(){
+    const name=input.files?.[0]?.name;
+    label.querySelector('span').textContent=name||'Upload from gallery';
+  });
+});
+</script>
+{% endblock %}

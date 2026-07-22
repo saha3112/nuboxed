@@ -1,6 +1,12 @@
 {% extends "storefront/base.html" %}
 
 {% block content %}
+<style>
+  /* Keep the directory visually separated from the footer, even with a short result set. */
+  .store-directory-shell { padding-bottom: 36px; }
+  .store-search-section { margin-top: 36px; }
+  .store-location-cta { padding-bottom: 36px !important; }
+</style>
 <section class="page-head">
   <div class="container">
     <h1>{{ storefront_page_texts.stores.title|default:"Store Directory" }}</h1>
@@ -22,15 +28,17 @@
         {% for store in stores %}
             {% include "storefront/partials/store_card.html" with store=store %}
         {% empty %}
-            <p>No stores matched your search.</p>
+            <p style="grid-column: 1 / -1; margin: 0; text-align: center;">No stores matched your search.</p>
         {% endfor %}
     </section>
 </div>
 
 {% if other_location_msg %}
-<div class="container" style="margin-top: 2rem; padding: 20px; text-align: center; background: var(--bg-alt); border-radius: 8px;">
-    <p style="margin-bottom: 10px; color: var(--text);">{{ storefront_location_messages.no_stores_message|default:"No more stores found in your current location." }}</p>
-    <a href="{{ other_location_url }}" class="button-compact" style="display: inline-block; padding: 10px 20px; text-decoration: none; background: var(--primary); color: #fff; border-radius: 4px;">{{ other_location_msg }}</a>
+<div class="container store-location-cta" style="margin-top: 0; padding: 36px 0; text-align: center;">
+    <div style="padding: 0 24px;">
+        <p style="margin: 0 0 16px; color: var(--text);">{{ storefront_location_messages.no_stores_message|default:"No stores are available in your current location." }}</p>
+        <a href="{{ other_location_url }}" class="button-compact" style="display: inline-block; padding: 11px 22px; text-decoration: none; background: #e04420; color: #fff; border-radius: 8px; font-weight: 700;">{{ other_location_msg|default:"View stores in other locations" }}</a>
+    </div>
 </div>
 {% endif %}
 

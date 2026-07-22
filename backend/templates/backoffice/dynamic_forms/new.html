@@ -1,0 +1,68 @@
+{% extends "backoffice/base.html" %}
+{% block content %}
+<style>
+    .new-form-page{max-width:1120px;margin:0 auto;padding:34px 32px 56px;color:var(--text-main)}
+    .new-form-breadcrumb{display:flex;align-items:center;gap:8px;margin-bottom:22px;color:var(--muted);font-size:12px;font-weight:700}
+    .new-form-breadcrumb i{font-size:14px}
+    .new-form-layout{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:22px;align-items:stretch}
+    .new-form-card,.new-form-aside{border:1px solid var(--border);border-radius:22px;background:var(--surface);box-shadow:0 16px 36px rgba(16,24,40,.07)}
+    .new-form-card{padding:34px 36px}
+    .new-form-heading{display:flex;align-items:flex-start;gap:16px;margin-bottom:30px}
+    .new-form-heading-icon{display:grid;place-items:center;flex:0 0 48px;width:48px;height:48px;border-radius:14px;background:#fff0eb;color:#e04420;font-size:23px}
+    .new-form-heading h1{margin:0;font-size:30px;letter-spacing:-.7px;line-height:1.15}
+    .new-form-heading p{margin:8px 0 0;color:var(--muted);font-size:14px;line-height:1.65}
+    .new-form-fields{display:grid;gap:22px}
+    .new-form-field{display:flex;flex-direction:column;gap:8px}
+    .new-form-field label{color:var(--text-main);font-size:13px;font-weight:800}
+    .new-form-field label small{color:var(--muted);font-weight:600}
+    .new-form-field input{width:100%;box-sizing:border-box;min-height:48px;padding:0 14px;border:1px solid var(--border);border-radius:11px;background:var(--surface);color:var(--text-main);font:inherit;outline:none;transition:border-color .2s,box-shadow .2s}
+    .new-form-field input::placeholder{color:#a0aabd}
+    .new-form-field input:focus{border-color:#e04420;box-shadow:0 0 0 4px rgba(224,68,32,.1)}
+    .new-form-field > small{color:var(--muted);font-size:12px;line-height:1.5}
+    .new-form-actions{display:flex;align-items:center;gap:10px;margin-top:30px;padding-top:24px;border-top:1px solid var(--border)}
+    .new-form-actions .primary-button,.new-form-actions .ghost-button{min-height:44px;padding:0 17px;border-radius:10px}
+    .new-form-actions .primary-button{display:inline-flex;align-items:center;gap:8px}
+    .new-form-aside{padding:26px;display:flex;flex-direction:column;justify-content:space-between;background:linear-gradient(145deg,#fff9f6 0%,var(--surface) 62%)}
+    .new-form-aside h2{margin:0 0 9px;font-size:18px;letter-spacing:-.2px}
+    .new-form-aside > p{margin:0;color:var(--muted);font-size:13px;line-height:1.65}
+    .new-form-steps{display:grid;gap:14px;margin:28px 0}
+    .new-form-step{display:flex;align-items:center!important;justify-content:flex-start;flex-direction:row;gap:12px;padding:12px 14px;border:1px solid #f4d8cb;border-radius:14px;background:rgba(255,255,255,.72);text-align:left}
+    .new-form-step .new-form-step-number{display:grid!important;place-items:center!important;align-self:center!important;flex:0 0 32px;width:32px;height:32px;margin-top:auto!important;margin-bottom:auto!important;margin-left:0;margin-right:0;border-radius:10px;background:#ffe8df;color:#e04420;font-size:13px;font-weight:800;line-height:1;text-align:center;box-sizing:border-box}
+    .new-form-step strong{display:block;margin:0 0 3px;color:#e04420;font-size:13px}
+    .new-form-step span{display:block;color:#e04420;font-size:12px;line-height:1.5}
+    .new-form-tip{display:flex;gap:10px;padding:14px;border:1px solid #f4d8cb;border-radius:13px;background:rgba(255,255,255,.65);color:#7d4b3b;font-size:12px;line-height:1.55}
+    .new-form-tip i{color:#e04420;font-size:17px;margin-top:1px}
+    @media(max-width:850px){.new-form-page{padding:24px 16px 42px}.new-form-layout{grid-template-columns:1fr}.new-form-aside{min-height:0}.new-form-card{padding:26px 22px}}
+    @media(max-width:480px){.new-form-heading h1{font-size:26px}.new-form-actions{align-items:stretch;flex-direction:column}.new-form-actions>*{justify-content:center;width:100%;box-sizing:border-box}}
+</style>
+
+<section class="new-form-page">
+    <div class="new-form-breadcrumb"><span>Storefront Content</span><i class="ph ph-caret-right"></i><span>Dynamic Forms</span><i class="ph ph-caret-right"></i><span>Add new</span></div>
+    <div class="new-form-layout">
+        <div class="new-form-card">
+            <div class="new-form-heading">
+                <span class="new-form-heading-icon"><i class="ph ph-textbox"></i></span>
+                <div><h1>Add New Form</h1><p>Start with the basics. You can add fields, configure the submission flow, and publish the form in the next step.</p></div>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <div class="new-form-fields">
+                    <div class="new-form-field"><label for="form-name">Form name</label><input id="form-name" name="name" value="New customer form" placeholder="e.g. Customer enquiry form" required><small>Choose a clear internal name so your team can find this form quickly.</small></div>
+                    <div class="new-form-field"><label for="form-slug">Public slug <small>(optional)</small></label><input id="form-slug" name="slug" placeholder="customer-contact-form"><small>This becomes part of the public form URL. Leave blank to generate it automatically.</small></div>
+                </div>
+                <div class="new-form-actions"><button class="primary-button" type="submit"><i class="ph ph-arrow-right"></i> Create and open builder</button><a class="ghost-button" href="{% url 'backoffice:dynamic-forms' %}">Cancel</a></div>
+            </form>
+        </div>
+        <aside class="new-form-aside">
+            <div><h2>Build a form in minutes</h2><p>Keep the first step simple, then tailor every detail from the visual builder.</p>
+                <div class="new-form-steps">
+                    <div class="new-form-step"><span class="new-form-step-number">1</span><div><strong>Name your form</strong><span>Give it a memorable name for your workspace.</span></div></div>
+                    <div class="new-form-step"><span class="new-form-step-number">2</span><div><strong>Add the right fields</strong><span>Collect only the information your customers need to share.</span></div></div>
+                    <div class="new-form-step"><span class="new-form-step-number">3</span><div><strong>Publish when ready</strong><span>Preview the experience before making it live.</span></div></div>
+                </div>
+            </div>
+            <div class="new-form-tip"><i class="ph ph-lightbulb"></i><span>You can change the name and slug later from the form builder.</span></div>
+        </aside>
+    </div>
+</section>
+{% endblock %}

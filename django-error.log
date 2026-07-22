@@ -4737,3 +4737,377 @@ Traceback (most recent call last):
 django.db.utils.OperationalError: (2003, "Can't connect to MySQL server on '127.0.0.1:3306' (1)")
 ERROR 2026-07-20 07:37:31,986 basehttp 10339 123145542213632 You're accessing the development server over HTTPS, but it only supports HTTP.
 ERROR 2026-07-20 07:38:51,614 basehttp 10752 123145531375616 You're accessing the development server over HTTPS, but it only supports HTTP.
+ERROR 2026-07-20 12:03:36,775 log 28043 123145443692544 Internal Server Error: /admin/modules/sliders/ba63c06b-56b5-495c-b0a8-23914cb988c2/edit/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/forms/forms.py", line 178, in __getitem__
+    field = self.fields[name]
+KeyError: 'secondary_cta_url'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/backoffice/views.py", line 86, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/auth/mixins.py", line 73, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/auth/mixins.py", line 135, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/edit.py", line 208, in post
+    return super().post(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/edit.py", line 152, in post
+    if form.is_valid():
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/forms/forms.py", line 201, in is_valid
+    return self.is_bound and not self.errors
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/forms/forms.py", line 196, in errors
+    self.full_clean()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/forms/forms.py", line 435, in full_clean
+    self._post_clean()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/forms/models.py", line 479, in _post_clean
+    self.instance = construct_instance(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/forms/models.py", line 72, in construct_instance
+    and form[f.name].field.widget.value_omitted_from_data(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/forms/forms.py", line 180, in __getitem__
+    raise KeyError(
+KeyError: "Key 'secondary_cta_url' not found in 'BackofficeSliderForm'. Choices are: cta_label, cta_manual_url, cta_target, eyebrow, is_active, meta_primary_text, meta_primary_title, meta_secondary_text, meta_secondary_title, product, retailer, right_image, secondary_cta_label, secondary_cta_manual_url, secondary_cta_target, sort_order, status, subtitle, title."
+ERROR 2026-07-20 12:03:36,793 basehttp 28043 123145443692544 "POST /admin/modules/sliders/ba63c06b-56b5-495c-b0a8-23914cb988c2/edit/ HTTP/1.1" 500 141166
+ERROR 2026-07-20 12:35:43,297 log 31571 123145356926976 Internal Server Error: /
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 75, in execute
+    return self.cursor.execute(query, args)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 179, in execute
+    res = self._query(mogrified_query)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 330, in _query
+    db.query(q)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 280, in query
+    _mysql.connection.query(self, query)
+MySQLdb.OperationalError: (1054, "Unknown column 'cms_homepagesettings.review_source' in 'field list'")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 228, in get
+    context = self.get_context_data(**kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/storefront/views.py", line 305, in get_context_data
+    homepage_settings = HomePageSettings.objects.filter(singleton_key="homepage", is_active=True).first()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 1059, in first
+    for obj in queryset[:1]:
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 400, in __iter__
+    self._fetch_all()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 1886, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/sql/compiler.py", line 1562, in execute_sql
+    cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 102, in execute
+    return super().execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 67, in execute
+    return self._execute_with_wrappers(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 80, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 75, in execute
+    return self.cursor.execute(query, args)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 179, in execute
+    res = self._query(mogrified_query)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 330, in _query
+    db.query(q)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 280, in query
+    _mysql.connection.query(self, query)
+django.db.utils.OperationalError: (1054, "Unknown column 'cms_homepagesettings.review_source' in 'field list'")
+ERROR 2026-07-20 12:35:43,325 basehttp 31571 123145356926976 "GET / HTTP/1.1" 500 201017
+ERROR 2026-07-20 12:36:05,653 log 31571 123145356926976 Internal Server Error: /admin/storefront/homepage-settings/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 75, in execute
+    return self.cursor.execute(query, args)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 179, in execute
+    res = self._query(mogrified_query)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 330, in _query
+    db.query(q)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 280, in query
+    _mysql.connection.query(self, query)
+MySQLdb.OperationalError: (1054, "Unknown column 'cms_homepagesettings.review_source' in 'field list'")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/backoffice/views.py", line 88, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/auth/mixins.py", line 73, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/auth/mixins.py", line 135, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/backoffice/views.py", line 125, in get
+    settings = self.get_settings()
+  File "/usr/local/var/www/Nuboxed/backend/apps/backoffice/views.py", line 121, in get_settings
+    settings, _ = HomePageSettings.objects.get_or_create(singleton_key="homepage")
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 918, in get_or_create
+    return self.get(**kwargs), False
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 635, in get
+    num = len(clone)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 382, in __len__
+    self._fetch_all()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 1886, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/sql/compiler.py", line 1562, in execute_sql
+    cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 102, in execute
+    return super().execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 67, in execute
+    return self._execute_with_wrappers(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 80, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 75, in execute
+    return self.cursor.execute(query, args)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 179, in execute
+    res = self._query(mogrified_query)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 330, in _query
+    db.query(q)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 280, in query
+    _mysql.connection.query(self, query)
+django.db.utils.OperationalError: (1054, "Unknown column 'cms_homepagesettings.review_source' in 'field list'")
+ERROR 2026-07-20 12:36:05,663 basehttp 31571 123145356926976 "GET /admin/storefront/homepage-settings/ HTTP/1.1" 500 219329
+ERROR 2026-07-21 07:44:43,649 log 45001 123145516777472 Internal Server Error: /
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 75, in execute
+    return self.cursor.execute(query, args)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 179, in execute
+    res = self._query(mogrified_query)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 330, in _query
+    db.query(q)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 280, in query
+    _mysql.connection.query(self, query)
+MySQLdb.OperationalError: (1054, "Unknown column 'settings_app_brandsettings.footer_description' in 'field list'")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 220, in _get_response
+    response = response.render()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/response.py", line 114, in render
+    self.content = self.rendered_content
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/response.py", line 92, in rendered_content
+    return template.render(context, self._request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/backends/django.py", line 61, in render
+    return self.template.render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 173, in render
+    with context.bind_template(self):
+  File "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/contextlib.py", line 117, in __enter__
+    return next(self.gen)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/context.py", line 254, in bind_template
+    updates.update(processor(self.request))
+  File "/usr/local/var/www/Nuboxed/backend/apps/settings_app/context_processors.py", line 4, in global_brand_settings
+    settings = BrandSettings.objects.filter(is_active=True).first()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 1059, in first
+    for obj in queryset[:1]:
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 400, in __iter__
+    self._fetch_all()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 1886, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/sql/compiler.py", line 1562, in execute_sql
+    cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 102, in execute
+    return super().execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 67, in execute
+    return self._execute_with_wrappers(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 80, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 75, in execute
+    return self.cursor.execute(query, args)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 179, in execute
+    res = self._query(mogrified_query)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 330, in _query
+    db.query(q)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 280, in query
+    _mysql.connection.query(self, query)
+django.db.utils.OperationalError: (1054, "Unknown column 'settings_app_brandsettings.footer_description' in 'field list'")
+ERROR 2026-07-21 07:44:43,686 basehttp 45001 123145516777472 "GET / HTTP/1.1" 500 217923
+ERROR 2026-07-21 13:07:11,595 log 71397 123145393618944 Internal Server Error: /stores/test-store/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 75, in execute
+    return self.cursor.execute(query, args)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 179, in execute
+    res = self._query(mogrified_query)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 330, in _query
+    db.query(q)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 280, in query
+    _mysql.connection.query(self, query)
+MySQLdb.OperationalError: (1054, "Unknown column 'settings_app_brandsettings.location_prompt_enabled' in 'field list'")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 220, in _get_response
+    response = response.render()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/response.py", line 114, in render
+    self.content = self.rendered_content
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/response.py", line 92, in rendered_content
+    return template.render(context, self._request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/backends/django.py", line 61, in render
+    return self.template.render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 173, in render
+    with context.bind_template(self):
+  File "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/contextlib.py", line 117, in __enter__
+    return next(self.gen)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/context.py", line 254, in bind_template
+    updates.update(processor(self.request))
+  File "/usr/local/var/www/Nuboxed/backend/apps/settings_app/context_processors.py", line 4, in global_brand_settings
+    settings = BrandSettings.objects.filter(is_active=True).first()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 1059, in first
+    for obj in queryset[:1]:
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 400, in __iter__
+    self._fetch_all()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 1886, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/sql/compiler.py", line 1562, in execute_sql
+    cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 102, in execute
+    return super().execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 67, in execute
+    return self._execute_with_wrappers(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 80, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 75, in execute
+    return self.cursor.execute(query, args)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 179, in execute
+    res = self._query(mogrified_query)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 330, in _query
+    db.query(q)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 280, in query
+    _mysql.connection.query(self, query)
+django.db.utils.OperationalError: (1054, "Unknown column 'settings_app_brandsettings.location_prompt_enabled' in 'field list'")
+ERROR 2026-07-21 13:07:11,629 basehttp 71397 123145393618944 "GET /stores/test-store/ HTTP/1.1" 500 230570
+ERROR 2026-07-21 13:07:27,622 log 71397 123145393618944 Internal Server Error: /stores/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 75, in execute
+    return self.cursor.execute(query, args)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 179, in execute
+    res = self._query(mogrified_query)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 330, in _query
+    db.query(q)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 280, in query
+    _mysql.connection.query(self, query)
+MySQLdb.OperationalError: (1054, "Unknown column 'settings_app_brandsettings.location_prompt_enabled' in 'field list'")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 220, in _get_response
+    response = response.render()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/response.py", line 114, in render
+    self.content = self.rendered_content
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/response.py", line 92, in rendered_content
+    return template.render(context, self._request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/backends/django.py", line 61, in render
+    return self.template.render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 173, in render
+    with context.bind_template(self):
+  File "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/contextlib.py", line 117, in __enter__
+    return next(self.gen)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/context.py", line 254, in bind_template
+    updates.update(processor(self.request))
+  File "/usr/local/var/www/Nuboxed/backend/apps/settings_app/context_processors.py", line 4, in global_brand_settings
+    settings = BrandSettings.objects.filter(is_active=True).first()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 1059, in first
+    for obj in queryset[:1]:
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 400, in __iter__
+    self._fetch_all()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 1886, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/sql/compiler.py", line 1562, in execute_sql
+    cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 102, in execute
+    return super().execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 67, in execute
+    return self._execute_with_wrappers(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 80, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 75, in execute
+    return self.cursor.execute(query, args)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 179, in execute
+    res = self._query(mogrified_query)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 330, in _query
+    db.query(q)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 280, in query
+    _mysql.connection.query(self, query)
+django.db.utils.OperationalError: (1054, "Unknown column 'settings_app_brandsettings.location_prompt_enabled' in 'field list'")
+ERROR 2026-07-21 13:07:27,623 basehttp 71397 123145393618944 "GET /stores/?q=iphone HTTP/1.1" 500 214974

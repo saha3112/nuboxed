@@ -86,6 +86,92 @@
         line-height: 1.5;
     }
 
+    .admin-form:has(#id_secondary_cta_label) {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+
+    .admin-form:has(#id_secondary_cta_label) .form-field {
+        grid-column: span 3;
+    }
+
+    .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_secondary_cta_label),
+    .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_cta_target),
+    .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_cta_manual_url),
+    .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_cta_label),
+    .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_secondary_cta_target),
+    .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_secondary_cta_manual_url) {
+        grid-column: span 2;
+    }
+
+    .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_meta_primary_title),
+    .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_meta_primary_text),
+    .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_meta_secondary_title),
+    .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_meta_secondary_text),
+    .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_retailer),
+    .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_product) {
+        grid-column: span 3;
+    }
+
+    .admin-form:has(#id_secondary_cta_label) #id_secondary_cta_label,
+    .admin-form:has(#id_secondary_cta_label) #id_cta_label,
+    .admin-form:has(#id_secondary_cta_label) #id_cta_target,
+    .admin-form:has(#id_secondary_cta_label) #id_cta_manual_url,
+    .admin-form:has(#id_secondary_cta_label) #id_secondary_cta_target,
+    .admin-form:has(#id_secondary_cta_label) #id_secondary_cta_manual_url,
+    .admin-form:has(#id_secondary_cta_label) #id_meta_primary_title,
+    .admin-form:has(#id_secondary_cta_label) #id_meta_primary_text,
+    .admin-form:has(#id_secondary_cta_label) #id_meta_secondary_title,
+    .admin-form:has(#id_secondary_cta_label) #id_meta_secondary_text,
+    .admin-form:has(#id_secondary_cta_label) #id_retailer,
+    .admin-form:has(#id_secondary_cta_label) #id_product {
+        min-width: 0;
+    }
+
+    .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_cta_label),
+    .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_secondary_cta_label) {
+        grid-column: 1 / 3;
+    }
+    .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_cta_target),
+    .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_secondary_cta_target) {
+        grid-column: 3 / 5;
+    }
+    .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_cta_manual_url),
+    .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_secondary_cta_manual_url) {
+        grid-column: 5 / 7;
+    }
+
+    @media (max-width: 900px) {
+        .admin-form:has(#id_secondary_cta_label) {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .admin-form:has(#id_secondary_cta_label) .form-field {
+            grid-column: span 1;
+        }
+        .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_secondary_cta_label),
+        .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_cta_target),
+        .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_cta_manual_url),
+        .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_cta_label),
+        .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_secondary_cta_target),
+        .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_secondary_cta_manual_url),
+        .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_meta_primary_title),
+        .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_meta_primary_text),
+        .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_meta_secondary_title),
+        .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_meta_secondary_text),
+        .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_retailer),
+        .admin-form:has(#id_secondary_cta_label) .form-field:has(#id_product) {
+            grid-column: span 1;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .admin-form:has(#id_secondary_cta_label) {
+            grid-template-columns: 1fr;
+        }
+        .admin-form:has(#id_secondary_cta_label) .form-field {
+            grid-column: span 1;
+        }
+    }
+
     /* Input Styling */
     .admin-form input[type="text"],
     .admin-form input[type="email"],
@@ -355,7 +441,7 @@
                 </div>
             {% endif %}
             {% for field in form %}
-                {% if field.name != "color_values_payload" and field.name != "product_images" and field.name != "product_videos" and field.name != "product_360_images" and field.name != "product_video_urls" and field.name != "remove_asset_ids" %}
+                {% if field.name != "color_values_payload" and field.name != "product_images" and field.name != "product_videos" and field.name != "product_360_images" and field.name != "product_video_urls" and field.name != "remove_asset_ids" and field.name != "cta_url" and field.name != "secondary_cta_url" and field.name != "image" %}
                     {% if field.field.widget.input_type == 'file' %}
                         <div class="form-field file-field-custom" style="grid-column: 1 / -1; margin-bottom: 24px;">
                             <label style="display: block; margin-bottom: 8px; font-weight: 600;">{{ field.label }}</label>
@@ -1107,6 +1193,49 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 });
+
+{% if module_key_active == "sliders" %}
+// Slider retailer -> product cascading selector
+(() => {
+    const retailer = document.getElementById('id_retailer');
+    const product = document.getElementById('id_product');
+    if (!retailer || !product) return;
+    const endpoint = "{% url 'backoffice:api-slider-products' %}";
+    const selectedProduct = product.value;
+    const setProducts = (items, selected = '') => {
+        product.innerHTML = '<option value="">Select a product (optional)</option>';
+        items.forEach(item => {
+            const option = new Option(item.label, item.id, false, String(item.id) === String(selected));
+            product.add(option);
+        });
+        product.disabled = !retailer.value;
+    };
+    const loadProducts = (selected = '') => {
+        if (!retailer.value) { setProducts([]); return; }
+        product.disabled = true;
+        fetch(`${endpoint}?retailer_id=${encodeURIComponent(retailer.value)}`, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+            .then(response => response.ok ? response.json() : {products: []})
+            .then(data => setProducts(data.products || [], selected))
+            .catch(() => setProducts([]));
+    };
+    retailer.addEventListener('change', () => loadProducts(''));
+    loadProducts(selectedProduct);
+
+    const bindDestination = (targetId, manualId) => {
+        const target = document.getElementById(targetId);
+        const manual = document.getElementById(manualId);
+        if (!target || !manual) return;
+        const manualField = manual.closest('.form-field');
+        const updateVisibility = () => {
+            if (manualField) manualField.style.display = target.value === '__manual__' ? 'flex' : 'none';
+        };
+        target.addEventListener('change', updateVisibility);
+        updateVisibility();
+    };
+    bindDestination('id_cta_target', 'id_cta_manual_url');
+    bindDestination('id_secondary_cta_target', 'id_secondary_cta_manual_url');
+})();
+{% endif %}
 
 // Current gallery asset manager (deleting existing items)
 (() => {

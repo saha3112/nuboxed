@@ -285,6 +285,10 @@ const quickWishlistForm = document.getElementById("quickWishlistForm");
 const quickWishlistButton = document.getElementById("quickWishlist");
 const quickStock = document.getElementById("quickStock");
 const quickPoints = document.getElementById("quickPoints");
+const productPageSettings = (() => {
+    const element = document.getElementById("product-page-settings");
+    try { return element ? JSON.parse(element.textContent || "{}") : {}; } catch (error) { return {}; }
+})();
 
 let quickImages = [];
 let quickIndex = 0;
@@ -451,7 +455,7 @@ function updateQuickSelectedVariant() {
             const compPrice = parseFloat(matching.compare_price);
             if (!isNaN(price) && !isNaN(compPrice) && compPrice > price) {
                 const pct = Math.round(((compPrice - price) / compPrice) * 100);
-                quickSave.textContent = `Save ${pct}%`;
+                quickSave.textContent = `${productPageSettings.quick_save_prefix || "Save"} ${pct}%`;
                 quickSave.style.display = "inline-flex";
             } else {
                 quickSave.style.display = "none";
@@ -459,7 +463,7 @@ function updateQuickSelectedVariant() {
         }
         if (quickStock) {
             if (matching.stock > 0) {
-                quickStock.innerHTML = '<i class="fa-solid fa-circle-check"></i> Available Stock';
+                quickStock.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${productPageSettings.quick_stock || "Available Stock"}`;
                 quickStock.className = "quick-stock success";
             } else {
                 quickStock.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Out of Stock';
@@ -670,14 +674,15 @@ function openQuickView(card) {
     if (!quickModal || !card) return;
     activeQuickProductId = card.dataset.productId || null;
     const name = card.dataset.qvName || "Product";
-    const brand = card.dataset.qvBrand || "Store";
+    const brand = card.dataset.qvBrand || productPageSettings.quick_brand_fallback || "Store";
     const category = card.dataset.qvCategory || "";
     const priceRaw = card.dataset.qvPrice || "";
     const oldPriceRaw = card.dataset.qvOldPrice || "";
     const currency = card.dataset.qvCurrency || "USD";
     const save = card.dataset.qvSave || "";
     const description = card.dataset.qvDescription || "";
-    const stock = card.dataset.qvStock || "Available";
+    const delivery = card.dataset.qvDelivery || "";
+    const stock = card.dataset.qvStock || productPageSettings.quick_stock || "Available";
     let stockClass = card.dataset.qvStockClass || "success";
     if (stock.toLowerCase().includes("out of stock")) {
         stockClass = "danger";
@@ -704,6 +709,8 @@ function openQuickView(card) {
         quickSave.textContent = save ? `Save ${save}%` : "";
         quickSave.style.display = save ? "inline-flex" : "none";
     }
+    const quickDelivery = document.getElementById("quickDelivery");
+    if (quickDelivery) quickDelivery.textContent = delivery;
     if (quickPoints) {
         quickPoints.innerHTML = "";
         if (description) {
@@ -711,7 +718,7 @@ function openQuickView(card) {
             li.textContent = description;
             quickPoints.appendChild(li);
         }
-        ["Verified product data from admin", "Store-aware delivery estimate and seller comparison"].forEach((text) => {
+        [productPageSettings.quick_point_1 || "Verified product data from Nuboxed", productPageSettings.quick_point_2 || "Store-aware delivery estimate and seller comparison"].forEach((text) => {
             const li = document.createElement("li");
             li.textContent = text;
             quickPoints.appendChild(li);

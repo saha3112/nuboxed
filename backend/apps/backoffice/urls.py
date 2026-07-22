@@ -20,6 +20,7 @@ from .views import (
     BackofficeModuleRestoreView,
     BackofficeNotificationsView,
     BackofficeModuleUpdateView,
+    BackofficeHomepageSettingsView,
     BackofficeProductVariantsView,
     BackofficeProductVariantCreateView,
     BackofficeProductDeleteView,
@@ -29,6 +30,7 @@ from .views import (
     BackofficeVariantRestoreView,
     BackofficeVariantPermanentDeleteView,
     ProductAttributesAPIView,
+    SliderProductsAPIView,
     # Phone Model Management
     PhoneModelsView,
     PhonePlatformCreateView,
@@ -68,11 +70,30 @@ from .views import (
     BackofficeOrdersView, BackofficeOrderDetailView, BackofficeOrderStatusView, BackofficeOrderCancelView, BackofficeOrderTransactionView, BackofficeOrderRefundView, BackofficeOrderAddressUpdateView, BackofficeOrderInvoiceView, BackofficeOrderLabelView, BackofficeCouponSettingsView,
     BackofficeOrderInvoicePrintView, BackofficeOrderLabelPrintView, BackofficeInvoiceDesignView,
     BackofficeOrderWorkflowSettingsView, BackofficeEmailSettingsView, BackofficeEmailTemplateListView, BackofficeEmailTemplateUpdateView,
+    BackofficeFooterSettingsView,
+    BackofficeContactSettingsView,
+    BackofficeProductPageSettingsView,
+)
+from .dynamic_forms import (
+    DynamicFormListView, DynamicFormNewView, DynamicFormEditView,
+    DynamicFormTrashView, DynamicFormFieldTrashView,
+    DynamicFormSubmissionsView, DynamicFormExportView,
 )
 
 app_name = "backoffice"
 
 urlpatterns = [
+    path("footer-settings/", BackofficeFooterSettingsView.as_view(), name="footer-settings"),
+    path("contact-settings/", BackofficeContactSettingsView.as_view(), name="contact-settings"),
+    path("product-page-settings/", BackofficeProductPageSettingsView.as_view(), name="product-page-settings"),
+    path("dynamic-forms/", DynamicFormListView.as_view(), name="dynamic-forms"),
+    path("dynamic-forms/new/", DynamicFormNewView.as_view(), name="dynamic-form-new"),
+    path("dynamic-forms/<uuid:pk>/edit/", DynamicFormEditView.as_view(), name="dynamic-form-edit"),
+    path("dynamic-forms/<uuid:pk>/submissions/", DynamicFormSubmissionsView.as_view(), name="dynamic-form-submissions"),
+    path("dynamic-forms/<uuid:pk>/submissions/export/<str:file_format>/", DynamicFormExportView.as_view(), name="dynamic-form-export"),
+    path("dynamic-forms/<uuid:pk>/<str:action>/", DynamicFormTrashView.as_view(), name="dynamic-form-trash"),
+    path("dynamic-forms/<uuid:pk>/fields/<uuid:field_pk>/<str:action>/", DynamicFormFieldTrashView.as_view(), name="dynamic-form-field-trash"),
+    path("storefront/homepage-settings/", BackofficeHomepageSettingsView.as_view(), name="homepage-settings"),
     path("orders/", BackofficeOrdersView.as_view(), name="orders"),
     path("coupons/settings/", BackofficeCouponSettingsView.as_view(), name="coupon-settings"),
     path("orders/<uuid:pk>/", BackofficeOrderDetailView.as_view(), name="order-detail"),
@@ -135,6 +156,7 @@ urlpatterns = [
     path("catalog/phone-models/variant/<uuid:pk>/delete-permanent/", PhoneModelVariantPermanentDeleteView.as_view(), name="phone-variant-delete-permanent"),
     # API for cascading dropdowns
     path("api/phone-brands/", PhoneBrandsAPIView.as_view(), name="api-phone-brands"),
+    path("api/slider-products/", SliderProductsAPIView.as_view(), name="api-slider-products"),
     path("api/phone-models/", PhoneModelsAPIView.as_view(), name="api-phone-models"),
     path("api/phone-models/<uuid:model_id>/variants/", PhoneModelVariantsAPIView.as_view(), name="api-phone-variants"),
     # Module routes

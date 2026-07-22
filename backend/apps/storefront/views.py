@@ -18,8 +18,8 @@ from django.views.generic import TemplateView
 from django.http import JsonResponse
 from django.core.paginator import Paginator
 
-from apps.catalog.models import Category, Product, ProductMedia, Brand, AttributeValue
-from apps.cms.models import FeaturedBanner, Slider
+from apps.catalog.models import Category, Product, ProductMedia, ProductReview, Brand, AttributeValue
+from apps.cms.models import FeaturedBanner, HomePageSettings, Slider
 from apps.inventory.delivery import (
     clear_request_location,
     estimate_product_delivery,
@@ -209,7 +209,10 @@ class StorefrontBaseMixin:
         ordered_stores = self.order_stores_by_location(stores, payload=location_payload)
         # Keep stores with score <= 3 (same city or pincode prefix)
         nearby_store_ids = [s.id for s in ordered_stores if self.get_store_proximity_score(s, payload=location_payload) <= 3]
-        if not nearby_store_ids and ordered_stores:
+        # Store directory must remain location-accurate. If there is no nearby
+        # store, keep the result empty and show the alternate-location CTA
+        # instead of silently replacing it with the nearest distant store.
+        if not nearby_store_ids and ordered_stores and not is_store_qs:
             nearest_score = self.get_store_proximity_score(ordered_stores[0], payload=location_payload)
             nearby_store_ids = [
                 store.id for store in ordered_stores
@@ -242,7 +245,17 @@ class StorefrontBaseMixin:
             Prefetch("media_items", queryset=ProductMedia.objects.filter(media_type=ProductMedia.TYPE_IMAGE).order_by("sort_order"))
         )
         qs, _, _ = self.apply_location_filter(qs, location_payload, ignore_location=ignore_location)
-        return qs[:limit]
+        featured = list(qs[:limit])
+        if len(featured) < limit:
+            existing_ids = [product.id for product in featured]
+            fallback = APPROVED_PRODUCT_QS.exclude(id__in=existing_ids).filter(
+                media_items__media_type=ProductMedia.TYPE_IMAGE,
+            ).prefetch_related(
+                Prefetch("media_items", queryset=ProductMedia.objects.filter(media_type=ProductMedia.TYPE_IMAGE).order_by("sort_order"))
+            ).order_by("-created_at")
+            fallback, _, _ = self.apply_location_filter(fallback, location_payload, ignore_location=ignore_location)
+            featured.extend(list(fallback[: limit - len(featured)]))
+        return featured[:limit]
 
     def get_category_sections(self, limit=4, items_per_category=8, location_payload=None, ignore_location=False):
         sections = []
@@ -292,18 +305,50 @@ class HomePageView(StorefrontBaseMixin, TemplateView):
         
         location_payload = self.get_delivery_payload()
         ignore_location = self.request.GET.get("ignore_location") == "1"
+        homepage_settings = HomePageSettings.objects.filter(singleton_key="homepage", is_active=True).first()
+        category_limit = homepage_settings.category_card_count if homepage_settings else 4
+        trending_limit = homepage_settings.trending_product_count if homepage_settings else 8
+        review_limit = homepage_settings.review_card_count if homepage_settings else 3
+        manual_reviews = list(homepage_settings.review_cards.filter(is_active=True)[:review_limit]) if homepage_settings else []
+        product_reviews = list(ProductReview.objects.filter(
+            status=ProductReview.STATUS_APPROVED,
+            product__is_active=True,
+            product__status=Product.STATUS_APPROVED,
+        ).select_related("product").order_by("-created_at")[:review_limit])
+        review_source = homepage_settings.review_source if homepage_settings else "manual"
+        if review_source == "product":
+            homepage_reviews = [
+                {"rating": r.rating, "quote": r.comment, "reviewer_name": r.reviewer_name,
+                 "role": f"Verified review · {r.product.name}", "avatar_color": "#bfdbfe",
+                 "text_color": "#475467", "font_family": "Inter"}
+                for r in product_reviews
+            ]
+        elif review_source == "both":
+            homepage_reviews = (manual_reviews + [
+                {"rating": r.rating, "quote": r.comment, "reviewer_name": r.reviewer_name,
+                 "role": f"Verified review · {r.product.name}", "avatar_color": "#bfdbfe",
+                 "text_color": "#475467", "font_family": "Inter"}
+                for r in product_reviews
+            ])[:review_limit]
+        else:
+            homepage_reviews = manual_reviews
         
         active_stores = Store.objects.filter(status=Store.STATUS_ACTIVE, is_active=True).order_by("name")
         active_stores, location_msg, location_url = self.apply_location_filter(active_stores, location_payload, ignore_location=ignore_location, is_store_qs=True)
         
         context.update(
             {
-                "page_title": "CommerceOS Marketplace",
-                "sliders": Slider.objects.exclude(status="draft").filter(is_active=True).order_by("sort_order")[:6],
+                "page_title": "Nuboxed Marketplace",
+                "sliders": Slider.objects.filter(status=Slider.STATUS_PUBLISHED, is_active=True).select_related("retailer", "product").prefetch_related(
+                    Prefetch("product__media_items", queryset=ProductMedia.objects.filter(media_type=ProductMedia.TYPE_IMAGE).order_by("sort_order"))
+                ).order_by("sort_order")[:12],
                 "featured_banners": FeaturedBanner.objects.exclude(status="draft").filter(is_active=True, placement="homepage")[:4],
                 "featured_categories": Category.objects.filter(is_featured=True, is_active=True).order_by("sort_order", "name")[:8],
-                "featured_products": self.get_featured_products(limit=8, location_payload=location_payload, ignore_location=ignore_location),
-                "category_sections": self.get_category_sections(location_payload=location_payload, ignore_location=ignore_location),
+                "featured_products": self.get_featured_products(limit=trending_limit, location_payload=location_payload, ignore_location=ignore_location),
+                "category_sections": self.get_category_sections(limit=category_limit, location_payload=location_payload, ignore_location=ignore_location),
+                "homepage_settings": homepage_settings,
+                "homepage_trust_cards": homepage_settings.trust_cards.filter(is_active=True) if homepage_settings else [],
+                "homepage_reviews": homepage_reviews,
                 "active_stores": active_stores[:8],
                 "location_msg": location_msg,
                 "location_url": location_url,

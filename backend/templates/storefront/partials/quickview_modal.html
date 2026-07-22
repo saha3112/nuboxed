@@ -21,7 +21,7 @@
       </section>
 
       <section class="quick-info">
-        <p class="quick-brand" id="quickBrand">Store</p>
+        <p class="quick-brand" id="quickBrand">{{ product_page_settings.quick_brand_fallback }}</p>
         <h2 id="quickTitle">Product name</h2>
 
         <div class="quick-price-row">
@@ -29,22 +29,22 @@
           <span class="quick-price" id="quickPrice"></span>
           <span class="quick-save" id="quickSave" style="display:none;">Save 15%</span>
         </div>
-        <div class="quick-delivery">Est. Delivery Time 2-3 Days</div>
+        <div class="quick-delivery" id="quickDelivery"></div>
 
-        <div class="quick-rating rating">★★★★★ <span class="review-num">(5 Reviews)</span></div>
+        <div class="quick-rating rating">★★★★★ <span class="review-num">(5 {{ product_page_settings.quick_reviews }})</span></div>
 
         <ul class="quick-points" id="quickPoints">
-          <li>Verified product data from admin</li>
-          <li>Store-aware delivery estimate and seller comparison</li>
+          <li>{{ product_page_settings.quick_point_1 }}</li>
+          <li>{{ product_page_settings.quick_point_2 }}</li>
         </ul>
 
-        <div class="quick-ram-title" id="quickRamTitleContainer" style="display:none;"><strong>RAM:</strong> <span class="quick-ram-current" id="quickRamLabel">Default</span></div>
+        <div class="quick-ram-title" id="quickRamTitleContainer" style="display:none;"><strong>{{ product_page_settings.quick_ram_label }}</strong> <span class="quick-ram-current" id="quickRamLabel">Default</span></div>
         <div class="quick-storage" id="quickRamButtons" style="display:none; margin-bottom: 12px;"></div>
 
-        <div class="quick-storage-title"><strong>Internal Storage:</strong> <span class="quick-storage-current" id="quickStorageLabel">Default</span></div>
+        <div class="quick-storage-title"><strong>{{ product_page_settings.quick_storage_label }}</strong> <span class="quick-storage-current" id="quickStorageLabel">Default</span></div>
         <div class="quick-storage" id="quickStorageButtons"></div>
 
-        <div class="quick-color-title" id="quickColorTitleContainer"><strong>Color:</strong> <span class="quick-color-current" id="quickColorLabel">Default</span></div>
+        <div class="quick-color-title" id="quickColorTitleContainer"><strong>{{ product_page_settings.quick_color_label }}</strong> <span class="quick-color-current" id="quickColorLabel">Default</span></div>
         <div class="quick-color" id="quickColorButtons"></div>
 
         <div class="quick-buy-row">
@@ -59,37 +59,38 @@
             {% csrf_token %}
             <input type="hidden" name="quantity" value="1" data-buy-qty>
             <input type="hidden" name="variant_id" id="quickCartVariantId" value="">
-            <button type="submit" class="quick-add" id="quickAdd">ADD TO CART</button>
+            <button type="submit" class="quick-add" id="quickAdd">{{ product_page_settings.quick_add_to_cart }}</button>
           </form>
           <form method="post" id="quickBuyForm" class="quick-buy-form">
             {% csrf_token %}
             <input type="hidden" name="quantity" value="1" data-buy-qty>
             <input type="hidden" name="variant_id" id="quickBuyNowVariantId" value="">
-            <button type="submit" class="quick-buy">BUY NOW</button>
+            <button type="submit" class="quick-buy">{{ product_page_settings.quick_buy_now }}</button>
           </form>
         </div>
 
         <div class="quick-links">
           <form method="post" id="quickWishlistForm" class="quick-buy-form">
             {% csrf_token %}
-            <button type="submit" class="quick-link-action" id="quickWishlist">♡ Add to Wishlist</button>
+            <button type="submit" class="quick-link-action" id="quickWishlist">♡ {{ product_page_settings.quick_wishlist }}</button>
           </form>
-          <button type="button" class="quick-link-action">⇄ Add to Compare</button>
+          <button type="button" class="quick-link-action">⇄ {{ product_page_settings.quick_compare }}</button>
         </div>
 
         <div class="quick-stock success" id="quickStock">
-          <i class="fa-solid fa-circle-check"></i> Available Stock
+          <i class="fa-solid fa-circle-check"></i> {{ product_page_settings.quick_stock }}
         </div>
 
-        <div class="quick-share">
-          <b>Share</b>
-          <a href="#" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>
-          <a href="#" aria-label="X"><i class="fa-brands fa-x-twitter"></i></a>
-          <a href="#" aria-label="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>
-          <a href="#" aria-label="Pinterest"><i class="fa-brands fa-pinterest-p"></i></a>
-          <a href="#" aria-label="Email"><i class="fa-regular fa-envelope"></i></a>
-        </div>
+        {% if product_page_settings.show_share_icons != "0" %}<div class="quick-share">
+          <b>{{ product_page_settings.quick_share }}</b>
+          {% if "facebook" in product_page_settings.share_platforms %}<a href="#" aria-label="Facebook"><i class="fa-brands fa-facebook-f"></i></a>{% endif %}
+          {% if "x" in product_page_settings.share_platforms %}<a href="#" aria-label="X"><i class="fa-brands fa-x-twitter"></i></a>{% endif %}
+          {% if "linkedin" in product_page_settings.share_platforms %}<a href="#" aria-label="LinkedIn"><i class="fa-brands fa-linkedin-in"></i></a>{% endif %}
+          {% if "pinterest" in product_page_settings.share_platforms %}<a href="#" aria-label="Pinterest"><i class="fa-brands fa-pinterest-p"></i></a>{% endif %}
+          {% if "email" in product_page_settings.share_platforms %}<a href="#" aria-label="Email"><i class="fa-regular fa-envelope"></i></a>{% endif %}
+        </div>{% endif %}
       </section>
     </div>
   </div>
 </div>
+{{ product_page_settings|json_script:"product-page-settings" }}

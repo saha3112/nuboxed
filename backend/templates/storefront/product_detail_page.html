@@ -209,6 +209,252 @@
             border: none !important;
             background: transparent !important;
         }
+
+        .product-info .purchase-row {
+            grid-template-columns: 90px 190px 190px !important;
+            justify-content: start !important;
+            gap: 12px !important;
+        }
+        .product-info .purchase-row .purchase-form {
+            width: 190px !important;
+            min-width: 0 !important;
+        }
+        .product-info .purchase-row .purchase-form button {
+            display: inline-flex !important;
+            width: 100% !important;
+            min-width: 0 !important;
+            min-height: 52px !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 8px !important;
+            border: 0 !important;
+            border-radius: 8px !important;
+            cursor: pointer !important;
+            transition: background-color .2s ease, box-shadow .2s ease, transform .2s ease !important;
+        }
+        .product-info .purchase-row .purchase-form button.primary {
+            background: #e04420 !important;
+            color: #fff !important;
+            box-shadow: 0 8px 18px rgba(224, 68, 32, .16) !important;
+        }
+        .product-info .purchase-row .purchase-form button.primary:hover {
+            background: #bd3519 !important;
+            box-shadow: 0 10px 22px rgba(189, 53, 25, .25) !important;
+            transform: translateY(-1px) !important;
+        }
+        .product-info .purchase-row .purchase-form button.buy {
+            background: #172033 !important;
+            color: #fff !important;
+            box-shadow: 0 8px 18px rgba(23, 32, 51, .14) !important;
+        }
+        .product-info .purchase-row .purchase-form button.buy:hover {
+            background: #e04420 !important;
+            box-shadow: 0 10px 22px rgba(224, 68, 32, .24) !important;
+            transform: translateY(-1px) !important;
+        }
+        .product-info .share-row {
+            display: flex !important;
+            align-items: center !important;
+            gap: 10px !important;
+            padding-top: 16px !important;
+        }
+        .product-info .share-row strong {
+            margin-right: 4px !important;
+            color: #172033 !important;
+            font-size: 13px !important;
+        }
+        .product-info .share-row a {
+            display: grid !important;
+            width: 34px !important;
+            height: 34px !important;
+            place-items: center !important;
+            border: 1px solid #e2e6ec !important;
+            border-radius: 50% !important;
+            background: #fff !important;
+            color: #536071 !important;
+            font-size: 15px !important;
+            text-decoration: none !important;
+            transition: color .2s ease, background-color .2s ease, border-color .2s ease, transform .2s ease !important;
+        }
+        .product-info .share-row a:hover {
+            border-color: #e04420 !important;
+            background: #e04420 !important;
+            color: #fff !important;
+            transform: translateY(-2px) !important;
+        }
+        .product-info .share-row a.share-email:hover { background: #172033 !important; border-color: #172033 !important; }
+        @media (max-width: 860px) {
+            .product-info .purchase-row { grid-template-columns: 90px minmax(150px, 190px) minmax(150px, 190px) !important; }
+            .product-info .purchase-row .purchase-form { width: auto !important; }
+        }
+        @media (max-width: 640px) {
+            .product-info .purchase-row { grid-template-columns: 90px minmax(0, 1fr) !important; }
+            .product-info .purchase-row .purchase-form { width: auto !important; }
+            .product-info .purchase-row #buyNowForm { grid-column: 1 / -1 !important; }
+        }
+
+        /* Product-detail recommendations must not inherit the shop listing's
+           sidebar grid. Keep the heading, carousel and card ratings aligned. */
+        .product-detail-recommendations.reference-shop-page {
+            display: block !important;
+            width: min(1630px, calc(100vw - 30px)) !important;
+            margin: 0 auto 34px !important;
+            padding: 0 !important;
+        }
+        .product-detail-recommendations .products-section-title {
+            display: block !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+            margin: 28px 0 18px !important;
+            line-height: 1.3 !important;
+        }
+        .product-detail-recommendations .carousel-container {
+            display: flex !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+            align-items: stretch !important;
+            margin: 0 !important;
+            padding: 4px 4px 18px !important;
+        }
+        .product-detail-recommendations .carousel-container .product-card {
+            display: flex !important;
+            flex-direction: column !important;
+            min-height: 410px !important;
+        }
+        .product-detail-recommendations .carousel-container .product-card .card-body {
+            flex: 1 1 auto !important;
+        }
+        .product-detail-recommendations .carousel-container .product-card .rating {
+            display: flex !important;
+            align-items: center !important;
+            gap: 4px !important;
+            min-height: 18px !important;
+            margin: 5px 0 8px !important;
+            line-height: 1 !important;
+        }
+        .product-detail-recommendations .carousel-container .product-card .review-num {
+            line-height: 1.2 !important;
+        }
+        .product-ref-shell.reviews {
+            width: min(1630px, calc(100vw - 30px)) !important;
+            margin: 36px auto 70px !important;
+            clear: both !important;
+        }
+        .product-ref-shell.reviews .reviews-head {
+            min-height: 52px !important;
+            box-sizing: border-box !important;
+        }
+        .product-ref-shell.reviews .reviews-head > div {
+            display: inline-flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            white-space: nowrap !important;
+        }
+        .product-ref-shell.reviews .reviews-head .stars {
+            display: inline-block !important;
+            color: #f9b000 !important;
+            font-size: 16px !important;
+            line-height: 1 !important;
+            letter-spacing: 1px !important;
+        }
+        .product-ref-shell.product-ref-layout,
+        .product-ref-shell.product-accessories,
+        .product-ref-shell.featured-products {
+            width: min(1630px, calc(100vw - 30px)) !important;
+        }
+        .comments-modal {
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: 20000 !important;
+            display: none !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 20px !important;
+            background: rgba(15, 23, 42, .62) !important;
+        }
+        .comments-modal.open { display: flex !important; }
+        .comments-dialog {
+            width: min(760px, 100%) !important;
+            max-height: min(760px, calc(100vh - 40px)) !important;
+            overflow: hidden !important;
+            border: 1px solid #e5e7eb !important;
+            border-radius: 20px !important;
+            background: #fff !important;
+            box-shadow: 0 24px 70px rgba(15, 23, 42, .28) !important;
+        }
+        .comments-modal-head {
+            display: flex !important;
+            align-items: flex-start !important;
+            justify-content: space-between !important;
+            gap: 20px !important;
+            padding: 24px 26px 18px !important;
+            border-bottom: 1px solid #eef0f2 !important;
+        }
+        .comments-eyebrow {
+            margin: 0 0 6px !important;
+            color: #e04420 !important;
+            font-size: 11px !important;
+            font-weight: 800 !important;
+            letter-spacing: .12em !important;
+            text-transform: uppercase !important;
+        }
+        .comments-modal-head h2 {
+            margin: 0 !important;
+            color: #172033 !important;
+            font-size: 24px !important;
+            line-height: 1.2 !important;
+        }
+        .comments-modal-head h2 span {
+            color: #667085 !important;
+            font-size: 15px !important;
+            font-weight: 600 !important;
+        }
+        .comments-close {
+            display: grid !important;
+            width: 36px !important;
+            height: 36px !important;
+            place-items: center !important;
+            flex: 0 0 36px !important;
+            border: 1px solid #e5e7eb !important;
+            border-radius: 50% !important;
+            background: #fff !important;
+            color: #667085 !important;
+            font-size: 24px !important;
+            line-height: 1 !important;
+            cursor: pointer !important;
+        }
+        .comments-list {
+            max-height: 560px !important;
+            overflow-y: auto !important;
+            padding: 0 26px !important;
+        }
+        .comments-list-item {
+            display: grid !important;
+            grid-template-columns: 150px minmax(0, 1fr) !important;
+            gap: 20px !important;
+            padding: 20px 0 !important;
+            border-bottom: 1px solid #eef0f2 !important;
+        }
+        .comments-list-meta { display: grid !important; gap: 6px !important; align-content: start !important; }
+        .comments-list-meta strong { color: #172033 !important; font-size: 13px !important; }
+        .comments-list-meta .stars { color: #f9b000 !important; font-size: 13px !important; }
+        .comments-list-meta small { color: #667085 !important; font-size: 11px !important; }
+        .comments-list-item h3 { margin: 0 0 6px !important; color: #172033 !important; font-size: 15px !important; }
+        .comments-list-item p { margin: 0 !important; color: #667085 !important; font-size: 13px !important; line-height: 1.6 !important; }
+        .comments-pagination { display: flex !important; justify-content: center !important; gap: 7px !important; padding: 16px 26px 20px !important; }
+        .comments-pagination button { min-width: 34px !important; height: 34px !important; border: 1px solid #e5e7eb !important; border-radius: 8px !important; background: #fff !important; cursor: pointer !important; }
+        @media (max-width: 600px) {
+            .product-detail-recommendations.reference-shop-page,
+            .product-ref-shell.reviews,
+            .product-ref-shell.product-ref-layout { width: calc(100% - 24px) !important; }
+            .product-detail-recommendations .products-section-title { font-size: 18px !important; }
+            .product-ref-shell.reviews .reviews-head { align-items: flex-start !important; gap: 8px !important; flex-direction: column !important; }
+            .comments-modal { padding: 10px !important; }
+            .comments-dialog { max-height: calc(100vh - 20px) !important; border-radius: 15px !important; }
+            .comments-modal-head { padding: 20px 18px 15px !important; }
+            .comments-list { padding: 0 18px !important; }
+            .comments-list-item { grid-template-columns: 1fr !important; gap: 8px !important; }
+        }
     </style>
 {% endblock %}
 
@@ -363,7 +609,7 @@
         <div class="seller-badge-container" style="margin-bottom: 12px; display: inline-flex; align-items: center;">
             <a href="{% url 'storefront:store-detail' slug=object.store.slug %}" class="seller-badge">
                 <i class="fa-solid fa-store" style="font-size: 13px; color: var(--primary);"></i>
-                <span style="font-size: 13px; font-weight: 600; color: var(--primary);">Visit the {{ object.store.name }} Store</span>
+                <span style="font-size: 13px; font-weight: 600; color: var(--primary);">{{ product_page_settings.visit_store_prefix }} {{ object.store.name }} Store</span>
                 <i class="fa-solid fa-arrow-right" style="font-size: 10px; color: var(--primary); transition: transform 0.2s ease;"></i>
             </a>
         </div>
@@ -371,13 +617,13 @@
 
         <div class="rating-row">
             <span class="stars">★★★★★</span>
-            <span>(5 Reviews)</span>
+            <span>(5 {{ product_page_settings.reviews_label }})</span>
         </div>
 
         <ul class="highlights">
-            <li>{{ object.short_description|default:"Shop the most popular featured products."|striptags|truncatewords:18 }}</li>
-            <li>Verified product data from admin</li>
-            <li>Store-aware delivery estimate and seller comparison</li>
+            <li>{{ object.short_description|default:product_page_settings.highlight_3|striptags|truncatewords:18 }}</li>
+            <li>{{ product_page_settings.highlight_1 }}</li>
+            <li>{{ product_page_settings.highlight_2 }}</li>
         </ul>
 
         <div class="divider"></div>
@@ -387,11 +633,11 @@
                 <div class="option-block">
                     <div class="option-title">
                         {% if "color" in group.name|lower %}
-                            Color: <strong id="colorLabel">{% for item in group.items %}{% if item.is_selected %}{{ item.label }}{% endif %}{% endfor %}</strong>
+                            {{ product_page_settings.quick_color_label }} <strong id="colorLabel">{% for item in group.items %}{% if item.is_selected %}{{ item.label }}{% endif %}{% endfor %}</strong>
                         {% elif "storage" in group.name|lower or "internal" in group.name|lower %}
-                            Internal Storage: <strong id="storageLabel">{% for item in group.items %}{% if item.is_selected %}{{ item.label }}{% endif %}{% endfor %}</strong>
+                            {{ product_page_settings.quick_storage_label }} <strong id="storageLabel">{% for item in group.items %}{% if item.is_selected %}{{ item.label }}{% endif %}{% endfor %}</strong>
                         {% elif "ram" in group.name|lower or "memory" in group.name|lower %}
-                            RAM: <strong id="ramLabel">{% for item in group.items %}{% if item.is_selected %}{{ item.label }}{% endif %}{% endfor %}</strong>
+                            {{ product_page_settings.quick_ram_label }} <strong id="ramLabel">{% for item in group.items %}{% if item.is_selected %}{{ item.label }}{% endif %}{% endfor %}</strong>
                         {% else %}
                             {{ group.name }}: <strong id="{{ group.name|lower }}Label">{% for item in group.items %}{% if item.is_selected %}{{ item.label }}{% endif %}{% endfor %}</strong>
                         {% endif %}
@@ -416,7 +662,7 @@
             {% endfor %}
         {% endif %}
 
-        <div class="sale-title">{{ sale_countdown.message|default:"Hurry up! Sale ends in:" }}</div>
+        <div class="sale-title">{{ sale_countdown.message|default:product_page_settings.sale_countdown }}</div>
         <div class="countdown" data-countdown data-countdown-end="{{ sale_countdown.ends_at|date:'c' }}">
             <div><strong data-countdown-days>0</strong><span>DAYS</span></div>
             <div><strong data-countdown-hours>00</strong><span>HRS</span></div>
@@ -436,7 +682,7 @@
             {% else %}
                 <span class="save-badge" id="displayDiscountBadge" style="display: none;"></span>
             {% endif %}
-            <span class="delivery">Est. Delivery Time {{ delivery_window_label }}</span>
+            <span class="delivery">{{ delivery_window_label }}</span>
         </div>
 
         <script id="product-variants-json" type="application/json">
@@ -470,13 +716,13 @@
                 {% csrf_token %}
                 <input type="hidden" name="quantity" value="1" id="hiddenCartQty">
                 <input type="hidden" name="variant_id" value="{{ default_variant.id|default:'' }}" id="hiddenCartVariantId">
-                <button type="submit" class="btn primary"><i class="fa-solid fa-cart-shopping"></i> ADD TO CART</button>
+                <button type="submit" class="btn primary"><i class="fa-solid fa-cart-shopping"></i> {{ product_page_settings.add_to_cart }}</button>
             </form>
             <form method="post" action="{% url 'storefront:buy-now' product_id=object.id %}" class="purchase-form" id="buyNowForm">
                 {% csrf_token %}
                 <input type="hidden" name="quantity" value="1" id="hiddenBuyNowQty">
                 <input type="hidden" name="variant_id" value="{{ default_variant.id|default:'' }}" id="hiddenBuyNowVariantId">
-                <button type="submit" class="btn buy">BUY NOW</button>
+                <button type="submit" class="btn buy">{{ product_page_settings.buy_now }}</button>
             </form>
         </div>
 
@@ -486,14 +732,14 @@
                 {% with pid=object.id|stringformat:"s" %}
                 <button type="submit" class="link-button {% if pid in wishlist %}selected{% endif %}" style="border:none; background:none; cursor:pointer;">
                     <i class="{% if pid in wishlist %}fa-solid in-wishlist{% else %}fa-regular{% endif %} fa-heart" {% if pid in wishlist %}style="color: #ef4444;"{% endif %}></i> Add to Wishlist
-                </button>
+                    {{ product_page_settings.add_wishlist }}</button>
                 {% endwith %}
             </form>
             <form method="post" action="{% url 'storefront:compare-add' product_id=object.id %}" class="ajax-compare-form" style="display:inline-block;">
                 {% csrf_token %}
                 {% with pid=object.id|stringformat:"s" %}
                 <button type="submit" class="link-button {% if pid in compare_list %}selected{% endif %}" style="border:none; background:none; cursor:pointer;">
-                    <i class="fa-solid fa-right-left {% if pid in compare_list %}in-compare{% endif %}" {% if pid in compare_list %}style="color: var(--primary, #0f766e);"{% endif %}></i> Add to Compare
+                    <i class="fa-solid fa-right-left {% if pid in compare_list %}in-compare{% endif %}" {% if pid in compare_list %}style="color: var(--primary, #0f766e);"{% endif %}></i> {{ product_page_settings.add_compare }}
                 </button>
                 {% endwith %}
             </form>
@@ -503,35 +749,35 @@
             <span><i class="fa-solid {{ stock_snapshot.icon }}"></i> {{ stock_snapshot.label }}</span>
         </div>
 
-        <div class="share-row">
-            <strong>Share</strong>
-            <a href="#" aria-label="Facebook">f</a>
-            <a href="#" aria-label="X">X</a>
-            <a href="#" aria-label="LinkedIn">in</a>
-            <a href="#" aria-label="Pinterest">p</a>
-            <a href="#" aria-label="Email">✉</a>
-        </div>
+        {% if product_page_settings.show_share_icons != "0" %}<div class="share-row">
+            <strong>{{ product_page_settings.share_label }}</strong>
+            {% if "facebook" in product_page_settings.share_platforms %}<a href="https://www.facebook.com/sharer/sharer.php?u={{ request.build_absolute_uri|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="Share on Facebook" title="Share on Facebook"><i class="fa-brands fa-facebook-f" aria-hidden="true"></i></a>{% endif %}
+            {% if "x" in product_page_settings.share_platforms %}<a href="https://twitter.com/intent/tweet?url={{ request.build_absolute_uri|urlencode }}&amp;text={{ object.model_name|default:object.name|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="Share on X" title="Share on X"><i class="fa-brands fa-x-twitter" aria-hidden="true"></i></a>{% endif %}
+            {% if "linkedin" in product_page_settings.share_platforms %}<a href="https://www.linkedin.com/sharing/share-offsite/?url={{ request.build_absolute_uri|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="Share on LinkedIn" title="Share on LinkedIn"><i class="fa-brands fa-linkedin-in" aria-hidden="true"></i></a>{% endif %}
+            {% if "pinterest" in product_page_settings.share_platforms %}<a href="https://pinterest.com/pin/create/button/?url={{ request.build_absolute_uri|urlencode }}&amp;description={{ object.model_name|default:object.name|urlencode }}" target="_blank" rel="noopener noreferrer" aria-label="Share on Pinterest" title="Share on Pinterest"><i class="fa-brands fa-pinterest-p" aria-hidden="true"></i></a>{% endif %}
+            {% if "email" in product_page_settings.share_platforms %}<a class="share-email" href="mailto:?subject={{ object.model_name|default:object.name|urlencode }}&amp;body={{ request.build_absolute_uri|urlencode }}" aria-label="Share by email" title="Share by email"><i class="fa-solid fa-envelope" aria-hidden="true"></i></a>{% endif %}
+        </div>{% endif %}
 
         <div class="policy-list">
-            <div><i class="fa-solid fa-truck"></i> <strong>Free Shipping & Returns:</strong> Available on all orders over $99.</div>
-            <div><i class="fa-solid fa-clock"></i> <strong>Estimated Delivery:</strong> Orders are typically dispatched within 24 hours.</div>
-            <div><i class="fa-solid fa-shield-halved"></i> <strong>Security Policy:</strong> Ensuring top-level security for your data and transactions.</div>
+            <div><i class="fa-solid fa-truck"></i> {{ product_page_settings.policy_1 }}</div>
+            <div><i class="fa-solid fa-clock"></i> {{ product_page_settings.policy_2 }}</div>
+            <div><i class="fa-solid fa-shield-halved"></i> {{ product_page_settings.policy_3 }}</div>
         </div>
     </aside>
 </section>
 
 <section class="product-ref-shell tabs-card">
     <div class="tab-buttons">
-        <button type="button" class="tab-btn active" data-tab="description">Description</button>
-        <button type="button" class="tab-btn" data-tab="details">Product Details</button>
+        <button type="button" class="tab-btn active" data-tab="description">{{ product_page_settings.description_tab }}</button>
+        <button type="button" class="tab-btn" data-tab="details">{{ product_page_settings.details_tab }}</button>
     </div>
 
     <div class="tab-panel active" id="description">
-        <h3>Its much more than mobile product</h3>
-        <p>{{ object.short_description|default:object.description|linebreaksbr }}</p>
-        <p>Your trusted marketplace page, wired to admin product data and structured for fast comparison, clear pricing, and clean buying actions.</p>
+        <h3>{{ product_page_settings.description_heading }}</h3>
+        <p>{{ object.short_description|default:object.description|default:product_page_settings.description_fallback|linebreaksbr }}</p>
+        <p>{{ product_page_settings.description_note }}</p>
 
-        <h4>PRODUCT DETAILS</h4>
+        <h4>{{ product_page_settings.specifications_heading }}</h4>
         <table class="details-table">
             {% for label, value in specifications %}
                 <tr>
@@ -557,19 +803,19 @@
     </div>
 </section>
 
-<section class="product-accessories clearfix card-block reference-shop-page product-ref-shell">
-    <h2 class="h2 products-section-title">You might also like</h2>
+{% if related_products %}
+<section class="product-accessories clearfix card-block reference-shop-page product-ref-shell product-detail-recommendations">
+    <h2 class="h2 products-section-title">{{ product_page_settings.related_heading }}</h2>
     <div class="carousel-container">
         {% for product in related_products %}
             {% include "storefront/partials/product_card.html" with product=product listing_card=True %}
-        {% empty %}
-            <p>No related products yet.</p>
         {% endfor %}
     </div>
 </section>
+{% endif %}
 
-<section class="featured-products clearfix card-block reference-shop-page product-ref-shell" data-type="categoryproducts">
-    <h2 class="h2 products-section-title">5 other products in the same category:</h2>
+<section class="featured-products clearfix card-block reference-shop-page product-ref-shell product-detail-recommendations" data-type="categoryproducts">
+    <h2 class="h2 products-section-title">{{ similar_products|length }} other product{% if similar_products|length != 1 %}s{% endif %} {{ product_page_settings.category_heading_suffix }}</h2>
     <div class="carousel-container">
         {% for offer in similar_products %}
             {% include "storefront/partials/product_card.html" with product=offer.product listing_card=True %}
@@ -581,8 +827,8 @@
 
 <section class="product-ref-shell reviews">
     <div class="reviews-head">
-        <h2>Comments ({{ reviews_count|default:0 }})</h2>
-        <div>Grade <span class="stars">
+        <h2>{{ product_page_settings.comments_heading }} ({{ reviews_count|default:0 }})</h2>
+        <div>{{ product_page_settings.grade_label }} <span class="stars">
             {% if avg_rating >= 4.5 %}★★★★★{% elif avg_rating >= 3.5 %}★★★★☆{% elif avg_rating >= 2.5 %}★★★☆☆{% elif avg_rating >= 1.5 %}★★☆☆☆{% elif avg_rating > 0 %}★☆☆☆☆{% else %}☆☆☆☆☆{% endif %}
         </span></div>
     </div>
@@ -608,18 +854,18 @@
 
     {% if reviews_count|default:0 > 3 %}
     <button type="button" class="review-view-all" id="viewAllComments" aria-controls="commentsModal">
-        View all {{ reviews_count }} comments <span aria-hidden="true">→</span>
+        {{ product_page_settings.view_all_comments }} {{ reviews_count }} <span aria-hidden="true">→</span>
     </button>
     {% endif %}
-    <button type="button" class="btn primary review-btn">✎ WRITE YOUR REVIEW</button>
+    <button type="button" class="btn primary review-btn">✎ {{ product_page_settings.write_review }}</button>
 </section>
 
 <div class="comments-modal" id="commentsModal" aria-hidden="true">
     <div class="comments-dialog" role="dialog" aria-modal="true" aria-labelledby="commentsTitle">
         <div class="comments-modal-head">
             <div>
-                <p class="comments-eyebrow">Customer voice</p>
-                <h2 id="commentsTitle">All comments <span>({{ reviews_count|default:0 }})</span></h2>
+                <p class="comments-eyebrow">{{ product_page_settings.customer_voice }}</p>
+                <h2 id="commentsTitle">{{ product_page_settings.all_comments }} <span>({{ reviews_count|default:0 }})</span></h2>
             </div>
             <button type="button" class="comments-close" id="commentsClose" aria-label="Close comments">&times;</button>
         </div>
@@ -645,7 +891,7 @@
 <div class="review-modal" id="reviewModal" aria-hidden="true">
     <div class="review-dialog" role="dialog" aria-modal="true" aria-labelledby="reviewTitle">
         <div class="review-modal-head">
-            <h2 id="reviewTitle">Write your review</h2>
+            <h2 id="reviewTitle">{{ product_page_settings.review_modal_heading }}</h2>
             <button type="button" class="review-close" id="reviewClose" aria-label="Close">&times;</button>
         </div>
 
@@ -671,30 +917,30 @@
             {% csrf_token %}
             <div class="review-form-grid">
                 <div class="review-field">
-                    <label for="reviewInputTitle">Title <sup>*</sup></label>
+                <label for="reviewInputTitle">{{ product_page_settings.review_title_label }} <sup>*</sup></label>
                     <input id="reviewInputTitle" name="title" required>
                 </div>
                 <div class="review-field">
-                    <label for="reviewName">Your name <sup>*</sup></label>
+                <label for="reviewName">{{ product_page_settings.review_name_label }} <sup>*</sup></label>
                     <input id="reviewName" name="name" required>
                 </div>
                 <div class="review-field full">
-                    <label for="reviewText">Review <sup>*</sup></label>
+                <label for="reviewText">{{ product_page_settings.review_text_label }} <sup>*</sup></label>
                     <textarea id="reviewText" name="review" required></textarea>
                 </div>
             </div>
 
             <label class="review-terms">
                 <input type="checkbox" id="reviewTerms" required>
-                <span>I agree to the terms and the privacy policy</span>
+                <span>{{ product_page_settings.review_terms }}</span>
             </label>
-            <div class="required-note">* Required fields</div>
+            <div class="required-note">{{ product_page_settings.required_note }}</div>
 
             <div class="review-actions">
-                <button class="review-cancel" id="reviewCancel" type="button">CANCEL</button>
-                <button class="review-send" type="submit">SEND</button>
+                <button class="review-cancel" id="reviewCancel" type="button">{{ product_page_settings.cancel_button }}</button>
+                <button class="review-send" type="submit">{{ product_page_settings.send_button }}</button>
             </div>
-            <div class="review-success" id="reviewSuccess">Thank you. Your review has been submitted successfully.</div>
+            <div class="review-success" id="reviewSuccess">{{ product_page_settings.review_success }}</div>
         </form>
     </div>
 </div>
