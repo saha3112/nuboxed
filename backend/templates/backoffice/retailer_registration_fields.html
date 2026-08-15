@@ -1,0 +1,39 @@
+{% extends "backoffice/base.html" %}
+{% block content %}
+{% if request.GET.saved or request.GET.added %}<div class="rrf-inline-success" role="status"><i class="ph ph-check-circle"></i>{% if request.GET.added %}Field added successfully.{% else %}Registration fields saved successfully.{% endif %}</div>{% endif %}
+{% if formset.errors or formset.non_form_errors %}<div class="rrf-inline-error" role="alert"><i class="ph ph-warning-circle"></i>Please correct the highlighted field values before saving.{% for error in formset.non_form_errors %}<span>{{ error }}</span>{% endfor %}{% for item in formset %}{% for field in item %}{% for error in field.errors %}<span>{{ field.label }}: {{ error }}</span>{% endfor %}{% endfor %}{% endfor %}</div>{% endif %}
+<style>.rrf-inline-success,.rrf-inline-error{max-width:1250px;margin:18px auto 0;padding:13px 16px;border-radius:10px;font-weight:700;display:flex;align-items:flex-start;gap:9px}.rrf-inline-success{color:#047857;background:#ecfdf3;border:1px solid #86efac}.rrf-inline-error{color:#be123c;background:#fff1f2;border:1px solid #fda4af;flex-wrap:wrap}.rrf-inline-error span{width:100%;font-weight:500;margin-left:26px}</style>
+<style>.rrf-check{justify-content:flex-start;gap:8px;white-space:nowrap}.rrf-check input[type=checkbox],.rrf-check-label input[type=checkbox]{width:18px;height:18px;accent-color:#ee4b27;cursor:pointer}.rrf-check-label{display:inline-flex;align-items:center;gap:8px;color:#334155;font-size:13px;font-weight:700;cursor:pointer}.rrf-add-checks{grid-column:1/-1;display:flex;align-items:center;gap:24px;padding:13px 15px;background:#f8fafc;border:1px solid #e5eaf2;border-radius:10px}.rrf td:nth-child(5) textarea{min-width:220px}.rrf td:nth-child(6) input{max-width:86px;text-align:center}.rrf th:nth-child(7),.rrf th:nth-child(8),.rrf td:nth-child(7),.rrf td:nth-child(8){min-width:105px}</style>
+<style>.rrf{max-width:1250px;margin:28px auto;padding:24px;background:#fff;border:1px solid #e5eaf2;border-radius:16px}.rrf table{width:100%;border-collapse:collapse}.rrf th{text-align:left;background:#f5f8fc;color:#64748b;font-size:11px;text-transform:uppercase;padding:13px}.rrf td{padding:14px;border-top:1px solid #e8edf4;vertical-align:top}.rrf td:nth-child(5){min-width:250px}.rrf input:not([type=checkbox]),.rrf select,.rrf textarea{width:100%;box-sizing:border-box;border:1px solid #dbe3ee;border-radius:9px;padding:10px;font:inherit}.rrf textarea.rrf-choices-editor{min-height:92px;resize:vertical;line-height:1.5}.rrf-actions{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}.rrf-btn{padding:11px 16px;border:0;border-radius:9px;text-decoration:none;font-weight:700;background:#ee4b27;color:#fff;cursor:pointer;transition:background .2s,transform .2s,box-shadow .2s}.rrf-btn:hover{background:#c83b1d;transform:translateY(-1px);box-shadow:0 6px 14px rgba(238,75,39,.22)}.rrf-check{display:flex;align-items:center;justify-content:center}.rrf small{color:#94a3b8}.rrf-add{display:none;margin-top:22px;padding-top:22px;border-top:1px solid #e8edf4}.rrf-add.is-open{display:block}.rrf-add-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.rrf-add-grid label{display:block;font-size:11px;font-weight:700;color:#64748b;margin-bottom:5px}.rrf-add-grid .wide{grid-column:span 2}.rrf-choice-hint{display:block;color:#94a3b8;font-size:11px;margin-top:5px}@media(max-width:1000px){.rrf{overflow:auto}.rrf table{min-width:1050px}.rrf-add-grid{min-width:900px}}</style>
+<div class="rrf"><div class="rrf-actions"><div><h1 style="margin:0">Retailer Registration Fields</h1><p style="color:#718096">Edit, hide/show, require, or add fields in the Business Info step.</p></div><button class="rrf-btn" type="button" id="show-new-field"><i class="ph ph-plus"></i> Add new field</button></div>
+<form method="post">{% csrf_token %}{{ formset.management_form }}<table><thead><tr><th>Field key</th><th>Title</th><th>Placeholder</th><th>Type</th><th>Choices</th><th>Order</th><th>Visible</th><th>Required</th><th>Action</th></tr></thead><tbody>{% for item in formset %}{{ item.id }}{{ item.field_name.as_hidden }}<tr><td><strong>{{ item.instance.field_name }}</strong>{% if item.instance.is_system %}<small style="display:block">System field</small>{% endif %}</td><td>{{ item.title }}</td><td>{{ item.placeholder }}</td><td>{{ item.field_type }}</td><td class="rrf-choices-cell">{{ item.choices_text }}</td><td>{{ item.sort_order }}</td><td><label class="rrf-check-label" title="Show this field on the retailer registration form">{{ item.is_visible }}<span>Visible</span></label></td><td><label class="rrf-check-label" title="Make this field required">{{ item.is_required }}<span>Required</span></label></td><td>{% if not item.instance.is_system %}<button type="submit" name="delete_field" value="{{ item.instance.pk }}" style="color:#dc2626;border:1px solid #fecaca;background:#fff5f5;border-radius:7px;padding:7px 9px;cursor:pointer" onclick="return confirm('Remove this field?')"><i class="ph ph-trash"></i></button>{% else %}<small>Hide instead</small>{% endif %}</td></tr>{% endfor %}</tbody></table><div style="text-align:right;margin-top:20px"><button class="rrf-btn" type="submit">Save fields</button></div></form>
+<div id="new-field" class="rrf-add{% if new_form.errors %} is-open{% endif %}"><h2 style="margin:0 0 6px">Add new field on this page</h2><p style="color:#718096;margin-top:0">The new field will appear in Business Info after saving.</p><form method="post"><input type="hidden" name="add_field" value="1">{% csrf_token %}<div class="rrf-add-grid">{% for field in new_form %}{% if field.name != 'is_visible' and field.name != 'is_required' %}<div class="{% if field.name == 'choices_text' %}wide rrf-new-choices{% endif %}"><label>{{ field.label }}</label>{{ field }}{% for error in field.errors %}<small style="display:block;color:#dc2626">{{ error }}</small>{% endfor %}</div>{% endif %}{% endfor %}<div class="rrf-add-checks"><label class="rrf-check-label">{{ new_form.is_visible }}<span>Visible</span></label><label class="rrf-check-label">{{ new_form.is_required }}<span>Required</span></label></div></div><div style="text-align:right;margin-top:14px"><button class="rrf-btn" type="submit"><i class="ph ph-plus"></i> Add field</button></div></form></div></div>
+<script>
+  (function () {
+    var addPanel = document.getElementById('new-field');
+    var addButton = document.getElementById('show-new-field');
+    if (addPanel && addButton) {
+      addButton.addEventListener('click', function () {
+        addPanel.classList.add('is-open');
+        addPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        var firstInput = addPanel.querySelector('input:not([type="hidden"]), select, textarea');
+        if (firstInput) firstInput.focus();
+      });
+    }
+    function syncChoices(select) {
+      if (!select) return;
+      var row = select.closest('tr');
+      var cell = row && row.querySelector('.rrf-choices-cell');
+      if (cell) cell.hidden = select.value !== 'select';
+    }
+    document.querySelectorAll('select[name$="-field_type"], select[name="field_type"]').forEach(function (select) {
+      syncChoices(select);
+      select.addEventListener('change', function () { syncChoices(select); });
+    });
+    var newType = document.querySelector('#new-field select[name="field_type"]');
+    var newChoices = document.querySelector('#new-field .rrf-new-choices');
+    function syncNewChoices() { if (newChoices && newType) newChoices.hidden = newType.value !== 'select'; }
+    if (newType) { syncNewChoices(); newType.addEventListener('change', syncNewChoices); }
+  }());
+</script>
+{% endblock %}

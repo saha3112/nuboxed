@@ -285,6 +285,10 @@ const quickWishlistForm = document.getElementById("quickWishlistForm");
 const quickWishlistButton = document.getElementById("quickWishlist");
 const quickStock = document.getElementById("quickStock");
 const quickPoints = document.getElementById("quickPoints");
+const productPageSettings = (() => {
+    const element = document.getElementById("product-page-settings");
+    try { return element ? JSON.parse(element.textContent || "{}") : {}; } catch (error) { return {}; }
+})();
 
 let quickImages = [];
 let quickIndex = 0;
@@ -321,6 +325,19 @@ function normalizeQuickOption(value) {
     return (value || "").toLowerCase().replace(/\s+/g, "");
 }
 
+function quickVariantAttribute(variant, type) {
+    const attributes = variant.attributes || {};
+    if (attributes[type] !== undefined) return attributes[type];
+    const key = Object.keys(attributes).find((name) => {
+        const normalizedName = normalizeQuickOption(name);
+        if (type === "storage") return normalizedName.includes("storage") || normalizedName.includes("internal");
+        if (type === "ram") return normalizedName.includes("ram") || normalizedName.includes("memory");
+        if (type === "color") return normalizedName.includes("color");
+        return normalizedName === normalizeQuickOption(type);
+    });
+    return key ? attributes[key] : "";
+}
+
 function setQuickActiveButton(container, value, datasetKey) {
     if (!container || !value) return;
     const target = normalizeQuickOption(value);
@@ -335,9 +352,9 @@ function selectFirstAvailableQuickVariant() {
     const variants = window.quickVariants || [];
     const firstAvailable = variants.find((variant) => Number(variant.stock || 0) > 0);
     if (!firstAvailable) return;
-    const ram = firstAvailable.attributes.ram || "";
-    const storage = firstAvailable.attributes.storage || "";
-    const color = firstAvailable.attributes.color || "";
+    const ram = quickVariantAttribute(firstAvailable, "ram");
+    const storage = quickVariantAttribute(firstAvailable, "storage");
+    const color = quickVariantAttribute(firstAvailable, "color");
     setQuickActiveButton(quickRamButtons, ram);
     setQuickActiveButton(quickStorageButtons, storage);
     setQuickActiveButton(quickColorButtons, color, "color");
@@ -352,20 +369,32 @@ function selectFirstAvailableQuickVariant() {
     if (activeColorBtn && quickColorLabel) quickColorLabel.textContent = activeColorBtn.dataset.color || activeColorBtn.textContent;
 }
 
-function applyQuickOptionStockState(button, attrKey, value) {
+function applyQuickOptionStockState(button, attrKey, value, activeSelections = null) {
     const variants = window.quickVariants || [];
     const optionValue = normalizeQuickOption(value || "");
-    const relatedVariants = variants.filter((variant) => normalizeQuickOption(variant.attributes[attrKey] || "") === optionValue);
-    const isOutOfStock = relatedVariants.length > 0 && relatedVariants.every((variant) => Number(variant.stock || 0) <= 0);
+    const relatedVariants = variants.filter((variant) => {
+        if (normalizeQuickOption(quickVariantAttribute(variant, attrKey)) !== optionValue) return false;
+        if (!activeSelections) return true;
+        return Object.entries(activeSelections).every(([type, selectedValue]) => {
+            if (type === attrKey || !selectedValue) return true;
+            return normalizeQuickOption(quickVariantAttribute(variant, type)) === selectedValue;
+        });
+    });
+    const stockFor = (variant) => Number(variant.stock ?? variant.available_qty ?? 0);
+    const isOutOfStock = variants.length > 0 && (
+        relatedVariants.length === 0 || relatedVariants.every((variant) => stockFor(variant) <= 0)
+    );
     button.classList.toggle("out-of-stock", isOutOfStock);
     button.classList.toggle("faded", isOutOfStock);
     button.dataset.stockState = isOutOfStock ? "out" : "in";
     button.setAttribute("aria-disabled", isOutOfStock ? "true" : "false");
+    button.title = isOutOfStock ? "Out of stock" : (button.dataset.color || button.textContent.trim());
 }
 
 function renderQuickThumbs() {
     if (!quickThumbs) return;
     quickThumbs.innerHTML = "";
+    quickThumbOffset = 0;
     quickImages.forEach((url, index) => {
         const button = document.createElement("button");
         button.type = "button";
@@ -376,6 +405,51 @@ function renderQuickThumbs() {
             setQuickImage(index);
         });
         quickThumbs.appendChild(button);
+    });
+    updateQuickThumbRail();
+}
+
+function updateQuickThumbRail() {
+    if (!quickThumbs) return;
+    const viewport = quickThumbs.parentElement;
+    if (!viewport) return;
+    const maxOffset = Math.max(0, quickThumbs.scrollWidth - viewport.clientWidth);
+    quickThumbOffset = Math.max(0, Math.min(quickThumbOffset, maxOffset));
+    quickThumbs.style.transform = `translateX(-${quickThumbOffset}px)`;
+    if (quickThumbPrev) quickThumbPrev.disabled = quickThumbOffset <= 0;
+    if (quickThumbNext) quickThumbNext.disabled = quickThumbOffset >= maxOffset - 1;
+}
+
+// Keep the active thumbnail visible whenever the large-image carousel moves.
+// The thumbnail list is translated, so offsetLeft/offsetWidth must be read
+// from the un-transformed list and then converted into the rail offset.
+function revealQuickThumbnail(index) {
+    if (!quickThumbs) return;
+    const viewport = quickThumbs.parentElement;
+    const thumbnail = quickThumbs.children[index];
+    if (!viewport || !thumbnail) return;
+
+    const viewportStart = quickThumbOffset;
+    const viewportEnd = viewportStart + viewport.clientWidth;
+    const thumbnailStart = thumbnail.offsetLeft;
+    const thumbnailEnd = thumbnailStart + thumbnail.offsetWidth;
+
+    if (thumbnailStart < viewportStart) {
+        quickThumbOffset = thumbnailStart;
+    } else if (thumbnailEnd > viewportEnd) {
+        quickThumbOffset = thumbnailEnd - viewport.clientWidth;
+    }
+    updateQuickThumbRail();
+}
+
+function updateQuickThumbColorBorder() {
+    if (!quickThumbs) return;
+    const selectedColorButton = quickColorButtons?.querySelector("button.active");
+    const selectedColor = selectedColorButton?.style.getPropertyValue("--swatch").trim() || "";
+    const borderColor = selectedColor || "#e04420";
+    quickThumbs.style.setProperty("--quick-selected-color", borderColor);
+    Array.from(quickThumbs.children).forEach((button, index) => {
+        button.style.borderColor = index === quickIndex ? borderColor : "";
     });
 }
 
@@ -393,10 +467,12 @@ function setQuickImage(index) {
     }
     if (quickPhoneFallback) quickPhoneFallback.style.display = "none";
     if (quickThumbs) {
+        updateQuickThumbColorBorder();
         Array.from(quickThumbs.children).forEach((button, idx) => {
             button.classList.toggle("active", idx === quickIndex);
         });
     }
+    revealQuickThumbnail(quickIndex);
 }
 
 function updateQuickSelectedVariant() {
@@ -451,7 +527,7 @@ function updateQuickSelectedVariant() {
             const compPrice = parseFloat(matching.compare_price);
             if (!isNaN(price) && !isNaN(compPrice) && compPrice > price) {
                 const pct = Math.round(((compPrice - price) / compPrice) * 100);
-                quickSave.textContent = `Save ${pct}%`;
+                quickSave.textContent = `${productPageSettings.quick_save_prefix || "Save"} ${pct}%`;
                 quickSave.style.display = "inline-flex";
             } else {
                 quickSave.style.display = "none";
@@ -459,7 +535,7 @@ function updateQuickSelectedVariant() {
         }
         if (quickStock) {
             if (matching.stock > 0) {
-                quickStock.innerHTML = '<i class="fa-solid fa-circle-check"></i> Available Stock';
+                quickStock.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${productPageSettings.quick_stock || "Available Stock"}`;
                 quickStock.className = "quick-stock success";
             } else {
                 quickStock.innerHTML = '<i class="fa-solid fa-circle-xmark"></i> Out of Stock';
@@ -537,20 +613,20 @@ function updateQuickOptionAvailability(changedAttr) {
     if (quickColorButtons) {
         Array.from(quickColorButtons.children).forEach(btn => {
             const btnVal = normalizeQuickOption(btn.dataset.color || "");
-            applyQuickOptionStockState(btn, "color", btnVal);
+            applyQuickOptionStockState(btn, "color", btnVal, { color: activeColor, storage: activeStorage, ram: activeRam });
         });
     }
 
     if (quickStorageButtons) {
         Array.from(quickStorageButtons.children).forEach(btn => {
             const btnVal = normalizeQuickOption(btn.textContent || "");
-            applyQuickOptionStockState(btn, "storage", btnVal);
+            applyQuickOptionStockState(btn, "storage", btnVal, { color: activeColor, storage: activeStorage, ram: activeRam });
         });
     }
     if (quickRamButtons) {
         Array.from(quickRamButtons.children).forEach(btn => {
             const btnVal = normalizeQuickOption(btn.textContent || "");
-            applyQuickOptionStockState(btn, "ram", btnVal);
+            applyQuickOptionStockState(btn, "ram", btnVal, { color: activeColor, storage: activeStorage, ram: activeRam });
         });
     }
 }
@@ -577,6 +653,7 @@ function renderRamButtons(labels) {
         applyQuickOptionStockState(button, "ram", label);
         if (index === 0) button.classList.add("active");
         button.addEventListener("click", () => {
+            if (button.dataset.stockState === "out") return;
             Array.from(quickRamButtons.children).forEach((child) => child.classList.remove("active"));
             button.classList.add("active");
             if (quickRamLabel) quickRamLabel.textContent = label;
@@ -600,6 +677,7 @@ function renderStorageButtons(labels) {
         applyQuickOptionStockState(button, "storage", label);
         if (index === 0) button.classList.add("active");
         button.addEventListener("click", () => {
+            if (button.dataset.stockState === "out") return;
             Array.from(quickStorageButtons.children).forEach((child) => child.classList.remove("active"));
             button.classList.add("active");
             if (quickStorageLabel) quickStorageLabel.textContent = label;
@@ -642,9 +720,11 @@ function renderColorButtons(colors) {
         applyQuickOptionStockState(btn, "color", label);
 
         btn.addEventListener("click", () => {
+            if (btn.dataset.stockState === "out") return;
             Array.from(quickColorButtons.children).forEach((b) => b.classList.remove("active"));
             btn.classList.add("active");
             if (quickColorLabel) quickColorLabel.textContent = label;
+            updateQuickThumbColorBorder();
             
             if (window.quickImagesColors) {
                 const targetColor = label.toLowerCase().trim();
@@ -670,14 +750,15 @@ function openQuickView(card) {
     if (!quickModal || !card) return;
     activeQuickProductId = card.dataset.productId || null;
     const name = card.dataset.qvName || "Product";
-    const brand = card.dataset.qvBrand || "Store";
+    const brand = card.dataset.qvBrand || productPageSettings.quick_brand_fallback || "Store";
     const category = card.dataset.qvCategory || "";
     const priceRaw = card.dataset.qvPrice || "";
     const oldPriceRaw = card.dataset.qvOldPrice || "";
     const currency = card.dataset.qvCurrency || "USD";
     const save = card.dataset.qvSave || "";
     const description = card.dataset.qvDescription || "";
-    const stock = card.dataset.qvStock || "Available";
+    const delivery = card.dataset.qvDelivery || "";
+    const stock = card.dataset.qvStock || productPageSettings.quick_stock || "Available";
     let stockClass = card.dataset.qvStockClass || "success";
     if (stock.toLowerCase().includes("out of stock")) {
         stockClass = "danger";
@@ -704,6 +785,23 @@ function openQuickView(card) {
         quickSave.textContent = save ? `Save ${save}%` : "";
         quickSave.style.display = save ? "inline-flex" : "none";
     }
+    const quickDelivery = document.getElementById("quickDelivery");
+    if (quickDelivery) {
+        const currentLocation = document.getElementById("product-delivery-location-label")?.textContent.trim()
+            || document.getElementById("loc-pin")?.textContent.trim()
+            || "Set location";
+        quickDelivery.innerHTML = `
+            <span class="quick-delivery-icon" aria-hidden="true"><i class="fa-solid fa-truck-fast"></i></span>
+            <span class="quick-delivery-copy">
+                <span>Estimated delivery</span>
+                <strong>${delivery || "Delivery time unavailable"}</strong>
+            </span>
+            <button type="button" class="quick-delivery-location" onclick="document.getElementById('locationModal').style.display='flex'" aria-label="Change delivery location">
+                <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                <span id="quick-delivery-location-label">${currentLocation}</span>
+                <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+            </button>`;
+    }
     if (quickPoints) {
         quickPoints.innerHTML = "";
         if (description) {
@@ -711,7 +809,7 @@ function openQuickView(card) {
             li.textContent = description;
             quickPoints.appendChild(li);
         }
-        ["Verified product data from admin", "Store-aware delivery estimate and seller comparison"].forEach((text) => {
+        [productPageSettings.quick_point_1 || "Verified product data from Nuboxed", productPageSettings.quick_point_2 || "Store-aware delivery estimate and seller comparison"].forEach((text) => {
             const li = document.createElement("li");
             li.textContent = text;
             quickPoints.appendChild(li);
@@ -745,6 +843,7 @@ function openQuickView(card) {
     quickModal.classList.add("open");
     quickModal.setAttribute("aria-hidden", "false");
     document.body.classList.add("quick-modal-open");
+    requestAnimationFrame(updateQuickThumbRail);
 }
 
 function closeQuickView() {
@@ -802,19 +901,16 @@ document.addEventListener("click", (event) => {
     }
     if (event.target.closest("#quickThumbPrev") && quickThumbs) {
         quickThumbOffset = Math.max(0, quickThumbOffset - 124);
-        quickThumbs.style.transform = `translateX(-${quickThumbOffset}px)`;
+        updateQuickThumbRail();
     }
     if (event.target.closest("#quickThumbNext") && quickThumbs) {
         quickThumbOffset += 124;
-        quickThumbs.style.transform = `translateX(-${quickThumbOffset}px)`;
+        updateQuickThumbRail();
     }
 });
 
 window.addEventListener("resize", () => {
-    if (!quickThumbs) return;
-    const max = Math.max(0, quickThumbs.scrollWidth - quickThumbs.parentElement.clientWidth);
-    quickThumbOffset = Math.min(quickThumbOffset, max);
-    quickThumbs.style.transform = `translateX(-${quickThumbOffset}px)`;
+    updateQuickThumbRail();
 });
 
 document.addEventListener("submit", (event) => {
@@ -867,6 +963,8 @@ if (liveSearchInput && liveSearchResults) {
                             let imgHtml = item.image_url ? `<img src="${item.image_url}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; margin-right: 10px;">` : `<div style="width: 40px; height: 40px; background: #eee; border-radius: 4px; margin-right: 10px;"></div>`;
                             
                             let variantsHtml = item.variants ? `<div style="font-size: 11px; color: var(--muted); margin-top: 2px;">${item.variants}</div>` : '';
+                            const stockLabel = item.stock_label || (Number(item.stock || 0) > 0 ? "In Stock" : "Out of Stock");
+                            const stockColor = Number(item.stock || 0) > 0 ? "#15803d" : "#b91c1c";
 
                             link.innerHTML = `
                                 ${imgHtml}
@@ -874,6 +972,7 @@ if (liveSearchInput && liveSearchResults) {
                                     <div style="font-weight: 500; font-size: 13px;">${item.name}</div>
                                     ${variantsHtml}
                                     <div style="font-weight: bold; color: var(--primary); font-size: 12px; margin-top: 2px;">€${item.price}</div>
+                                    <div style="font-size: 11px; font-weight: 700; color: ${stockColor}; margin-top: 2px;">${stockLabel}</div>
                                 </div>
                             `;
                             liveSearchResults.appendChild(link);

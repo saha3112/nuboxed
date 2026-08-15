@@ -1,0 +1,14 @@
+{% if captcha.enabled %}
+    <div class="captcha-widget-wrap" style="text-align:{{ captcha.alignment|default:'left' }};margin:18px 0;padding:0;">
+    {% if captcha.provider == 'recaptcha' %}
+        <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+        <div class="g-recaptcha" data-sitekey="{{ captcha.site_key }}"></div>
+    {% elif captcha.provider == 'hcaptcha' %}
+        <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+        <div class="h-captcha" data-sitekey="{{ captcha.site_key }}"></div>
+    {% elif captcha.provider == 'turnstile' %}
+        <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+        <div class="cf-turnstile" data-sitekey="{{ captcha.site_key }}"></div>
+    {% endif %}
+    </div>
+{% endif %}

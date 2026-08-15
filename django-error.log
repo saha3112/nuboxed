@@ -5111,3 +5111,1347 @@ Traceback (most recent call last):
     _mysql.connection.query(self, query)
 django.db.utils.OperationalError: (1054, "Unknown column 'settings_app_brandsettings.location_prompt_enabled' in 'field list'")
 ERROR 2026-07-21 13:07:27,623 basehttp 71397 123145393618944 "GET /stores/?q=iphone HTTP/1.1" 500 214974
+ERROR 2026-07-27 13:07:21,246 log 80186 140704332404800 Invalid HTTP_HOST header: 'testserver'. You may need to add 'testserver' to ALLOWED_HOSTS.
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/deprecation.py", line 133, in __call__
+    response = self.process_request(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/middleware/common.py", line 48, in process_request
+    host = request.get_host()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/http/request.py", line 151, in get_host
+    raise DisallowedHost(msg)
+django.core.exceptions.DisallowedHost: Invalid HTTP_HOST header: 'testserver'. You may need to add 'testserver' to ALLOWED_HOSTS.
+ERROR 2026-07-28 05:47:00,838 log 1353 140704332404800 Invalid HTTP_HOST header: 'testserver'. You may need to add 'testserver' to ALLOWED_HOSTS.
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/deprecation.py", line 133, in __call__
+    response = self.process_request(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/middleware/common.py", line 48, in process_request
+    host = request.get_host()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/http/request.py", line 151, in get_host
+    raise DisallowedHost(msg)
+django.core.exceptions.DisallowedHost: Invalid HTTP_HOST header: 'testserver'. You may need to add 'testserver' to ALLOWED_HOSTS.
+ERROR 2026-07-28 06:11:34,815 log 3253 140704332404800 Internal Server Error: /contact/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 288, in ensure_connection
+    self.connect()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 269, in connect
+    self.connection = self.get_new_connection(conn_params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 247, in get_new_connection
+    connection = Database.connect(**conn_params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/__init__.py", line 121, in Connect
+    return Connection(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 200, in __init__
+    super().__init__(*args, **kwargs2)
+MySQLdb.OperationalError: (2003, "Can't connect to MySQL server on '127.0.0.1:3306' (1)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 228, in get
+    context = self.get_context_data(**kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/storefront/views.py", line 1342, in get_context_data
+    primary_store = Store.objects.filter(status=Store.STATUS_ACTIVE, is_active=True).order_by("name").first()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 1059, in first
+    for obj in queryset[:1]:
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 400, in __iter__
+    self._fetch_all()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 1886, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/sql/compiler.py", line 1560, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 329, in cursor
+    return self._cursor()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 305, in _cursor
+    self.ensure_connection()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 288, in ensure_connection
+    self.connect()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 288, in ensure_connection
+    self.connect()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 269, in connect
+    self.connection = self.get_new_connection(conn_params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 247, in get_new_connection
+    connection = Database.connect(**conn_params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/__init__.py", line 121, in Connect
+    return Connection(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 200, in __init__
+    super().__init__(*args, **kwargs2)
+django.db.utils.OperationalError: (2003, "Can't connect to MySQL server on '127.0.0.1:3306' (1)")
+ERROR 2026-07-28 06:22:14,541 log 3820 123145429929984 Internal Server Error: /contact/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 75, in execute
+    return self.cursor.execute(query, args)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 179, in execute
+    res = self._query(mogrified_query)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 330, in _query
+    db.query(q)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 280, in query
+    _mysql.connection.query(self, query)
+MySQLdb.OperationalError: (1054, "Unknown column 'cms_page.deleted_at' in 'field list'")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 228, in get
+    context = self.get_context_data(**kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/storefront/views.py", line 1353, in get_context_data
+    policy_by_slug = {item.slug: item for item in policy_pages}
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 400, in __iter__
+    self._fetch_all()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 1886, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/sql/compiler.py", line 1562, in execute_sql
+    cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 102, in execute
+    return super().execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 67, in execute
+    return self._execute_with_wrappers(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 80, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 75, in execute
+    return self.cursor.execute(query, args)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 179, in execute
+    res = self._query(mogrified_query)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 330, in _query
+    db.query(q)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 280, in query
+    _mysql.connection.query(self, query)
+django.db.utils.OperationalError: (1054, "Unknown column 'cms_page.deleted_at' in 'field list'")
+ERROR 2026-07-28 06:22:14,576 basehttp 3820 123145429929984 "GET /contact/ HTTP/1.1" 500 179651
+ERROR 2026-07-28 11:35:15,512 log 21211 123145484984320 Internal Server Error: /admin/modules/products/08da86bf-d47c-4b38-96b2-fef4628e6e25/edit/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/backoffice/views.py", line 380, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/auth/mixins.py", line 73, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/auth/mixins.py", line 135, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/edit.py", line 204, in get
+    return super().get(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/edit.py", line 144, in get
+    return self.render_to_response(self.get_context_data())
+  File "/usr/local/var/www/Nuboxed/backend/apps/backoffice/views.py", line 1647, in get_context_data
+    context = super().get_context_data(**kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/backoffice/views.py", line 396, in get_context_data
+    context = super().get_context_data(**kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/edit.py", line 74, in get_context_data
+    kwargs["form"] = self.get_form()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/edit.py", line 39, in get_form
+    return form_class(**self.get_form_kwargs())
+  File "/usr/local/var/www/Nuboxed/backend/apps/backoffice/forms.py", line 685, in __init__
+    super().__init__(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/catalog/forms.py", line 193, in __init__
+    listing = MarketplaceListing.objects.filter(connection=connection, product=self.instance, variant=None).first()
+UnboundLocalError: local variable 'MarketplaceListing' referenced before assignment
+ERROR 2026-07-28 11:35:15,533 basehttp 21211 123145484984320 "GET /admin/modules/products/08da86bf-d47c-4b38-96b2-fef4628e6e25/edit/ HTTP/1.1" 500 133094
+ERROR 2026-07-29 05:16:05,666 log 30226 123145497387008 Internal Server Error: /admin/integrations/amazon/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/sessions/backends/base.py", line 187, in _get_session
+    return self._session_cache
+AttributeError: 'SessionStore' object has no attribute '_session_cache'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 288, in ensure_connection
+    self.connect()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 269, in connect
+    self.connection = self.get_new_connection(conn_params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 247, in get_new_connection
+    connection = Database.connect(**conn_params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/__init__.py", line 121, in Connect
+    return Connection(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 200, in __init__
+    super().__init__(*args, **kwargs2)
+MySQLdb.OperationalError: (2026, 'SSL connection error: error:0A00010B:SSL routines::wrong version number')
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/backoffice/views.py", line 84, in dispatch
+    user_id = request.session.get(self.session_user_key)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/sessions/backends/base.py", line 68, in get
+    return self._session.get(key, default)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/sessions/backends/base.py", line 192, in _get_session
+    self._session_cache = self.load()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/sessions/backends/db.py", line 42, in load
+    s = self._get_session_from_db()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/sessions/backends/db.py", line 32, in _get_session_from_db
+    return self.model.objects.get(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 635, in get
+    num = len(clone)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 382, in __len__
+    self._fetch_all()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 1886, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/sql/compiler.py", line 1560, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 329, in cursor
+    return self._cursor()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 305, in _cursor
+    self.ensure_connection()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 288, in ensure_connection
+    self.connect()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 288, in ensure_connection
+    self.connect()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 269, in connect
+    self.connection = self.get_new_connection(conn_params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 247, in get_new_connection
+    connection = Database.connect(**conn_params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/__init__.py", line 121, in Connect
+    return Connection(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 200, in __init__
+    super().__init__(*args, **kwargs2)
+django.db.utils.OperationalError: (2026, 'SSL connection error: error:0A00010B:SSL routines::wrong version number')
+ERROR 2026-07-29 05:16:05,697 log 30226 123145480597504 Internal Server Error: /admin/integrations/amazon/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/sessions/backends/base.py", line 187, in _get_session
+    return self._session_cache
+AttributeError: 'SessionStore' object has no attribute '_session_cache'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 288, in ensure_connection
+    self.connect()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 269, in connect
+    self.connection = self.get_new_connection(conn_params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 247, in get_new_connection
+    connection = Database.connect(**conn_params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/__init__.py", line 121, in Connect
+    return Connection(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 200, in __init__
+    super().__init__(*args, **kwargs2)
+MySQLdb.OperationalError: (2026, 'SSL connection error: error:0A00010B:SSL routines::wrong version number')
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/backoffice/views.py", line 84, in dispatch
+    user_id = request.session.get(self.session_user_key)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/sessions/backends/base.py", line 68, in get
+    return self._session.get(key, default)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/sessions/backends/base.py", line 192, in _get_session
+    self._session_cache = self.load()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/sessions/backends/db.py", line 42, in load
+    s = self._get_session_from_db()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/sessions/backends/db.py", line 32, in _get_session_from_db
+    return self.model.objects.get(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 635, in get
+    num = len(clone)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 382, in __len__
+    self._fetch_all()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 1886, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/sql/compiler.py", line 1560, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 329, in cursor
+    return self._cursor()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 305, in _cursor
+    self.ensure_connection()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 288, in ensure_connection
+    self.connect()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 288, in ensure_connection
+    self.connect()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 269, in connect
+    self.connection = self.get_new_connection(conn_params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 247, in get_new_connection
+    connection = Database.connect(**conn_params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/__init__.py", line 121, in Connect
+    return Connection(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 200, in __init__
+    super().__init__(*args, **kwargs2)
+django.db.utils.OperationalError: (2026, 'SSL connection error: error:0A00010B:SSL routines::wrong version number')
+ERROR 2026-07-29 05:16:05,781 basehttp 30226 123145497387008 "GET /admin/integrations/amazon/?snapshot=1 HTTP/1.1" 500 28190
+ERROR 2026-07-29 05:16:05,782 basehttp 30226 123145480597504 "GET /admin/integrations/amazon/?health=1 HTTP/1.1" 500 28184
+ERROR 2026-07-30 12:04:19,758 log 30226 123145480597504 Internal Server Error: /admin/integrations/amazon/orders/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 880, in _resolve_lookup
+    current = current[bit]
+TypeError: 'NoneType' object is not subscriptable
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 890, in _resolve_lookup
+    current = getattr(current, bit)
+AttributeError: 'NoneType' object has no attribute 'legal_name'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 896, in _resolve_lookup
+    current = current[int(bit)]
+ValueError: invalid literal for int() with base 10: 'legal_name'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 220, in _get_response
+    response = response.render()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/response.py", line 114, in render
+    self.content = self.rendered_content
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/response.py", line 92, in rendered_content
+    return template.render(context, self._request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/backends/django.py", line 61, in render
+    return self.template.render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 175, in render
+    return self._render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 167, in _render
+    return self.nodelist.render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 1005, in <listcomp>
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 966, in render_annotated
+    return self.render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/loader_tags.py", line 157, in render
+    return compiled_parent._render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 167, in _render
+    return self.nodelist.render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 1005, in <listcomp>
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 966, in render_annotated
+    return self.render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/loader_tags.py", line 63, in render
+    result = block.nodelist.render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 1005, in <listcomp>
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 966, in render_annotated
+    return self.render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/defaulttags.py", line 238, in render
+    nodelist.append(node.render_annotated(context))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 966, in render_annotated
+    return self.render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 1064, in render
+    output = self.filter_expression.resolve(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 736, in resolve
+    arg_vals.append(arg.resolve(context))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 847, in resolve
+    value = self._resolve_lookup(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 903, in _resolve_lookup
+    raise VariableDoesNotExist(
+django.template.base.VariableDoesNotExist: Failed lookup for key [legal_name] in None
+ERROR 2026-07-30 12:04:19,775 basehttp 30226 123145480597504 "GET /admin/integrations/amazon/orders/ HTTP/1.1" 500 360544
+ERROR 2026-08-08 08:01:54,488 log 4560 123145588514816 Internal Server Error: /register/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/storefront/views.py", line 1003, in post
+    context = self.get_context_data()
+  File "/usr/local/var/www/Nuboxed/backend/apps/storefront/views.py", line 983, in get_context_data
+    context = super().get_context_data(**kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/edit.py", line 75, in get_context_data
+    return super().get_context_data(**kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/detail.py", line 95, in get_context_data
+    if self.object:
+AttributeError: 'CustomerRegisterView' object has no attribute 'object'
+ERROR 2026-08-08 08:01:54,500 basehttp 4560 123145588514816 "POST /register/ HTTP/1.1" 500 101971
+ERROR 2026-08-08 08:03:30,334 log 5016 123145558208512 Internal Server Error: /register/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/storefront/views.py", line 1015, in post
+    context = self.get_context_data()
+  File "/usr/local/var/www/Nuboxed/backend/apps/storefront/views.py", line 993, in get_context_data
+    context = super().get_context_data(**kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/edit.py", line 75, in get_context_data
+    return super().get_context_data(**kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/detail.py", line 95, in get_context_data
+    if self.object:
+AttributeError: 'CustomerRegisterView' object has no attribute 'object'
+ERROR 2026-08-08 08:03:30,346 basehttp 5016 123145558208512 "POST /register/ HTTP/1.1" 500 102416
+ERROR 2026-08-08 08:04:29,278 log 5176 123145452974080 Internal Server Error: /register/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/storefront/views.py", line 1015, in post
+    context = self.get_context_data()
+  File "/usr/local/var/www/Nuboxed/backend/apps/storefront/views.py", line 994, in get_context_data
+    context = super().get_context_data(**kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/edit.py", line 75, in get_context_data
+    return super().get_context_data(**kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/detail.py", line 95, in get_context_data
+    if self.object:
+AttributeError: 'CustomerRegisterView' object has no attribute 'object'
+ERROR 2026-08-08 08:04:29,291 basehttp 5176 123145452974080 "POST /register/ HTTP/1.1" 500 102161
+ERROR 2026-08-08 08:06:17,045 log 5754 123145495601152 Internal Server Error: /register/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/storefront/views.py", line 1020, in post
+    context = self.get_context_data()
+  File "/usr/local/var/www/Nuboxed/backend/apps/storefront/views.py", line 999, in get_context_data
+    context = super().get_context_data(**kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/edit.py", line 75, in get_context_data
+    return super().get_context_data(**kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/detail.py", line 95, in get_context_data
+    if self.object:
+AttributeError: 'CustomerRegisterView' object has no attribute 'object'
+ERROR 2026-08-08 08:06:17,059 basehttp 5754 123145495601152 "POST /register/ HTTP/1.1" 500 102162
+ERROR 2026-08-08 08:09:19,377 log 6146 123145532248064 Internal Server Error: /admin/modules/users/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 75, in execute
+    return self.cursor.execute(query, args)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 179, in execute
+    res = self._query(mogrified_query)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 330, in _query
+    db.query(q)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 280, in query
+    _mysql.connection.query(self, query)
+MySQLdb.OperationalError: (1054, "Unknown column 'settings_app_brandsettings.email_logo' in 'field list'")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 220, in _get_response
+    response = response.render()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/response.py", line 114, in render
+    self.content = self.rendered_content
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/response.py", line 92, in rendered_content
+    return template.render(context, self._request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/backends/django.py", line 61, in render
+    return self.template.render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 173, in render
+    with context.bind_template(self):
+  File "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/Python3.framework/Versions/3.9/lib/python3.9/contextlib.py", line 117, in __enter__
+    return next(self.gen)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/context.py", line 254, in bind_template
+    updates.update(processor(self.request))
+  File "/usr/local/var/www/Nuboxed/backend/apps/settings_app/context_processors.py", line 5, in global_brand_settings
+    settings = BrandSettings.objects.filter(is_active=True).first()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 1059, in first
+    for obj in queryset[:1]:
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 400, in __iter__
+    self._fetch_all()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 1886, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/sql/compiler.py", line 1562, in execute_sql
+    cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 102, in execute
+    return super().execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 67, in execute
+    return self._execute_with_wrappers(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 80, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 75, in execute
+    return self.cursor.execute(query, args)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 179, in execute
+    res = self._query(mogrified_query)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/cursors.py", line 330, in _query
+    db.query(q)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 280, in query
+    _mysql.connection.query(self, query)
+django.db.utils.OperationalError: (1054, "Unknown column 'settings_app_brandsettings.email_logo' in 'field list'")
+ERROR 2026-08-08 08:09:19,422 basehttp 6146 123145532248064 "GET /admin/modules/users/ HTTP/1.1" 500 240591
+ERROR 2026-08-08 08:25:16,838 log 7247 140704571807808 Invalid HTTP_HOST header: 'testserver'. You may need to add 'testserver' to ALLOWED_HOSTS.
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/deprecation.py", line 133, in __call__
+    response = self.process_request(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/middleware/common.py", line 48, in process_request
+    host = request.get_host()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/http/request.py", line 151, in get_host
+    raise DisallowedHost(msg)
+django.core.exceptions.DisallowedHost: Invalid HTTP_HOST header: 'testserver'. You may need to add 'testserver' to ALLOWED_HOSTS.
+ERROR 2026-08-08 09:15:48,426 log 10371 140704571807808 Invalid HTTP_HOST header: 'testserver'. You may need to add 'testserver' to ALLOWED_HOSTS.
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/deprecation.py", line 133, in __call__
+    response = self.process_request(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/middleware/common.py", line 48, in process_request
+    host = request.get_host()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/http/request.py", line 151, in get_host
+    raise DisallowedHost(msg)
+django.core.exceptions.DisallowedHost: Invalid HTTP_HOST header: 'testserver'. You may need to add 'testserver' to ALLOWED_HOSTS.
+ERROR 2026-08-08 11:16:44,728 log 21027 123145452183552 Internal Server Error: /admin/integrations/amazon/orders/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 880, in _resolve_lookup
+    current = current[bit]
+TypeError: 'NoneType' object is not subscriptable
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 890, in _resolve_lookup
+    current = getattr(current, bit)
+AttributeError: 'NoneType' object has no attribute 'legal_name'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 896, in _resolve_lookup
+    current = current[int(bit)]
+ValueError: invalid literal for int() with base 10: 'legal_name'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 220, in _get_response
+    response = response.render()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/response.py", line 114, in render
+    self.content = self.rendered_content
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/response.py", line 92, in rendered_content
+    return template.render(context, self._request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/backends/django.py", line 61, in render
+    return self.template.render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 175, in render
+    return self._render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 167, in _render
+    return self.nodelist.render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 1005, in <listcomp>
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 966, in render_annotated
+    return self.render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/loader_tags.py", line 157, in render
+    return compiled_parent._render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 167, in _render
+    return self.nodelist.render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 1005, in <listcomp>
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 966, in render_annotated
+    return self.render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/loader_tags.py", line 63, in render
+    result = block.nodelist.render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 1005, in <listcomp>
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 966, in render_annotated
+    return self.render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/defaulttags.py", line 238, in render
+    nodelist.append(node.render_annotated(context))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 966, in render_annotated
+    return self.render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 1064, in render
+    output = self.filter_expression.resolve(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 736, in resolve
+    arg_vals.append(arg.resolve(context))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 847, in resolve
+    value = self._resolve_lookup(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 903, in _resolve_lookup
+    raise VariableDoesNotExist(
+django.template.base.VariableDoesNotExist: Failed lookup for key [legal_name] in None
+ERROR 2026-08-08 11:16:44,742 basehttp 21027 123145452183552 "GET /admin/integrations/amazon/orders/ HTTP/1.1" 500 360658
+ERROR 2026-08-09 05:45:15,094 log 31640 123145359192064 Internal Server Error: /admin/catalog/phone-models/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/backoffice/views.py", line 474, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/auth/mixins.py", line 73, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/auth/mixins.py", line 135, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 228, in get
+    context = self.get_context_data(**kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/backoffice/views.py", line 2312, in get_context_data
+    ram_presets = self.get_ram_presets()
+AttributeError: 'PhoneModelsView' object has no attribute 'get_ram_presets'
+ERROR 2026-08-09 05:45:15,107 basehttp 31640 123145359192064 "GET /admin/catalog/phone-models/ HTTP/1.1" 500 108172
+ERROR 2026-08-09 05:45:47,327 log 31640 123145359192064 Internal Server Error: /admin/catalog/phone-models/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/backoffice/views.py", line 474, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/auth/mixins.py", line 73, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/auth/mixins.py", line 135, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 228, in get
+    context = self.get_context_data(**kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/backoffice/views.py", line 2312, in get_context_data
+    ram_presets = self.get_ram_presets()
+AttributeError: 'PhoneModelsView' object has no attribute 'get_ram_presets'
+ERROR 2026-08-09 05:45:47,327 basehttp 31640 123145359192064 "GET /admin/catalog/phone-models/ HTTP/1.1" 500 108172
+ERROR 2026-08-09 05:45:57,711 log 31640 123145359192064 Internal Server Error: /admin/catalog/phone-models/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/backoffice/views.py", line 474, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/auth/mixins.py", line 73, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/auth/mixins.py", line 135, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 228, in get
+    context = self.get_context_data(**kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/backoffice/views.py", line 2312, in get_context_data
+    ram_presets = self.get_ram_presets()
+AttributeError: 'PhoneModelsView' object has no attribute 'get_ram_presets'
+ERROR 2026-08-09 05:45:57,712 basehttp 31640 123145359192064 "GET /admin/catalog/phone-models/ HTTP/1.1" 500 108051
+ERROR 2026-08-09 19:27:08,372 log 3715 123145446539264 Internal Server Error: /products/abc-store-dell-xps-13/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/detail.py", line 109, in get
+    context = self.get_context_data(object=self.object)
+  File "/usr/local/var/www/Nuboxed/backend/apps/catalog/views.py", line 615, in get_context_data
+    "first_image_url": spin_items.first().file.url,
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/fields/files.py", line 66, in url
+    self._require_file()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/fields/files.py", line 41, in _require_file
+    raise ValueError(
+ValueError: The 'file' attribute has no file associated with it.
+ERROR 2026-08-09 19:27:08,384 basehttp 3715 123145446539264 "GET /products/abc-store-dell-xps-13/ HTTP/1.1" 500 108930
+ERROR 2026-08-09 20:19:24,129 log 9905 140704459368512 Internal Server Error: /products/abc-store-google-pixel-tablet/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 288, in ensure_connection
+    self.connect()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 269, in connect
+    self.connection = self.get_new_connection(conn_params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 247, in get_new_connection
+    connection = Database.connect(**conn_params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/__init__.py", line 121, in Connect
+    return Connection(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 200, in __init__
+    super().__init__(*args, **kwargs2)
+MySQLdb.OperationalError: (2003, "Can't connect to MySQL server on '127.0.0.1:3306' (1)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/detail.py", line 108, in get
+    self.object = self.get_object()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/detail.py", line 53, in get_object
+    obj = queryset.get()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 635, in get
+    num = len(clone)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 382, in __len__
+    self._fetch_all()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 1886, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/sql/compiler.py", line 1560, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 329, in cursor
+    return self._cursor()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 305, in _cursor
+    self.ensure_connection()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 288, in ensure_connection
+    self.connect()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 288, in ensure_connection
+    self.connect()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 269, in connect
+    self.connection = self.get_new_connection(conn_params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 247, in get_new_connection
+    connection = Database.connect(**conn_params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/__init__.py", line 121, in Connect
+    return Connection(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 200, in __init__
+    super().__init__(*args, **kwargs2)
+django.db.utils.OperationalError: (2003, "Can't connect to MySQL server on '127.0.0.1:3306' (1)")
+ERROR 2026-08-09 21:14:51,162 log 15780 140704459368512 Invalid HTTP_HOST header: 'testserver'. You may need to add 'testserver' to ALLOWED_HOSTS.
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/deprecation.py", line 133, in __call__
+    response = self.process_request(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/middleware/common.py", line 48, in process_request
+    host = request.get_host()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/http/request.py", line 151, in get_host
+    raise DisallowedHost(msg)
+django.core.exceptions.DisallowedHost: Invalid HTTP_HOST header: 'testserver'. You may need to add 'testserver' to ALLOWED_HOSTS.
+ERROR 2026-08-10 11:34:24,643 log 42549 123145411301376 Internal Server Error: /stores/xyz-store/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/sqlite3/base.py", line 328, in execute
+    return super().execute(query, params)
+sqlite3.OperationalError: no such column: stores_store.store_page_tagline
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 228, in get
+    context = self.get_context_data(**kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/storefront/views.py", line 634, in get_context_data
+    store = get_object_or_404(Store.objects.select_related("retailer"), slug=self.kwargs["slug"], status=Store.STATUS_ACTIVE, is_active=True)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/shortcuts.py", line 85, in get_object_or_404
+    return queryset.get(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 635, in get
+    num = len(clone)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 382, in __len__
+    self._fetch_all()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 1886, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/sql/compiler.py", line 1562, in execute_sql
+    cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 102, in execute
+    return super().execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 67, in execute
+    return self._execute_with_wrappers(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 80, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/utils.py", line 89, in _execute
+    return self.cursor.execute(sql, params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/sqlite3/base.py", line 328, in execute
+    return super().execute(query, params)
+django.db.utils.OperationalError: no such column: stores_store.store_page_tagline
+ERROR 2026-08-10 11:34:24,674 basehttp 42549 123145411301376 "GET /stores/xyz-store/ HTTP/1.1" 500 21889
+ERROR 2026-08-12 11:04:11,794 log 45721 123145363447808 Internal Server Error: /retailer/catalog/products/f081acae-d858-4cdf-bc4e-7ebf571807b8/variants/new/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/retailers/views.py", line 111, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/auth/mixins.py", line 73, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/auth/mixins.py", line 135, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/edit.py", line 180, in get
+    return super().get(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/edit.py", line 144, in get
+    return self.render_to_response(self.get_context_data())
+  File "/usr/local/var/www/Nuboxed/backend/apps/catalog/views.py", line 497, in get_context_data
+    context = super().get_context_data(**kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/retailers/views.py", line 153, in get_context_data
+    context = super().get_context_data(**kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/edit.py", line 74, in get_context_data
+    kwargs["form"] = self.get_form()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/edit.py", line 39, in get_form
+    return form_class(**self.get_form_kwargs())
+  File "/usr/local/var/www/Nuboxed/backend/apps/catalog/forms.py", line 593, in __init__
+    product = self.instance.product
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/fields/related_descriptors.py", line 246, in __get__
+    raise self.RelatedObjectDoesNotExist(
+apps.catalog.models.ProductVariant.product.RelatedObjectDoesNotExist: ProductVariant has no product.
+ERROR 2026-08-12 11:04:11,821 basehttp 45721 123145363447808 "GET /retailer/catalog/products/f081acae-d858-4cdf-bc4e-7ebf571807b8/variants/new/ HTTP/1.1" 500 17925
+ERROR 2026-08-13 07:06:18,297 log 65708 123145410252800 Internal Server Error: /retailer/inventory/delivery-locations/new/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/retailers/views.py", line 111, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/auth/mixins.py", line 73, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/auth/mixins.py", line 135, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/inventory/views.py", line 236, in post
+    return self.render_to_response(self.get_context_data(formset=formset))
+  File "/usr/local/var/www/Nuboxed/backend/apps/inventory/views.py", line 242, in get_context_data
+    context = super().get_context_data(**kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/retailers/views.py", line 153, in get_context_data
+    context = super().get_context_data(**kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/edit.py", line 75, in get_context_data
+    return super().get_context_data(**kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/detail.py", line 95, in get_context_data
+    if self.object:
+AttributeError: 'DeliveryLocationCreateView' object has no attribute 'object'
+ERROR 2026-08-13 07:06:18,319 basehttp 65708 123145410252800 "POST /retailer/inventory/delivery-locations/new/ HTTP/1.1" 500 17057
+ERROR 2026-08-13 07:24:14,417 log 67926 140704459368512 Invalid HTTP_HOST header: 'testserver'. You may need to add 'testserver' to ALLOWED_HOSTS.
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/deprecation.py", line 133, in __call__
+    response = self.process_request(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/middleware/common.py", line 48, in process_request
+    host = request.get_host()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/http/request.py", line 151, in get_host
+    raise DisallowedHost(msg)
+django.core.exceptions.DisallowedHost: Invalid HTTP_HOST header: 'testserver'. You may need to add 'testserver' to ALLOWED_HOSTS.
+ERROR 2026-08-13 07:24:14,468 log 67926 140704459368512 Invalid HTTP_HOST header: 'testserver'. You may need to add 'testserver' to ALLOWED_HOSTS.
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/deprecation.py", line 133, in __call__
+    response = self.process_request(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/middleware/common.py", line 48, in process_request
+    host = request.get_host()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/http/request.py", line 151, in get_host
+    raise DisallowedHost(msg)
+django.core.exceptions.DisallowedHost: Invalid HTTP_HOST header: 'testserver'. You may need to add 'testserver' to ALLOWED_HOSTS.
+ERROR 2026-08-13 08:27:36,199 log 75180 140704459368512 Internal Server Error: /top-deals/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 228, in get
+    context = self.get_context_data(**kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/storefront/views.py", line 1039, in get_context_data
+    "deals_only": deals_only,
+NameError: name 'deals_only' is not defined
+ERROR 2026-08-13 08:49:10,207 log 78024 140704459368512 Invalid HTTP_HOST header: 'testserver'. You may need to add 'testserver' to ALLOWED_HOSTS.
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/deprecation.py", line 133, in __call__
+    response = self.process_request(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/middleware/common.py", line 48, in process_request
+    host = request.get_host()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/http/request.py", line 151, in get_host
+    raise DisallowedHost(msg)
+django.core.exceptions.DisallowedHost: Invalid HTTP_HOST header: 'testserver'. You may need to add 'testserver' to ALLOWED_HOSTS.
+ERROR 2026-08-13 09:00:37,431 log 79147 123145380507648 Internal Server Error: /retailer/inventory/offline-sales/settings/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 880, in _resolve_lookup
+    current = current[bit]
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/context.py", line 83, in __getitem__
+    raise KeyError(key)
+KeyError: 'retailer'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 886, in _resolve_lookup
+    if isinstance(current, BaseContext) and getattr(
+AttributeError: type object 'RequestContext' has no attribute 'retailer'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 896, in _resolve_lookup
+    current = current[int(bit)]
+ValueError: invalid literal for int() with base 10: 'retailer'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/retailers/views.py", line 111, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/auth/mixins.py", line 73, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/auth/mixins.py", line 135, in dispatch
+    return super().dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/inventory/views.py", line 241, in get
+    return self.render_page(request, retailer, sales)
+  File "/usr/local/var/www/Nuboxed/backend/apps/inventory/views.py", line 251, in render_page
+    return render(request, self.template_name, {
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/shortcuts.py", line 24, in render
+    content = loader.render_to_string(template_name, context, request, using=using)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/loader.py", line 62, in render_to_string
+    return template.render(context, request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/backends/django.py", line 61, in render
+    return self.template.render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 175, in render
+    return self._render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 167, in _render
+    return self.nodelist.render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 1005, in <listcomp>
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 966, in render_annotated
+    return self.render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/loader_tags.py", line 157, in render
+    return compiled_parent._render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 167, in _render
+    return self.nodelist.render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 1005, in render
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 1005, in <listcomp>
+    return SafeString("".join([node.render_annotated(context) for node in self]))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 966, in render_annotated
+    return self.render(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 1064, in render
+    output = self.filter_expression.resolve(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 736, in resolve
+    arg_vals.append(arg.resolve(context))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 847, in resolve
+    value = self._resolve_lookup(context)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 903, in _resolve_lookup
+    raise VariableDoesNotExist(
+django.template.base.VariableDoesNotExist: Failed lookup for key [retailer] in [{'True': True, 'False': False, 'None': None}, {}, {}, {'page_title': 'Offline Sales Settings', 'offline_sales_enabled': True, 'offline_sales': <QuerySet []>}]
+ERROR 2026-08-13 09:00:37,467 basehttp 79147 123145380507648 "GET /retailer/inventory/offline-sales/settings/ HTTP/1.1" 500 24237
+ERROR 2026-08-13 11:16:59,499 log 88469 123145396719616 Internal Server Error: /products/abc-store-apple-macbook-air-13-inch-m3/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/detail.py", line 109, in get
+    context = self.get_context_data(object=self.object)
+  File "/usr/local/var/www/Nuboxed/backend/apps/catalog/views.py", line 758, in get_context_data
+    for listed_variant in variant_options:
+NameError: name 'variant_options' is not defined
+ERROR 2026-08-13 11:16:59,511 basehttp 88469 123145396719616 "GET /products/abc-store-apple-macbook-air-13-inch-m3/ HTTP/1.1" 500 17224
+ERROR 2026-08-13 11:17:23,310 log 88469 123145413509120 Internal Server Error: /products/abc-store-apple-macbook-air-13-inch-m3/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/detail.py", line 109, in get
+    context = self.get_context_data(object=self.object)
+  File "/usr/local/var/www/Nuboxed/backend/apps/catalog/views.py", line 758, in get_context_data
+    for listed_variant in sorted_variants:
+NameError: name 'variant_options' is not defined
+ERROR 2026-08-13 11:17:23,315 basehttp 88469 123145413509120 "GET /products/abc-store-apple-macbook-air-13-inch-m3/ HTTP/1.1" 500 117271
+ERROR 2026-08-13 11:29:16,044 log 89916 123145583222784 Internal Server Error: /stores/xyz-store/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 288, in ensure_connection
+    self.connect()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 269, in connect
+    self.connection = self.get_new_connection(conn_params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 247, in get_new_connection
+    connection = Database.connect(**conn_params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/__init__.py", line 121, in Connect
+    return Connection(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 200, in __init__
+    super().__init__(*args, **kwargs2)
+MySQLdb.OperationalError: (2003, "Can't connect to MySQL server on '127.0.0.1:3306' (61)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 228, in get
+    context = self.get_context_data(**kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/storefront/views.py", line 693, in get_context_data
+    store = get_object_or_404(Store.objects.select_related("retailer"), slug=self.kwargs["slug"], status=Store.STATUS_ACTIVE, is_active=True)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/shortcuts.py", line 85, in get_object_or_404
+    return queryset.get(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 635, in get
+    num = len(clone)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 382, in __len__
+    self._fetch_all()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 1886, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/sql/compiler.py", line 1560, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 329, in cursor
+    return self._cursor()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 305, in _cursor
+    self.ensure_connection()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 288, in ensure_connection
+    self.connect()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 288, in ensure_connection
+    self.connect()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 269, in connect
+    self.connection = self.get_new_connection(conn_params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 247, in get_new_connection
+    connection = Database.connect(**conn_params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/__init__.py", line 121, in Connect
+    return Connection(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 200, in __init__
+    super().__init__(*args, **kwargs2)
+django.db.utils.OperationalError: (2003, "Can't connect to MySQL server on '127.0.0.1:3306' (61)")
+ERROR 2026-08-13 11:29:16,087 basehttp 89916 123145583222784 "GET /stores/xyz-store/ HTTP/1.1" 500 26598
+ERROR 2026-08-13 16:54:23,650 log 1852 140704459368512 Invalid HTTP_HOST header: 'testserver'. You may need to add 'testserver' to ALLOWED_HOSTS.
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/deprecation.py", line 133, in __call__
+    response = self.process_request(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/middleware/common.py", line 48, in process_request
+    host = request.get_host()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/http/request.py", line 151, in get_host
+    raise DisallowedHost(msg)
+django.core.exceptions.DisallowedHost: Invalid HTTP_HOST header: 'testserver'. You may need to add 'testserver' to ALLOWED_HOSTS.
+ERROR 2026-08-14 10:56:30,428 log 25644 140704459368512 Invalid HTTP_HOST header: 'testserver'. You may need to add 'testserver' to ALLOWED_HOSTS.
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/deprecation.py", line 133, in __call__
+    response = self.process_request(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/middleware/common.py", line 48, in process_request
+    host = request.get_host()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/http/request.py", line 151, in get_host
+    raise DisallowedHost(msg)
+django.core.exceptions.DisallowedHost: Invalid HTTP_HOST header: 'testserver'. You may need to add 'testserver' to ALLOWED_HOSTS.
+ERROR 2026-08-14 11:13:41,997 log 27207 140704459368512 Internal Server Error: /cart/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 505, in parse
+    compile_func = self.tags[command]
+KeyError: 'endwith'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 220, in _get_response
+    response = response.render()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/response.py", line 114, in render
+    self.content = self.rendered_content
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/response.py", line 90, in rendered_content
+    template = self.resolve_template(self.template_name)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/response.py", line 72, in resolve_template
+    return select_template(template, using=self.using)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/loader.py", line 42, in select_template
+    return engine.get_template(template_name)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/backends/django.py", line 33, in get_template
+    return Template(self.engine.get_template(template_name), self)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/engine.py", line 175, in get_template
+    template, origin = self.find_template(template_name)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/engine.py", line 157, in find_template
+    template = loader.get_template(name, skip=skip)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/loaders/cached.py", line 57, in get_template
+    template = super().get_template(template_name, skip)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/loaders/base.py", line 28, in get_template
+    return Template(
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 154, in __init__
+    self.nodelist = self.compile_nodelist()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 200, in compile_nodelist
+    return parser.parse()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 513, in parse
+    raise self.error(token, e)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 511, in parse
+    compiled_result = compile_func(self, token)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/loader_tags.py", line 293, in do_extends
+    nodelist = parser.parse()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 513, in parse
+    raise self.error(token, e)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 511, in parse
+    compiled_result = compile_func(self, token)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/defaulttags.py", line 1491, in do_with
+    nodelist = parser.parse(("endwith",))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 513, in parse
+    raise self.error(token, e)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 511, in parse
+    compiled_result = compile_func(self, token)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/loader_tags.py", line 232, in do_block
+    nodelist = parser.parse(("endblock",))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 507, in parse
+    self.invalid_block_tag(token, command, parse_until)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/template/base.py", line 558, in invalid_block_tag
+    raise self.error(
+django.template.exceptions.TemplateSyntaxError: Invalid block tag on line 72: 'endwith', expected 'endblock'. Did you forget to register or load this tag?
+ERROR 2026-08-14 11:16:32,251 log 27451 140704459368512 Internal Server Error: /cart/
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 288, in ensure_connection
+    self.connect()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 269, in connect
+    self.connection = self.get_new_connection(conn_params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 247, in get_new_connection
+    connection = Database.connect(**conn_params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/__init__.py", line 121, in Connect
+    return Connection(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 200, in __init__
+    super().__init__(*args, **kwargs2)
+MySQLdb.OperationalError: (2003, "Can't connect to MySQL server on '127.0.0.1:3306' (1)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 105, in view
+    return self.dispatch(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 144, in dispatch
+    return handler(request, *args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/views/generic/base.py", line 228, in get
+    context = self.get_context_data(**kwargs)
+  File "/usr/local/var/www/Nuboxed/backend/apps/storefront/views.py", line 1195, in get_context_data
+    context.update({"page_title": "Cart", **self.get_cart_totals(self.request)})
+  File "/usr/local/var/www/Nuboxed/backend/apps/storefront/views.py", line 506, in get_cart_totals
+    items = self.get_cart_items(request)
+  File "/usr/local/var/www/Nuboxed/backend/apps/storefront/views.py", line 498, in get_cart_items
+    cart = ensure_request_cart(request)
+  File "/usr/local/var/www/Nuboxed/backend/apps/orders/services.py", line 99, in ensure_request_cart
+    request.session.create()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/sessions/backends/db.py", line 50, in create
+    self._session_key = self._get_new_session_key()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/sessions/backends/base.py", line 150, in _get_new_session_key
+    if not self.exists(session_key):
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/contrib/sessions/backends/db.py", line 46, in exists
+    return self.model.objects.filter(session_key=session_key).exists()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/query.py", line 1243, in exists
+    return self.query.has_results(using=self.db)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/sql/query.py", line 600, in has_results
+    return compiler.has_results()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/sql/compiler.py", line 1530, in has_results
+    return bool(self.execute_sql(SINGLE))
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/models/sql/compiler.py", line 1560, in execute_sql
+    cursor = self.connection.cursor()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 329, in cursor
+    return self._cursor()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 305, in _cursor
+    self.ensure_connection()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 288, in ensure_connection
+    self.connect()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 288, in ensure_connection
+    self.connect()
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/base/base.py", line 269, in connect
+    self.connection = self.get_new_connection(conn_params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/utils/asyncio.py", line 26, in inner
+    return func(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/django/db/backends/mysql/base.py", line 247, in get_new_connection
+    connection = Database.connect(**conn_params)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/__init__.py", line 121, in Connect
+    return Connection(*args, **kwargs)
+  File "/usr/local/var/www/Nuboxed/.venv/lib/python3.9/site-packages/MySQLdb/connections.py", line 200, in __init__
+    super().__init__(*args, **kwargs2)
+django.db.utils.OperationalError: (2003, "Can't connect to MySQL server on '127.0.0.1:3306' (1)")

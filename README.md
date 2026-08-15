@@ -13,7 +13,7 @@ The implementation is intentionally phased. Core platform foundations come first
 
 ## Target stack
 
-- Backend: Python, Django, Django REST Framework
+- Backend: Python 3.12, Django 4.2 LTS, Django REST Framework
 - Database: MySQL
 - Queue: Redis, Celery
 - Storage: S3-compatible object storage

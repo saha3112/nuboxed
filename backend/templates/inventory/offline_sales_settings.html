@@ -1,0 +1,38 @@
+{% extends "retailer/base.html" %}
+
+{% block content %}
+<style>
+    .offline-setting-shell{max-width:980px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr);gap:18px}
+    .offline-setting-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;box-shadow:var(--shadow);padding:22px}
+    .offline-setting-card h2{margin:0 0 8px;font-size:20px;color:var(--text-main)}
+    .offline-setting-card p{margin:0;color:var(--text-muted);line-height:1.6;font-size:13px}
+    .offline-setting-row{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:22px;padding:15px;border:1px solid var(--border);border-radius:12px;background:var(--surface-soft)}
+    .offline-setting-row strong{display:block;color:var(--text-main);font-size:14px}.offline-setting-row small{color:var(--text-muted)}
+    .offline-toggle{width:42px;height:24px;accent-color:var(--primary);flex:0 0 auto}
+    .offline-mini-list{margin-top:16px;display:grid;gap:8px}.offline-mini-item{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);font-size:12px}.offline-mini-item:last-child{border-bottom:0}.offline-mini-item span{color:var(--text-muted)}
+    @media(max-width:780px){.offline-setting-shell{grid-template-columns:1fr}.offline-setting-card{padding:17px}}
+</style>
+<div class="offline-setting-shell">
+    <section class="offline-setting-card">
+        <h2>Offline Sales</h2>
+        <p>Record sales made at your physical store and automatically reduce the selected warehouse stock. Admin can monitor every entry and control this feature.</p>
+        <form method="post">
+            {% csrf_token %}
+            <label class="offline-setting-row" for="offline-sales-enabled">
+                <span><strong>Allow offline sales</strong><small>Retailer staff can create offline sale entries.</small></span>
+                <input id="offline-sales-enabled" class="offline-toggle" type="checkbox" name="enabled" {% if offline_sales_enabled %}checked{% endif %} onchange="this.form.submit()">
+            </label>
+        </form>
+        {% if not offline_sales_enabled %}<p style="margin-top:14px;color:#b42318;">Offline Sales is currently disabled. New sale entries are blocked.</p>{% endif %}
+    </section>
+    <section class="offline-setting-card">
+        <h2>Recent entries</h2>
+        <p>Your latest offline sales are shown here for quick verification.</p>
+        <div class="offline-mini-list">
+            {% for sale in offline_sales %}
+            <div class="offline-mini-item"><span>{{ sale.product.name }} · {{ sale.quantity }} unit{{ sale.quantity|pluralize }}</span><strong>{{ sale.total_amount }}</strong></div>
+            {% empty %}<div class="offline-mini-item"><span>No offline sales recorded yet.</span></div>{% endfor %}
+        </div>
+    </section>
+</div>
+{% endblock %}

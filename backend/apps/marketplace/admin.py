@@ -6,6 +6,7 @@ from apps.marketplace.models import (
     MarketplaceSyncJob,
     MarketplaceConflictLog,
     MarketplaceWebhookEvent
+    , MarketplaceListing, MarketplaceStoreMapping, AmazonOrderTracking, AmazonOrderItemTracking
 )
 
 
@@ -54,3 +55,30 @@ class MarketplaceWebhookEventAdmin(admin.ModelAdmin):
     list_display = ("connector_code", "status", "processed_at", "created_at")
     list_filter = ("status", "connector_code", "created_at")
     search_fields = ("connector_code", "error_message")
+
+
+@admin.register(MarketplaceListing)
+class MarketplaceListingAdmin(admin.ModelAdmin):
+    list_display = ("seller_sku", "connection", "product", "fulfillment_location", "status", "last_pushed_at")
+    list_filter = ("status", "connection")
+    search_fields = ("seller_sku", "product__name", "product__sku")
+
+
+@admin.register(MarketplaceStoreMapping)
+class MarketplaceStoreMappingAdmin(admin.ModelAdmin):
+    list_display = ("connection", "store", "warehouse", "amazon_store_code", "is_enabled", "last_sync_at")
+    list_filter = ("is_enabled", "connection")
+    search_fields = ("store__name", "amazon_store_code", "warehouse__name")
+
+
+@admin.register(AmazonOrderTracking)
+class AmazonOrderTrackingAdmin(admin.ModelAdmin):
+    list_display = ("external_order_id", "retailer", "store", "amazon_order_status", "fulfillment_status", "purchase_date", "local_order")
+    list_filter = ("amazon_order_status", "fulfillment_status", "attribution_status", "marketplace_id")
+    search_fields = ("external_order_id", "retailer__legal_name", "retailer__display_name", "store__name")
+
+
+@admin.register(AmazonOrderItemTracking)
+class AmazonOrderItemTrackingAdmin(admin.ModelAdmin):
+    list_display = ("tracking_order", "seller_sku", "retailer", "store", "quantity", "item_total")
+    search_fields = ("seller_sku", "title", "tracking_order__external_order_id")

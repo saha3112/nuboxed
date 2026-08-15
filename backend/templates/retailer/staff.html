@@ -45,10 +45,10 @@
             {% csrf_token %}
             <div style="padding: 14px 18px; display:flex; gap:8px; flex-wrap:wrap;">
                 {% if show_deleted %}
-                    <button type="submit" name="staff_action" value="restore" class="ra-btn ra-btn-primary">Restore Selected</button>
-                    <button type="submit" name="staff_action" value="permanent_delete" class="ra-btn ra-btn-danger" onclick="return confirm('Permanently delete selected staff members?');">Permanently Delete</button>
+                    <button type="submit" name="staff_action" value="restore" class="ra-btn ra-btn-primary" data-staff-confirm="restore">Restore Selected</button>
+                    <button type="submit" name="staff_action" value="permanent_delete" class="ra-btn ra-btn-danger" data-staff-confirm="permanent_delete">Permanently Delete</button>
                 {% else %}
-                    <button type="submit" name="staff_action" value="delete" class="ra-btn ra-btn-danger" onclick="return confirm('Move selected staff members to deleted staff?');">Delete Selected</button>
+                    <button type="submit" name="staff_action" value="delete" class="ra-btn ra-btn-danger" data-staff-confirm="delete">Delete Selected</button>
                 {% endif %}
             </div>
             <table class="ra-table">
@@ -112,6 +112,27 @@ document.addEventListener('DOMContentLoaded', function () {
     const boxes = () => document.querySelectorAll('[data-staff-checkbox]');
     if (!all) return;
     all.addEventListener('change', function () { boxes().forEach(box => box.checked = all.checked); });
+    document.querySelectorAll('[data-staff-confirm]').forEach(function (button) {
+        button.addEventListener('click', async function (event) {
+            event.preventDefault();
+            const selected = document.querySelectorAll('[data-staff-checkbox]:checked').length;
+            if (!selected) {
+                if (window.appAlert) await window.appAlert('Select at least one staff member.', {title: 'No staff selected'});
+                return;
+            }
+            const action = button.dataset.staffConfirm;
+            const copy = {
+                delete: {title: 'Move staff to trash', message: `Move ${selected} selected staff member(s) to deleted staff?`, confirmText: 'Move to Trash', tone: 'warning'},
+                restore: {title: 'Restore staff members', message: `Restore ${selected} selected staff member(s)?`, confirmText: 'Restore', tone: 'restore'},
+                permanent_delete: {title: 'Delete staff permanently', message: `Permanently delete ${selected} selected staff member(s)? This cannot be undone.`, confirmText: 'Delete Permanently', tone: 'danger'}
+            }[action];
+            const confirmed = window.appConfirm ? await window.appConfirm(copy) : false;
+            if (!confirmed) return;
+            const form = button.form;
+            form.dataset.confirmSubmitting = '1';
+            form.requestSubmit(button);
+        });
+    });
 });
 </script>
 {% endblock %}

@@ -1,14 +1,31 @@
 import logging
 import re
+from io import BytesIO
+from email.mime.image import MIMEImage
 from typing import Dict, Any, List
+from PIL import Image
 from django.db import transaction
 from django.utils import timezone
-from django.core.mail import get_connection, send_mail
+from django.core.mail import EmailMultiAlternatives, get_connection, send_mail
+from django.template.loader import render_to_string
 
 from apps.notifications.models import NotificationTemplate, Notification, NotificationDeliveryLog
 from apps.settings_app.models import BrandSettings, Setting
 
 logger = logging.getLogger(__name__)
+
+
+def _email_logo_image(logo_field):
+    """Convert uploaded transparent logos to PNG for reliable email rendering."""
+    with logo_field.open("rb") as logo_file:
+        source = logo_file.read()
+    try:
+        image = Image.open(BytesIO(source)).convert("RGBA")
+        output = BytesIO()
+        image.save(output, format="PNG", optimize=True)
+        return MIMEImage(output.getvalue(), _subtype="png")
+    except (OSError, ValueError):
+        return MIMEImage(source)
 
 
 def render_template(template_str: str, context: Dict[str, Any]) -> str:
@@ -63,6 +80,7 @@ def send_notification_event(event_name: str, context: Dict[str, Any], user=None,
             "user_registered": f"Welcome to {brand_name} — your account is ready",
             "retailer_registered": "A new retailer has registered",
             "return_request": f"Return request {context.get('return_number', '')} received",
+            "password_changed": f"{brand_name} password changed successfully",
         }.get(event_name, f"Event triggered: {event_name.replace('_', ' ').title()}")
         body = {
             "new_order": f"Your order {context.get('order_number', '')} was placed successfully. Total: {context.get('amount', '')}.",
@@ -70,6 +88,7 @@ def send_notification_event(event_name: str, context: Dict[str, Any], user=None,
             "user_registered": f"Welcome to {brand_name}, {context.get('name', '')}. Your account was created successfully.",
             "retailer_registered": f"Retailer {context.get('legal_name', '')} has been added.",
             "return_request": f"Return request {context.get('return_number', '')} has been placed.",
+            "password_changed": f"Your {brand_name} password was changed successfully. If you did not make this change, contact support immediately.",
         }.get(event_name, f"An event of type '{event_name}' occurred. Context details: {str(context)}")
         
         # Email fallback
@@ -160,14 +179,35 @@ def dispatch_notification(notification: Notification) -> Notification:
                         timeout=mail_config.get("timeout") or 30,
                         fail_silently=False,
                     )
-                send_mail(
+                brand = BrandSettings.objects.filter(is_active=True).first()
+                brand_name = brand.brand_name if brand else "Nuboxed"
+                logo_field = None
+                if brand:
+                    logo_field = brand.email_logo or brand.fixed_menu_logo or brand.logo_big or brand.logo_small
+                message = EmailMultiAlternatives(
                     notification.subject,
                     notification.body,
                     mail_config.get("default_from_email") or None,
                     [notification.recipient],
-                    fail_silently=False,
                     connection=connection,
                 )
+                message.attach_alternative(render_to_string("emails/notification.html", {
+                    "brand_name": brand_name,
+                    "subject": notification.subject,
+                    "body": notification.body,
+                    "logo_cid": "nuboxed-logo",
+                    "has_logo": bool(logo_field),
+                }), "text/html")
+                if logo_field:
+                    try:
+                        logo_image = _email_logo_image(logo_field)
+                        logo_image.add_header("Content-ID", "<nuboxed-logo>")
+                        logo_image.add_header("Content-Disposition", "inline", filename="nuboxed-logo")
+                        message.attach(logo_image)
+                    except (OSError, ValueError):
+                        pass
+                if message.send(fail_silently=False) != 1:
+                    raise RuntimeError("The email could not be sent.")
         elif channel == "sms":
             logger.info(f"Sending SMS to {notification.recipient}: {notification.body}")
         elif channel == "whatsapp":

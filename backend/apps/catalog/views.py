@@ -7,6 +7,7 @@ from django.http import Http404, JsonResponse
 from django.shortcuts import get_object_or_404, redirect
 from django.urls import reverse
 from django.utils.decorators import method_decorator
+from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.views.generic import CreateView, DetailView, TemplateView, UpdateView, View
 
@@ -14,11 +15,12 @@ from apps.backoffice.views import SuperAdminRequiredMixin
 from apps.catalog.forms import ProductForm, ProductVariantForm
 from apps.catalog.models import AttributeValue, Product, ProductMedia, ProductVariant
 from apps.catalog.services import approve_product, normalize_comma_separated_phone_models, reject_product, unique_slug, unique_sku
+from apps.marketplace.services import sync_product_amazon_mapping
 from apps.inventory.delivery import estimate_product_delivery, get_request_location_payload, serialize_delivery_context
 from apps.retailers.views import RetailerPortalMixin
 from apps.stores.models import Store
 from apps.users.models import User
-from apps.settings_app.services import get_effective_sale_countdown
+from apps.settings_app.services import get_effective_sale_countdown, get_effective_sale_price
 
 
 class ProductAssetSyncMixin:
@@ -38,16 +40,36 @@ class ProductAssetSyncMixin:
         return json.dumps(rows)
 
     def get_phone_picker_context(self, product=None):
-        from apps.catalog.models import PhoneBrand, PhoneColorOption, PhoneModel, PhoneModelVariant, PhonePlatform, PhoneStorageOption, PhoneRamOption
+        from apps.catalog.models import Brand, PhoneBrand, PhoneColorOption, PhoneModel, PhoneModelVariant, PhonePlatform, PhoneStorageOption, PhoneRamOption
 
         normalize_comma_separated_phone_models()
         platforms = PhonePlatform.objects.all().order_by("name")
         brands = PhoneBrand.objects.select_related("platform").order_by("platform__name", "sort_order", "name")
-        models = PhoneModel.objects.select_related("platform", "brand").filter(is_active=True).order_by("platform__name", "brand__name", "sort_order", "name")
+        models = PhoneModel.objects.select_related("platform", "brand").prefetch_related("variants").filter(is_active=True).order_by("platform__name", "brand__name", "sort_order", "name")
         variants = PhoneModelVariant.objects.select_related("phone_model", "phone_model__brand").order_by("phone_model__name", "sort_order", "storage", "color")
         storages = PhoneStorageOption.objects.filter(is_active=True).order_by("sort_order", "label")
         colors = PhoneColorOption.objects.filter(is_active=True).order_by("sort_order", "name")
         rams = PhoneRamOption.objects.filter(is_active=True).order_by("sort_order", "label")
+        apple_platform = next((item for item in platforms if item.name.casefold() == "apple"), None)
+        apple_brand = next((item for item in brands if apple_platform and item.platform_id == apple_platform.id and item.name.casefold() == "apple"), None)
+        hidden_phone_brand_id = next((item.id for item in brands if apple_platform and item.platform_id == apple_platform.id and item.name.casefold() == "iphone"), None)
+
+        # iPhone is a product family, not a second brand. Treat it as an
+        # Apple alias in the picker and merge duplicate model rows while
+        # retaining the model row that has the most configured variants.
+        canonical_model_groups = {}
+        canonical_model_ids = {}
+        for item in models:
+            canonical_brand_id = apple_brand.id if hidden_phone_brand_id and item.brand_id == hidden_phone_brand_id and apple_brand else item.brand_id
+            key = (str(item.platform_id), str(canonical_brand_id or ""), item.name.strip().casefold())
+            canonical_model_groups.setdefault(key, []).append((item, canonical_brand_id))
+        canonical_models = []
+        for group in canonical_model_groups.values():
+            chosen, canonical_brand_id = max(group, key=lambda pair: len(pair[0].variants.all()))
+            canonical_models.append((chosen, canonical_brand_id))
+            for item, _brand_id in group:
+                canonical_model_ids[item.id] = chosen.id
+
         return {
             "all_platforms": platforms,
             "all_phone_brands": brands,
@@ -55,6 +77,10 @@ class ProductAssetSyncMixin:
             "all_phone_variants": variants,
             "phone_picker_payload": json.dumps(
                 {
+                    "catalog_brands": [
+                        {"id": str(item.id), "name": item.name}
+                        for item in Brand.objects.filter(is_active=True).order_by("name")
+                    ],
                     "platforms": [{"id": str(item.id), "name": item.name, "label": item.get_name_display()} for item in platforms],
                     "brands": [
                         {
@@ -65,6 +91,7 @@ class ProductAssetSyncMixin:
                             "platform_name": item.platform.name,
                         }
                         for item in brands
+                        if item.id != hidden_phone_brand_id
                     ],
                     "models": [
                         {
@@ -73,15 +100,15 @@ class ProductAssetSyncMixin:
                             "display_name": item.display_name,
                             "platform_id": str(item.platform_id),
                             "platform_name": item.platform.name,
-                            "brand_id": str(item.brand_id) if item.brand_id else "",
+                            "brand_id": str(canonical_brand_id) if canonical_brand_id else "",
                         }
-                        for item in models
+                        for item, canonical_brand_id in canonical_models
                     ],
                     "variants": [
                         {
                             "id": str(item.id),
                             "label": item.display_name,
-                            "phone_model_id": str(item.phone_model_id),
+                            "phone_model_id": str(canonical_model_ids.get(item.phone_model_id, item.phone_model_id)),
                             "ram": item.ram,
                             "storage": item.storage,
                             "color": item.color,
@@ -314,9 +341,32 @@ class RetailerCatalogDashboardView(RetailerPortalMixin, TemplateView):
             {
                 "page_title": "Catalog Products",
                 "products": queryset.order_by("-created_at"),
+                "deleted_products": Product.objects.filter(retailer=retailer, deleted_at__isnull=False).select_related("store", "category", "brand").order_by("-deleted_at"),
             }
         )
         return context
+
+
+class RetailerProductBulkActionView(RetailerPortalMixin, View):
+    def post(self, request, *args, **kwargs):
+        action = request.POST.get("action")
+        product_ids = request.POST.getlist("product_ids")
+        retailer = self.get_retailer()
+        products = Product.objects.filter(retailer=retailer, id__in=product_ids)
+        if not product_ids or action not in {"trash", "restore", "permanent_delete"}:
+            messages.error(request, "Select valid products and an action.")
+            return redirect("catalog:retailer-products")
+        if action == "trash":
+            count = products.filter(deleted_at__isnull=True).update(deleted_at=timezone.now(), is_active=False, updated_at=timezone.now())
+            message = f"{count} product(s) moved to trash."
+        elif action == "restore":
+            count = products.filter(deleted_at__isnull=False).update(deleted_at=None, is_active=True, updated_at=timezone.now())
+            message = f"{count} product(s) restored."
+        else:
+            count, _ = products.filter(deleted_at__isnull=False).delete()
+            message = f"{count} product record(s) permanently deleted."
+        messages.success(request, message)
+        return redirect("catalog:retailer-products")
 
 
 class RetailerProductCreateView(ProductAssetSyncMixin, RetailerPortalMixin, CreateView):
@@ -339,6 +389,7 @@ class RetailerProductCreateView(ProductAssetSyncMixin, RetailerPortalMixin, Crea
         product.is_active = True
         product.save()
         self.object = product
+        sync_product_amazon_mapping(product, form.cleaned_data.get("amazon_seller_sku"), form.cleaned_data.get("amazon_asin"))
         form.save_product_attributes(product)
         form.sync_product_variants(product)
         self.sync_product_assets(product, form)
@@ -389,6 +440,7 @@ class RetailerProductEditView(ProductAssetSyncMixin, RetailerPortalMixin, Update
         product.is_active = True
         product.save()
         self.object = product
+        sync_product_amazon_mapping(product, form.cleaned_data.get("amazon_seller_sku"), form.cleaned_data.get("amazon_asin"))
         form.save_product_attributes(product)
         form.sync_product_variants(product)
         self.sync_product_assets(product, form)
@@ -437,8 +489,9 @@ class RetailerProductVariantCreateView(RetailerPortalMixin, CreateView):
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
+        kwargs["product"] = self.get_product()
         kwargs["initial"] = kwargs.get("initial", {})
-        kwargs["initial"]["product"] = self.get_product()
+        kwargs["initial"]["product"] = kwargs["product"]
         return kwargs
 
     def form_valid(self, form):
@@ -454,6 +507,7 @@ class RetailerProductVariantCreateView(RetailerPortalMixin, CreateView):
         # Save to database first to get variant ID, then trigger form save with commit=True to save attributes
         variant.save()
         form.save(commit=True)
+        sync_product_amazon_mapping(variant.product, form.cleaned_data.get("amazon_seller_sku"), form.cleaned_data.get("amazon_asin"), variant=variant)
         
         messages.success(self.request, "Product variant added.")
         return redirect(self.get_success_url())
@@ -484,6 +538,7 @@ class RetailerProductVariantEditView(RetailerPortalMixin, UpdateView):
 
     def form_valid(self, form):
         variant = form.save()
+        sync_product_amazon_mapping(variant.product, form.cleaned_data.get("amazon_seller_sku"), form.cleaned_data.get("amazon_asin"), variant=variant)
         messages.success(self.request, "Product variant updated.")
         return redirect(self.get_success_url())
 
@@ -577,6 +632,38 @@ class ProductDetailPageView(DetailView):
         product_family = self.resolve_product_family_value(product)
         related_products = self.get_related_products(product)
         similar_products = self.get_similar_products(product)
+
+        def enrich_recommendation(item):
+            variants = list(item.variants.prefetch_related("attribute_values__attribute").all())
+            default = next((row for row in variants if row.is_default and row.available_qty > 0), None)
+            default = default or next((row for row in variants if row.available_qty > 0), None)
+            price = get_effective_sale_price(item, default)
+            item.effective_discount_price = price["price"]
+            item.effective_compare_price = price["compare_price"]
+            item.effective_discount_percentage = int(price["discount_percentage"])
+            item.effective_default_variant_id = str(default.id) if default else ""
+            item.effective_sale_ends_at = get_effective_sale_countdown(item, default).get("ends_at")
+            item.effective_sale_message = get_effective_sale_countdown(item, default).get("message", "")
+            rows = []
+            for row in variants:
+                row_price = get_effective_sale_price(item, row)
+                rows.append({
+                    "id": str(row.id),
+                    "sku": row.sku,
+                    "price": str(row_price["price"]),
+                    "compare_price": str(row_price["compare_price"] or ""),
+                    "stock": row.available_qty,
+                    "attributes": {
+                        av.attribute.name.lower(): (av.value or "").lower()
+                        for av in row.attribute_values.all() if av.attribute
+                    },
+                })
+            item.effective_variants_json = json.dumps(rows)
+            return item
+
+        related_products = [enrich_recommendation(item) for item in related_products]
+        for recommendation in similar_products:
+            enrich_recommendation(recommendation.get("product") if isinstance(recommendation, dict) else recommendation)
         stock_snapshot = self.get_stock_snapshot(product)
         location_payload = get_request_location_payload(self.request)
         delivery_estimate = estimate_product_delivery(product, location_payload=location_payload)
@@ -600,6 +687,8 @@ class ProductDetailPageView(DetailView):
             media_list.append(item)
             
         spin_items = product.media_items.filter(media_type=ProductMedia.TYPE_IMAGE_360).order_by("sort_order")
+        if spin_items.values("file", "external_url").distinct().count() < 2:
+            spin_items = spin_items.none()
         if spin_items.exists():
             first_360_order = spin_items.first().sort_order
             spin_entry = {
@@ -607,7 +696,7 @@ class ProductDetailPageView(DetailView):
                 "media_type": "image_360",
                 "title": "360° View",
                 "sort_order": first_360_order,
-                "first_image_url": spin_items.first().file.url,
+                "first_image_url": spin_items.first().display_url,
             }
             media_list.append(spin_entry)
             
@@ -698,6 +787,13 @@ class ProductDetailPageView(DetailView):
             variant_option_groups.append({"name": attr_name, "items": deduped})
         variant_option_groups.sort(key=lambda group: self.get_variant_group_order(group["name"]))
 
+        for listed_variant in sorted_variants:
+            effective_variant_price = get_effective_sale_price(product, listed_variant)
+            listed_variant.effective_sale_price = effective_variant_price["price"]
+            listed_variant.effective_compare_price = effective_variant_price["compare_price"]
+            listed_variant.effective_discount_percentage = effective_variant_price["discount_percentage"]
+        effective_price = get_effective_sale_price(product, default_variant)
+
         context.update(
             {
                 "page_title": product.seo_title or product.name,
@@ -707,7 +803,7 @@ class ProductDetailPageView(DetailView):
                 "spin_items": spin_items,
                 "default_variant": default_variant,
                 "variant_options": sorted_variants,
-                "discount_percentage": self.get_discount_percentage(product),
+                "discount_percentage": int(effective_price["discount_percentage"]),
                 "stock_snapshot": stock_snapshot,
                 "delivery_estimate": delivery_estimate,
                 "delivery_window_label": delivery_window_label,
@@ -717,9 +813,9 @@ class ProductDetailPageView(DetailView):
                 "related_products": related_products,
                 "similar_products": similar_product_cards,
                 "variant_option_groups": variant_option_groups,
-                "display_price": (default_variant.discount_price or default_variant.price) if default_variant else (product.discount_price or product.price),
-                "display_compare_price": default_variant.price if default_variant and default_variant.discount_price else (product.price if product.discount_price else None),
-                "sale_countdown": get_effective_sale_countdown(product),
+                "display_price": effective_price["price"],
+                "display_compare_price": effective_price["compare_price"],
+                "sale_countdown": get_effective_sale_countdown(product, variant=default_variant),
                 "active_variant_name": default_variant.name if default_variant else None,
                 "approved_reviews": product.reviews.filter(status="approved").order_by("-created_at"),
                 "reviews_count": product.reviews.filter(status="approved").count(),

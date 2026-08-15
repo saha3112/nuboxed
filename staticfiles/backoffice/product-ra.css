@@ -95,6 +95,85 @@
     margin-bottom: 16px;
 }
 
+.bo-product-ra .ra-field.ra-boolean-field {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    min-height: 40px;
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--body-bg);
+}
+
+.bo-product-ra .ra-field.ra-boolean-field .ra-label {
+    margin: 0;
+    white-space: nowrap;
+}
+
+.bo-product-ra .ra-field.ra-boolean-field input[type="checkbox"] {
+    width: 19px;
+    height: 19px;
+    margin: 0;
+    flex: 0 0 auto;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+
+.bo-product-ra .ra-boolean-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin: 2px 0 18px;
+}
+
+.bo-product-ra .ra-boolean-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 58px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--body-bg), var(--card-bg));
+    cursor: pointer;
+    transition: border-color .15s, box-shadow .15s, transform .15s;
+}
+
+.bo-product-ra .ra-boolean-option:hover {
+    border-color: var(--primary);
+    box-shadow: 0 5px 14px rgba(224, 68, 32, .10);
+    transform: translateY(-1px);
+}
+
+.bo-product-ra .ra-boolean-option input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    flex: 0 0 auto;
+    accent-color: var(--primary);
+}
+
+.bo-product-ra .ra-boolean-option span {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.bo-product-ra .ra-boolean-option strong {
+    color: var(--text-main);
+    font-size: 14px;
+}
+
+.bo-product-ra .ra-boolean-option small {
+    color: var(--text-muted);
+    font-size: 11px;
+}
+
+@media (max-width: 640px) {
+    .bo-product-ra .ra-boolean-options { grid-template-columns: 1fr; }
+}
+
 .bo-product-ra .ra-label {
     font-size: 13px;
     font-weight: 500;
@@ -259,6 +338,43 @@
     border-collapse: collapse;
 }
 
+/* Keep the media management grid readable even when asset titles and color
+   mappings are long. On narrow screens the table scrolls as one unit instead
+   of squeezing controls into unreadable columns. */
+.bo-product-ra table.ra-assets-table {
+    min-width: 980px;
+    table-layout: fixed;
+}
+
+.bo-product-ra .ra-assets-table th:nth-child(1),
+.bo-product-ra .ra-assets-table td:nth-child(1) { width: 190px; }
+.bo-product-ra .ra-assets-table th:nth-child(2),
+.bo-product-ra .ra-assets-table td:nth-child(2) { width: 150px; }
+.bo-product-ra .ra-assets-table th:nth-child(3),
+.bo-product-ra .ra-assets-table td:nth-child(3) { width: 110px; }
+.bo-product-ra .ra-assets-table th:nth-child(4),
+.bo-product-ra .ra-assets-table td:nth-child(4) { width: 125px; }
+.bo-product-ra .ra-assets-table th:nth-child(5),
+.bo-product-ra .ra-assets-table td:nth-child(5) { width: 255px; }
+.bo-product-ra .ra-assets-table th:nth-child(6),
+.bo-product-ra .ra-assets-table td:nth-child(6) { width: 130px; }
+
+.bo-product-ra .ra-assets-table td:first-child {
+    font-weight: 600;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.bo-product-ra .ra-assets-table .ra-input {
+    box-sizing: border-box;
+    max-width: 100%;
+}
+
+.bo-product-ra .ra-assets-table select.ra-input {
+    width: 100% !important;
+    min-width: 0;
+}
+
 .bo-product-ra .ra-table th {
     padding: 11px 16px;
     text-align: left;
@@ -392,8 +508,8 @@
 }
 
 .bo-product-ra .ra-media-thumb {
-    width: 62px;
-    height: 62px;
+    width: 92px;
+    height: 78px;
     border-radius: 10px;
     overflow: hidden;
     border: 1px solid var(--border);

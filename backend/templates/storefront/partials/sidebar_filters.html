@@ -7,7 +7,11 @@
         <div class="sidebar-block">
             <div class="sidebar-title">Categories</div>
             <div class="category-menu">
-                <a href="{% url 'storefront:products' %}"><strong>Home</strong></a>
+                {% if store_page and request.resolver_match.kwargs.slug %}
+                    <a href="{% url 'storefront:retailer-shop' slug=request.resolver_match.kwargs.slug %}"><strong>Home</strong></a>
+                {% else %}
+                    <a href="{% url 'storefront:products' %}"><strong>Home</strong></a>
+                {% endif %}
                 {% for c in nav_device_categories %}
                     {% if c.children_with_products.exists %}
                         <div class="category-item {% for child in c.children_with_products %}{% if child.id|stringformat:'s' in selected_category_ids %}open{% endif %}{% endfor %}{% if c.id|stringformat:'s' in selected_category_ids %}open{% endif %}">
@@ -75,12 +79,40 @@
                 {% if all_colors %}
                 <div class="filter-section">
                     <h3>Color</h3>
-                    <div class="color-filter">
+                    <div class="color-filter filter-options-scroll">
                         {% for c in all_colors %}
-                            <label class="color-option {% if c.id|stringformat:'s' in selected_color_ids %}selected{% endif %}" {% if c.hex_color == "#ffffff" or c.value|lower == "white" %}data-white="1"{% endif %}>
+                            <label class="color-option {% if c.id|stringformat:'s' in selected_color_ids %}selected{% endif %}" title="{{ c.label|default:c.value }}" aria-label="{{ c.label|default:c.value }}" data-tooltip="{{ c.label|default:c.value }}" {% if c.hex_color == "#ffffff" or c.value|lower == "white" %}data-white="1"{% endif %}>
                                 <input type="checkbox" name="color_id" value="{{ c.id }}" {% if c.id|stringformat:"s" in selected_color_ids %}checked{% endif %} style="display: none;" onchange="this.form.submit()">
-                                <span class="color-swatch" style="--swatch: {{ c.hex_color|default:'#ccc' }}"></span>
+                                <span class="color-swatch" style="--swatch: {{ c.hex_color|default:'#ccc' }}" aria-label="{{ c.label|default:c.value }}"></span>
                                 <span>{{ c.value }}</span>
+                            </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if all_storage %}
+                <div class="filter-section">
+                    <h3>Storage</h3>
+                    <div class="filter-options-scroll">
+                        {% for option in all_storage %}
+                            <label class="check" title="{{ option.label }}" data-tooltip="{{ option.label }}">
+                                <input type="checkbox" name="storage" value="{{ option.value }}" {% if option.value in selected_storage_values %}checked{% endif %} onchange="this.form.submit()">
+                                {{ option.label }}
+                            </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if all_ram %}
+                <div class="filter-section">
+                    <h3>RAM</h3>
+                    <div class="filter-options-scroll">
+                        {% for option in all_ram %}
+                            <label class="check" title="{{ option.label }}" data-tooltip="{{ option.label }}">
+                                <input type="checkbox" name="ram" value="{{ option.value }}" {% if option.value in selected_ram_values %}checked{% endif %} onchange="this.form.submit()">
+                                {{ option.label }}
                             </label>
                         {% endfor %}
                     </div>
@@ -90,12 +122,14 @@
                 {% if all_brands %}
                 <div class="filter-section">
                     <h3>Brand</h3>
-                    {% for b in all_brands %}
-                        <label class="check">
-                            <input type="checkbox" name="brand_id" value="{{ b.id }}" {% if b.id|stringformat:"s" in selected_brand_ids %}checked{% endif %} onchange="this.form.submit()">
-                            {{ b.name }}
-                        </label>
-                    {% endfor %}
+                    <div class="filter-options-scroll">
+                        {% for b in all_brands %}
+                            <label class="check" title="{{ b.name }}" data-tooltip="{{ b.name }}">
+                                <input type="checkbox" name="brand_id" value="{{ b.id }}" {% if b.id|stringformat:"s" in selected_brand_ids %}checked{% endif %} onchange="this.form.submit()">
+                                {{ b.name }}
+                            </label>
+                        {% endfor %}
+                    </div>
                 </div>
                 {% endif %}
             </div>

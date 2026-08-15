@@ -1,6 +1,5 @@
 {% extends "storefront/base.html" %}
 {% load currency_tags %}
-
 {% block content %}
 <section class="page-head">
   <div class="container">
@@ -17,8 +16,8 @@
         {% for item in items %}
             <article class="cart-line">
                 <a href="{% url 'catalog:product-detail' slug=item.product.slug %}" class="cart-line-media">
-                    {% if item.product.primary_image %}
-                        <img src="{{ item.product.primary_image.url }}" alt="{{ item.product.name }}">
+                        {% if item.product.primary_image_url %}
+                            <img src="{{ item.product.primary_image_url }}" alt="{{ item.product.name }}">
                     {% else %}
                         <i class="fa-solid fa-mobile-screen-button"></i>
                     {% endif %}
@@ -35,9 +34,9 @@
                         <button type="submit" class="button-compact ghost">Update</button>
                     </form>
                     <div class="cart-line-pricing">
-                        <strong>{{ item.quantity }} x {{ item.discount_price|format_currency:item.product.store.currency_code }}</strong>
-                        <span>Tax {{ item.line_tax }} · Shipping {{ item.shipping_amount }}</span>
-                        <strong>{{ item.line_total }}</strong>
+                        <strong>{{ item.quantity }} x {{ item.discount_price|format_currency:cart.currency_code }}</strong>
+                        <span>Tax {{ item.line_tax|format_currency:cart.currency_code }} · Shipping {{ item.shipping_amount|format_currency:cart.currency_code }}</span>
+                        <strong>{{ item.line_total|format_currency:cart.currency_code }}</strong>
                     </div>
                 </div>
                 <form method="post" action="{% url 'storefront:cart-remove' product_id=item.product.id %}" class="cart-line-remove">
@@ -54,17 +53,17 @@
     </div>
     <aside class="summary-panel order-summary-panel">
         <h2>Summary</h2>
-        <div class="summary-row"><span>Subtotal</span><strong>{{ subtotal }}</strong></div>
-        <div class="summary-row"><span>Discount</span><strong>{{ discount }}</strong></div>
-        <div class="summary-row"><span>Tax</span><strong>{{ tax }}</strong></div>
-        <div class="summary-row"><span>Shipping</span><strong>{{ shipping }}</strong></div>
+        <div class="summary-row"><span>Subtotal</span><strong>{{ subtotal|format_currency:cart.currency_code }}</strong></div>
+        <div class="summary-row"><span>Discount</span><strong>{{ discount|format_currency:cart.currency_code }}</strong></div>
+        <div class="summary-row"><span>Tax</span><strong>{{ tax|format_currency:cart.currency_code }}</strong></div>
+        <div class="summary-row"><span>Shipping</span><strong>{{ shipping|format_currency:cart.currency_code }}</strong></div>
         <div class="summary-row"><span>Coupon</span><strong>{{ coupon_code|default:"Ready" }}</strong></div>
         {% if coupon_feature_enabled %}
         <form method="post" action="{% url 'storefront:apply-coupon' %}" style="display:flex;gap:8px;margin:14px 0;">
             {% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"><input type="text" name="coupon_code" value="{{ coupon_code }}" placeholder="Enter coupon code" style="flex:1;min-width:0;"><button type="submit" class="button-compact ghost">Apply</button>
         </form>
         {% endif %}
-        <div class="summary-row total"><span>Total</span><strong>{{ total }}</strong></div>
+        <div class="summary-row total"><span>Total</span><strong>{{ total|format_currency:cart.currency_code }}</strong></div>
         <a href="{% url 'storefront:checkout' %}" class="primary-link full-width-link">Proceed to checkout</a>
     </aside>
 </section>

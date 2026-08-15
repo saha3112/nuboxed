@@ -63,7 +63,61 @@
         let activeType = galleryPanel.dataset.activeType || "image";
         let thumbOffset = 0;
 
+        function initSpinViewer() {
+            const spinPane = document.querySelector('[data-media-type="image_360"]');
+            if (!spinPane) return;
+            const frames = Array.from(spinPane.querySelectorAll("[data-spin-frame]"));
+            if (frames.length < 2) return;
+            let frame = 0;
+            let startX = null;
+            let moved = false;
+            const showFrame = (next) => {
+                frame = (next + frames.length) % frames.length;
+                frames.forEach((node, index) => { node.hidden = index !== frame; });
+            };
+            const moveBy = (distance) => {
+                const steps = Math.max(1, Math.round(Math.abs(distance) / 18));
+                showFrame(frame + (distance < 0 ? steps : -steps));
+            };
+            spinPane.style.cursor = "grab";
+            spinPane.addEventListener("pointerdown", (event) => {
+                startX = event.clientX;
+                moved = false;
+                spinPane.setPointerCapture?.(event.pointerId);
+                spinPane.style.cursor = "grabbing";
+            });
+            spinPane.addEventListener("pointermove", (event) => {
+                if (startX === null) return;
+                const distance = event.clientX - startX;
+                if (Math.abs(distance) >= 12) {
+                    moveBy(distance);
+                    startX = event.clientX;
+                    moved = true;
+                }
+            });
+            const finishSpin = (event) => {
+                if (startX !== null && !moved && event?.type === "click") showFrame(frame + 1);
+                startX = null;
+                spinPane.style.cursor = "grab";
+            };
+            spinPane.addEventListener("pointerup", finishSpin);
+            spinPane.addEventListener("pointercancel", finishSpin);
+            spinPane.addEventListener("click", (event) => { if (!moved) showFrame(frame + 1); });
+            showFrame(0);
+        }
+
         function setActivePane(targetId, targetType) {
+            // Leaving a video always pauses and rewinds it, including when the
+            // customer switches to an image or the 360 viewer.
+            document.querySelectorAll(".media-video video").forEach((video) => {
+                if (!video.paused) video.pause();
+                try { video.currentTime = 0; } catch (error) { /* unloaded video */ }
+            });
+            document.querySelectorAll(".media-video iframe").forEach((frame) => {
+                try {
+                    frame.contentWindow.postMessage(JSON.stringify({ event: "command", func: "stopVideo", args: [] }), "*");
+                } catch (error) { /* cross-origin player may ignore this */ }
+            });
             mediaPanes.forEach((pane) => {
                 const isActive = pane.dataset.mediaId === targetId;
                 pane.classList.toggle("is-active", isActive);
@@ -92,6 +146,32 @@
             activeType = targetType;
             galleryPanel.dataset.activeId = targetId;
             galleryPanel.dataset.activeType = targetType;
+
+            // A video thumbnail is itself the user's play gesture. Start the
+            // selected player immediately instead of requiring a second click.
+            if (targetType === "video") {
+                const pane = mediaPanes.find((node) => node.dataset.mediaId === targetId);
+                if (!pane) return;
+                const video = pane.querySelector("video");
+                if (video) {
+                    const play = video.play();
+                    if (play?.catch) play.catch(() => {});
+                    return;
+                }
+                const frame = pane.querySelector("iframe");
+                if (frame) {
+                    const playMessage = () => {
+                        try {
+                            frame.contentWindow.postMessage(JSON.stringify({
+                                event: "command", func: "playVideo", args: []
+                            }), "*");
+                        } catch (error) { /* player may still be loading */ }
+                    };
+                    playMessage();
+                    window.setTimeout(playMessage, 150);
+                    window.setTimeout(playMessage, 500);
+                }
+            }
         }
 
         function updateThumbPosition() {
@@ -116,6 +196,24 @@
         function stepThumbs(direction) {
             thumbOffset += direction * (window.matchMedia("(max-width: 640px)").matches ? 80 : 98);
             updateThumbPosition();
+        }
+
+        // Scroll the thumbnail rail while the pointer is over it. At either
+        // end, leave the wheel event untouched so the page can keep scrolling.
+        if (thumbViewport) {
+            thumbViewport.addEventListener("wheel", (event) => {
+                const before = thumbOffset;
+                const delta = Math.abs(event.deltaY) >= Math.abs(event.deltaX)
+                    ? event.deltaY
+                    : event.deltaX;
+                if (!delta) return;
+                thumbOffset += delta;
+                updateThumbPosition();
+                if (thumbOffset !== before) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                }
+            }, { passive: false });
         }
 
         thumbButtons.forEach((button) => {
@@ -184,6 +282,7 @@
         }
 
         setActivePane(activeId || (thumbButtons[0] && (thumbButtons[0].dataset.targetId || thumbButtons[0].dataset.paneId)) || "", activeType);
+        initSpinViewer();
         updateThumbPosition();
         window.addEventListener("resize", () => {
             thumbOffset = 0;
@@ -270,6 +369,20 @@
             return (value || "").toLowerCase().replace(/\s+/g, "");
         }
 
+        function variantAttribute(variant, type) {
+            const attributes = variant.attributes || {};
+            const exact = attributes[type];
+            if (exact !== undefined) return exact;
+            const key = Object.keys(attributes).find((name) => {
+                const normalizedName = normalized(name);
+                if (type === "storage") return normalizedName.includes("storage") || normalizedName.includes("internal");
+                if (type === "ram") return normalizedName.includes("ram") || normalizedName.includes("memory");
+                if (type === "color") return normalizedName.includes("color");
+                return normalizedName === normalized(type);
+            });
+            return key ? attributes[key] : "";
+        }
+
         function selectFirstAvailableVariant() {
             const firstAvailable = variants.find((variant) => Number(variant.stock || 0) > 0);
             if (!firstAvailable) return;
@@ -280,7 +393,7 @@
                 const attrKey = titleText.includes("color")
                     ? "color"
                     : (titleText.includes("storage") || titleText.includes("internal") ? "storage" : titleText.replace(":", "").trim().toLowerCase());
-                const target = normalized(firstAvailable.attributes[attrKey] || "");
+                const target = normalized(variantAttribute(firstAvailable, attrKey));
                 if (!target) return;
                 const buttons = Array.from(block.querySelectorAll(".storage"));
                 const match = buttons.find((btn) => normalized(btn.dataset.value || btn.textContent.trim()) === target);
@@ -330,7 +443,7 @@
             // Find matching variant
             const matching = variants.find((variant) => {
                 return Object.entries(activeOptions).every(([attrKey, activeVal]) => {
-                    const varVal = normalized(variant.attributes[attrKey] || "");
+                    const varVal = normalized(variantAttribute(variant, attrKey));
                     return varVal === activeVal;
                 });
             });
@@ -391,16 +504,16 @@
 
             // Auto-fallback if invalid combination
             let matching = variants.find(v => {
-                const varColor = normalized(v.attributes.color || "");
-                const varStorage = normalized(v.attributes.storage || "");
+                const varColor = normalized(variantAttribute(v, "color"));
+                const varStorage = normalized(variantAttribute(v, "storage"));
                 return varColor === activeColor && varStorage === activeStorage;
             });
 
             if (!matching && variants.length > 0) {
                 if (changedAttr === "storage" && activeStorage) {
-                    const fallback = variants.find(v => normalized(v.attributes.storage || "") === activeStorage);
+                    const fallback = variants.find(v => normalized(variantAttribute(v, "storage")) === activeStorage);
                     if (fallback) {
-                        const fallbackColor = normalized(fallback.attributes.color || "");
+                        const fallbackColor = normalized(variantAttribute(fallback, "color"));
                         document.querySelectorAll(".option-block").forEach((block) => {
                             const titleEl = block.querySelector(".option-title");
                             if (titleEl && titleEl.textContent.toLowerCase().includes("color")) {
@@ -416,9 +529,9 @@
                         });
                     }
                 } else if (changedAttr === "color" && activeColor) {
-                    const fallback = variants.find(v => normalized(v.attributes.color || "") === activeColor);
+                    const fallback = variants.find(v => normalized(variantAttribute(v, "color")) === activeColor);
                     if (fallback) {
-                        const fallbackStorage = normalized(fallback.attributes.storage || "");
+                        const fallbackStorage = normalized(variantAttribute(fallback, "storage"));
                         document.querySelectorAll(".option-block").forEach((block) => {
                             const titleEl = block.querySelector(".option-title");
                             if (titleEl && (titleEl.textContent.toLowerCase().includes("storage") || titleEl.textContent.toLowerCase().includes("internal"))) {
@@ -437,27 +550,49 @@
             }
 
             // Now update classes (fade and crossed-out/out-of-stock)
+            const activeByType = {};
+            document.querySelectorAll(".option-block").forEach((block) => {
+                const titleEl = block.querySelector(".option-title");
+                const activeBtn = block.querySelector(".storage.active");
+                if (!titleEl || !activeBtn) return;
+                const titleText = titleEl.textContent.trim().toLowerCase();
+                const type = titleText.includes("color")
+                    ? "color"
+                    : (titleText.includes("storage") || titleText.includes("internal")
+                        ? "storage"
+                        : (titleText.includes("ram") || titleText.includes("memory") ? "ram" : ""));
+                if (type) activeByType[type] = normalized(activeBtn.dataset.value || activeBtn.textContent.trim());
+            });
+
             document.querySelectorAll(".option-block").forEach((block) => {
                 const titleEl = block.querySelector(".option-title");
                 if (!titleEl) return;
                 const titleText = titleEl.textContent.trim().toLowerCase();
                 const isColorGroup = titleText.includes("color");
                 const isStorageGroup = titleText.includes("storage") || titleText.includes("internal");
+                const isRamGroup = titleText.includes("ram") || titleText.includes("memory");
+                const optionType = isColorGroup ? "color" : (isStorageGroup ? "storage" : (isRamGroup ? "ram" : ""));
 
                 block.querySelectorAll(".storage").forEach(btn => {
                     const btnVal = normalized(btn.dataset.value || btn.textContent.trim());
-                    
-                    if (isColorGroup) {
-                        const relatedVariants = variants.filter(v => normalized(v.attributes.color || "") === btnVal);
-                        const isOutOfStock = relatedVariants.length > 0 && relatedVariants.every(v => Number(v.stock || 0) <= 0);
-                        btn.classList.toggle("out-of-stock", isOutOfStock);
-                        btn.classList.toggle("faded", isOutOfStock);
-                    } else if (isStorageGroup) {
-                        const relatedVariants = variants.filter(v => normalized(v.attributes.storage || "") === btnVal);
-                        const isOutOfStock = relatedVariants.length > 0 && relatedVariants.every(v => Number(v.stock || 0) <= 0);
-                        btn.classList.toggle("out-of-stock", isOutOfStock);
-                        btn.classList.toggle("faded", isOutOfStock);
-                    }
+                    if (!optionType) return;
+
+                    // Evaluate this option against the currently selected values
+                    // of every other attribute (e.g. RAM + Yellow + 256GB).
+                    const relatedVariants = variants.filter((variant) => {
+                        if (normalized(variantAttribute(variant, optionType)) !== btnVal) return false;
+                        return Object.entries(activeByType).every(([type, value]) => {
+                            if (type === optionType || !value) return true;
+                            return normalized(variantAttribute(variant, type)) === value;
+                        });
+                    });
+                    const isOutOfStock = variants.length > 0 && (
+                        relatedVariants.length === 0 || relatedVariants.every(v => Number(v.stock || 0) <= 0)
+                    );
+                    btn.classList.toggle("out-of-stock", isOutOfStock);
+                    btn.classList.toggle("faded", isOutOfStock);
+                    btn.dataset.stockState = isOutOfStock ? "out" : "in";
+                    btn.setAttribute("aria-disabled", isOutOfStock ? "true" : "false");
                 });
             });
         }
@@ -466,6 +601,7 @@
 
         storageButtons.forEach((button) => {
             button.addEventListener("click", () => {
+                if (button.dataset.stockState === "out") return;
                 const group = button.closest(".storage-options");
                 if (group) {
                     group.querySelectorAll(".storage").forEach((item) => item.classList.remove("active"));
@@ -664,63 +800,6 @@
         });
     }
 
-    function initCommentsModal() {
-        const modal = document.getElementById("commentsModal");
-        const openButton = document.getElementById("viewAllComments");
-        const closeButton = document.getElementById("commentsClose");
-        const list = document.getElementById("commentsList");
-        const pagination = document.getElementById("commentsPagination");
-        if (!modal || !openButton || !closeButton || !list || !pagination) return;
-
-        const items = Array.from(list.querySelectorAll(".comments-list-item"));
-        const perPage = 5;
-        let currentPage = 1;
-        const pageCount = Math.max(1, Math.ceil(items.length / perPage));
-
-        function renderPage(page) {
-            currentPage = Math.min(Math.max(1, page), pageCount);
-            items.forEach((item, index) => {
-                item.hidden = index < (currentPage - 1) * perPage || index >= currentPage * perPage;
-            });
-            pagination.innerHTML = "";
-            if (pageCount < 2) return;
-
-            const addButton = (label, pageNumber, disabled = false, active = false) => {
-                const button = document.createElement("button");
-                button.type = "button";
-                button.textContent = label;
-                button.disabled = disabled;
-                button.classList.toggle("active", active);
-                button.setAttribute("aria-label", label === "‹" ? "Previous page" : label === "›" ? "Next page" : `Page ${pageNumber}`);
-                if (!disabled) button.addEventListener("click", () => renderPage(pageNumber));
-                pagination.appendChild(button);
-            };
-
-            addButton("‹", currentPage - 1, currentPage === 1);
-            for (let pageNumber = 1; pageNumber <= pageCount; pageNumber += 1) {
-                addButton(String(pageNumber), pageNumber, false, pageNumber === currentPage);
-            }
-            addButton("›", currentPage + 1, currentPage === pageCount);
-        }
-
-        const setOpen = (open) => {
-            modal.classList.toggle("open", open);
-            modal.setAttribute("aria-hidden", open ? "false" : "true");
-            document.body.style.overflow = open ? "hidden" : "";
-            if (open) renderPage(currentPage);
-        };
-
-        openButton.addEventListener("click", () => setOpen(true));
-        closeButton.addEventListener("click", () => setOpen(false));
-        modal.addEventListener("click", (event) => {
-            if (event.target === modal) setOpen(false);
-        });
-        document.addEventListener("keydown", (event) => {
-            if (event.key === "Escape" && modal.classList.contains("open")) setOpen(false);
-        });
-        renderPage(1);
-    }
-
     document.addEventListener("DOMContentLoaded", () => {
         initLegacyGallery();
         initReferenceGallery();
@@ -729,6 +808,5 @@
         initCountdown();
         initQuantity();
         initReviewModal();
-        initCommentsModal();
     });
 })();

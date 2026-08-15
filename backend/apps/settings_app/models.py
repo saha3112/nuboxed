@@ -24,8 +24,15 @@ class SaleCountdownSetting(BaseModel):
 
     retailer = models.ForeignKey(Retailer, null=True, blank=True, on_delete=models.CASCADE, related_name="sale_countdown_settings")
     category = models.ForeignKey(Category, null=True, blank=True, on_delete=models.CASCADE, related_name="sale_countdown_settings")
+    product = models.ForeignKey("catalog.Product", null=True, blank=True, on_delete=models.CASCADE, related_name="sale_countdown_settings")
+    variant = models.ForeignKey("catalog.ProductVariant", null=True, blank=True, on_delete=models.CASCADE, related_name="sale_countdown_settings")
+    selected_variant_ids = models.JSONField(default=list, blank=True)
+    name = models.CharField(max_length=160, default="Sale Countdown", help_text="Internal name used to identify this sale rule in the backend.")
     message = models.CharField(max_length=160, default="Hurry up! Sale ends in:")
     ends_at = models.DateTimeField(null=True, blank=True)
+    starts_at = models.DateTimeField(null=True, blank=True)
+    discount_percentage = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    deleted_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         verbose_name = "Sale Countdown Setting"
@@ -34,13 +41,39 @@ class SaleCountdownSetting(BaseModel):
 
     def __str__(self):
         owner = self.retailer.display_name if self.retailer_id else "Global"
-        scope = self.category.name if self.category_id else "All categories"
-        return f"{owner} — {scope}"
+        scope = self.variant.name if self.variant_id else self.product.name if self.product_id else self.category.name if self.category_id else "All categories"
+        return f"{self.name or 'Sale Countdown'} — {owner} — {scope}"
 
 
 class BrandSettings(BaseModel):
     logo_big = models.ImageField(upload_to="logos/", blank=True, null=True, help_text="Large logo shown when sidebar is expanded.")
     logo_small = models.ImageField(upload_to="logos/", blank=True, null=True, help_text="Small icon logo shown when sidebar is collapsed.")
+    favicon = models.ImageField(
+        upload_to="logos/favicon/",
+        blank=True,
+        null=True,
+        help_text="Browser tab icon. Use a square PNG, ICO, or SVG-compatible image (32x32 or 48x48 recommended).",
+    )
+    drawer_menu_logo = models.ImageField(
+        "Drawer menu logo",
+        upload_to="logos/drawer/",
+        blank=True,
+        null=True,
+        help_text="Custom logo shown at the top of the storefront mobile/tablet drawer menu.",
+    )
+    email_logo = models.ImageField(
+        upload_to="logos/email/",
+        blank=True,
+        null=True,
+        help_text="Logo used in OTP and notification emails. Falls back to the storefront logo when empty.",
+    )
+    fixed_menu_logo = models.ImageField(
+        "Fixed storefront menu logo",
+        upload_to="logos/",
+        blank=True,
+        null=True,
+        help_text="Logo shown at the left of the storefront menu when visitors scroll.",
+    )
     notification_empty_image = models.ImageField(
         upload_to="logos/",
         blank=True,
@@ -177,7 +210,7 @@ class MegaMenuSettings(BaseModel):
     
     background_color = models.CharField(max_length=20, default="#ffffff", help_text="Menu background color HEX")
     text_color = models.CharField(max_length=20, default="#444444", help_text="Menu item text color HEX")
-    hover_color = models.CharField(max_length=20, default="#0b55e5", help_text="Menu item hover color HEX")
+    hover_color = models.CharField(max_length=20, default="#e04420", help_text="Menu item hover color HEX")
     heading_color = models.CharField(max_length=20, default="#222222", help_text="Menu heading color HEX")
 
     promo_subtitle = models.CharField(max_length=100, default="SPECIAL OFFER", help_text="Store mega menu promo subtitle")

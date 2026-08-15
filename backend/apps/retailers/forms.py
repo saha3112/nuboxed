@@ -2,6 +2,7 @@ import json
 
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm
+from django.utils.text import slugify
 from functools import lru_cache
 from pathlib import Path
 
@@ -572,6 +573,54 @@ class RetailerRegistrationForm(forms.Form):
     msme_certificate = forms.FileField(required=False, label="MSME / Udyam Registration (if applicable)")
     fssai_license = forms.FileField(required=False, label="FSSAI License (if food products)")
 
+    DOCUMENT_FIELDS = (
+        "business_document", "gst_certificate", "pan_card", "cancelled_cheque",
+        "address_proof", "signature", "msme_certificate", "fssai_license",
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Titles and required state are deliberately read from the same records
+        # used by the retailer-facing template, so admin changes are consistent.
+        from apps.retailers.models import SellerVerificationDocumentSetting, SellerVerificationPageSetting
+        page_visible = SellerVerificationPageSetting.objects.filter(
+            singleton_key="registration", is_active=True, is_visible=True
+        ).exists()
+        settings = SellerVerificationDocumentSetting.objects.filter(
+            is_active=True, field_name__in=self.DOCUMENT_FIELDS
+        )
+        for setting in settings:
+            field = self.fields.get(setting.field_name)
+            if field:
+                field.label = setting.title
+                field.help_text = setting.description
+                # A hidden uploader can never be completed by the retailer.
+                field.required = setting.is_required and setting.is_visible and page_visible
+        for setting in settings:
+            if setting.field_name not in self.fields:
+                self.fields[setting.field_name] = forms.FileField(
+                    required=setting.is_required and setting.is_visible and page_visible,
+                    label=setting.title,
+                    help_text=setting.description,
+                )
+        from apps.retailers.models import RetailerRegistrationFieldSetting
+        for setting in RetailerRegistrationFieldSetting.objects.filter(is_active=True):
+            required = setting.is_required and setting.is_visible
+            if setting.field_type == setting.FIELD_SELECT:
+                field = forms.ChoiceField(choices=[("", setting.placeholder or "Select...")] + setting.choices_list, required=required, label=setting.title)
+            elif setting.field_type == setting.FIELD_TEXTAREA:
+                field = forms.CharField(required=required, label=setting.title, widget=forms.Textarea(attrs={"rows": 2, "placeholder": setting.placeholder}))
+            else:
+                field = forms.CharField(required=required, label=setting.title, widget=forms.TextInput(attrs={"placeholder": setting.placeholder}))
+            if setting.field_name in self.fields:
+                self.fields[setting.field_name].label = setting.title
+                self.fields[setting.field_name].required = required
+                self.fields[setting.field_name].widget.attrs["placeholder"] = setting.placeholder
+                if setting.field_type == setting.FIELD_SELECT:
+                    self.fields[setting.field_name].choices = [("", setting.placeholder or "Select...")] + setting.choices_list
+            else:
+                self.fields[setting.field_name] = field
+
     def clean_email(self):
         email = self.cleaned_data.get("email").strip().lower()
         from apps.users.models import User
@@ -636,6 +685,67 @@ class RetailerProfileForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        from apps.retailers.models import SellerVerificationDocumentSetting
+        document_settings = SellerVerificationDocumentSetting.objects.filter(is_active=True)
+        for setting in document_settings:
+            if setting.field_name in self.fields:
+                self.fields[setting.field_name].label = setting.title
+                self.fields[setting.field_name].help_text = setting.description
+        from apps.retailers.models import RetailerRegistrationFieldSetting
+        registration_settings = RetailerRegistrationFieldSetting.objects.filter(is_active=True)
+        controlled_fields = {"vat_number", "business_type", "business_address"}
+        for setting in registration_settings:
+            # Admin visibility is authoritative on both registration and the
+            # retailer Business Profile page.
+            if setting.field_name in controlled_fields and not setting.is_visible:
+                self.fields.pop(setting.field_name, None)
+                continue
+
+            required = setting.is_required and setting.is_visible
+            if setting.field_name in self.fields:
+                old_field = self.fields[setting.field_name]
+                if setting.field_type == setting.FIELD_SELECT:
+                    field = forms.ChoiceField(
+                        choices=[("", setting.placeholder or "Select...")] + setting.choices_list,
+                        required=required,
+                        label=setting.title,
+                    )
+                elif setting.field_type == setting.FIELD_TEXTAREA:
+                    field = forms.CharField(
+                        required=required,
+                        label=setting.title,
+                        widget=forms.Textarea(attrs={"rows": 2, "placeholder": setting.placeholder}),
+                    )
+                else:
+                    field = forms.CharField(
+                        required=required,
+                        label=setting.title,
+                        widget=forms.TextInput(attrs={"placeholder": setting.placeholder}),
+                    )
+                field.initial = old_field.initial
+                self.fields[setting.field_name] = field
+            elif setting.is_visible:
+                if setting.field_type == setting.FIELD_SELECT:
+                    self.fields[setting.field_name] = forms.ChoiceField(
+                        choices=[("", setting.placeholder or "Select...")] + setting.choices_list,
+                        required=required,
+                        label=setting.title,
+                    )
+                elif setting.field_type == setting.FIELD_TEXTAREA:
+                    self.fields[setting.field_name] = forms.CharField(
+                        required=required,
+                        label=setting.title,
+                        widget=forms.Textarea(attrs={"rows": 2, "placeholder": setting.placeholder}),
+                    )
+                else:
+                    self.fields[setting.field_name] = forms.CharField(
+                        required=required,
+                        label=setting.title,
+                        widget=forms.TextInput(attrs={"placeholder": setting.placeholder}),
+                    )
+        for setting in document_settings:
+            if setting.field_name not in self.fields:
+                self.fields[setting.field_name] = forms.FileField(required=setting.is_required and setting.is_visible, label=setting.title, help_text=setting.description)
         for field_name, field in self.fields.items():
             if isinstance(field.widget, forms.CheckboxInput):
                 pass
@@ -655,6 +765,20 @@ class RetailerProfileForm(forms.ModelForm):
 
         if commit:
             retailer.save()
+            from apps.retailers.models import SellerVerificationDocumentSetting, SellerVerificationDocumentUpload
+            for setting in SellerVerificationDocumentSetting.objects.filter(is_active=True, is_visible=True):
+                uploaded = self.cleaned_data.get(setting.field_name)
+                if uploaded and setting.field_name not in self.DOCUMENT_FIELDS:
+                    SellerVerificationDocumentUpload.objects.update_or_create(
+                        retailer=retailer, setting=setting, defaults={"file": uploaded}
+                    )
+            from apps.retailers.models import RetailerRegistrationFieldSetting
+            custom_data = dict(retailer.custom_registration_data or {})
+            for setting in RetailerRegistrationFieldSetting.objects.filter(is_active=True, is_system=False):
+                if setting.field_name in self.cleaned_data:
+                    custom_data[setting.field_name] = self.cleaned_data.get(setting.field_name) or ""
+            retailer.custom_registration_data = custom_data
+            retailer.save(update_fields=["custom_registration_data", "updated_at"])
         return retailer
 
 
@@ -688,10 +812,15 @@ class StoreForm(forms.ModelForm):
         choices=((Store.STATUS_DRAFT, "Draft"), (Store.STATUS_ACTIVE, "Active")),
         initial=Store.STATUS_DRAFT,
     )
+    slug = forms.SlugField(
+        required=False,
+        label="Public URL slug",
+        help_text="Leave blank to generate it from the store name. You can also enter a custom URL slug.",
+    )
     
     class Meta:
         model = Store
-        exclude = ("retailer", "slug", "status", "is_active", "created_at", "updated_at", "icon", "store_page_sections")
+        exclude = ("retailer", "status", "is_active", "created_at", "updated_at", "icon", "store_page_sections")
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -777,6 +906,12 @@ class StoreForm(forms.ModelForm):
         if code and code not in self.country_meta:
             raise forms.ValidationError("Select a valid country.")
         return code
+
+    def clean_slug(self):
+        value = slugify((self.cleaned_data.get("slug") or "").strip())
+        if value and Store.objects.filter(slug=value).exclude(pk=self.instance.pk).exists():
+            raise forms.ValidationError("This URL slug is already used by another store.")
+        return value
 
     def clean(self):
         cleaned_data = super().clean()

@@ -1,0 +1,9 @@
+{% extends "backoffice/base.html" %}
+{% block content %}
+<style>
+.bo-preview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}.bo-preview-card{padding:22px;border:1px solid var(--line);border-radius:16px;background:var(--surface);box-shadow:0 8px 22px rgba(15,23,42,.06)}.bo-preview-card h2{margin:0 0 7px;font-size:19px;color:var(--ink)}.bo-preview-card p{margin:0 0 6px;color:var(--muted);font-size:13px}.bo-preview-card small{display:block;margin-bottom:16px;color:var(--muted)}.bo-preview-empty{padding:28px;border:1px dashed var(--line);border-radius:14px;color:var(--muted);background:var(--soft)}
+</style>
+<section class="bo-card"><div class="bo-card-header"><div><h2>Preview stores</h2><p>Admin can preview every active retailer storefront.</p></div></div><div class="bo-card-body">
+{% if preview_stores %}<div class="bo-preview-grid">{% for store in preview_stores %}<article class="bo-preview-card"><h2>{{ store.name }}</h2><p>{{ store.retailer.display_name|default:store.retailer.legal_name }}</p><small>{{ store.city|default:"" }}{% if store.city and store.country_code %}, {% endif %}{{ store.country_code|default:"" }}</small><a class="bo-btn bo-btn-primary" href="{% url 'storefront:store-detail' slug=store.slug %}" target="_blank" rel="noopener"><i class="ph ph-arrow-square-out"></i> Preview store</a></article>{% endfor %}</div>{% else %}<div class="bo-preview-empty">No active stores are available for preview.</div>{% endif %}
+</div></section>
+{% endblock %}

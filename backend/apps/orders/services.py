@@ -160,16 +160,29 @@ def cart_delivery_payload(request, cart):
 
 
 def recalculate_cart(cart, location_payload=None):
+    from apps.settings_app.services import get_effective_sale_price
     subtotal = Decimal("0.00")
     tax_amount = Decimal("0.00")
     shipping_amount = Decimal("0.00")
     items = list(
         cart.items.select_related("product", "variant", "product__store", "product__retailer", "product__category")
     )
+    # A cart uses one storefront currency. Follow the first active line item's
+    # store instead of relying on the model default or a stale session value.
+    cart_currency = next(
+        (
+            (item.product.store.currency_code or "EUR").upper()
+            for item in items
+            if getattr(item.product, "store", None)
+        ),
+        (cart.currency_code or "EUR").upper(),
+    )
+    cart.currency_code = cart_currency
     group_subtotals = {}
     for item in items:
         price_source = item.variant if item.variant else item.product
-        price = price_source.discount_price or price_source.price or Decimal("0.00")
+        effective_price = get_effective_sale_price(item.product, item.variant)
+        price = effective_price["price"]
         base_price = price_source.price or price
         item.unit_price = quantize_money(base_price)
         item.discount_price = quantize_money(price)
@@ -226,6 +239,7 @@ def recalculate_cart(cart, location_payload=None):
             "tax_amount",
             "shipping_amount",
             "total_amount",
+            "currency_code",
             "updated_at",
         ]
     )

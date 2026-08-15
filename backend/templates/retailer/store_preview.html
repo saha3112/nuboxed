@@ -1,0 +1,9 @@
+{% extends "retailer/base.html" %}
+{% block content %}
+<style>
+.store-preview-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px}.store-preview-card{padding:22px;border:1px solid var(--border);border-radius:16px;background:var(--surface);box-shadow:var(--shadow)}.store-preview-card h2{margin:0 0 7px;font-size:19px;color:var(--text-main)}.store-preview-card p{margin:0 0 16px;color:var(--text-muted);font-size:13px}.store-preview-card .ra-btn{width:max-content}.store-preview-empty{padding:28px;border:1px dashed var(--border);border-radius:14px;color:var(--text-muted);background:var(--surface-soft)}
+</style>
+<section class="ra-card"><div class="ra-card-header"><span class="ra-card-title">Preview your storefront</span></div><div class="ra-card-body">
+{% if preview_stores %}<div class="store-preview-grid">{% for store in preview_stores %}<article class="store-preview-card"><h2>{{ store.name }}</h2><p>{{ store.city|default:"" }}{% if store.city and store.country_code %}, {% endif %}{{ store.country_code|default:"" }}</p><a class="ra-btn ra-btn-primary" href="{% url 'storefront:store-detail' slug=store.slug %}" target="_blank" rel="noopener"><i class="ph ph-arrow-square-out"></i> Preview store</a></article>{% endfor %}</div>{% else %}<div class="store-preview-empty">No active store is available for preview yet.</div>{% endif %}
+</div></section>
+{% endblock %}

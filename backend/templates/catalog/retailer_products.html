@@ -2,6 +2,16 @@
 {% load currency_tags %}
 
 {% block content %}
+<style>
+    .catalog-bulk-toolbar { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:14px; padding:10px 12px; border:1px solid var(--border); border-radius:10px; background:var(--body-bg); }
+    .catalog-bulk-toolbar[hidden] { display:none; }
+    .catalog-bulk-count { margin-right:auto; color:var(--text-muted); font-size:12px; font-weight:600; }
+    .catalog-select { width:18px; height:18px; accent-color:var(--primary); cursor:pointer; }
+    .catalog-trash-card { margin-top:20px; }
+    .catalog-trash-card .product-row { opacity:.78; }
+    .catalog-trash-card .ra-table { min-width:760px; }
+    @media(max-width:700px){ .catalog-bulk-count { width:100%; } }
+</style>
 
 <!-- Page actions -->
 <div class="ra-card ra-hero" style="margin-bottom:20px;">
@@ -20,8 +30,17 @@
             <i class="ph ph-plus"></i> Add Product
         </a>
         </div>
+        <div class="catalog-bulk-toolbar" id="catalogBulkToolbar" hidden>
+            <span class="catalog-bulk-count" id="catalogBulkCount">0 selected</span>
+            <button type="button" class="ra-btn ra-btn-soft-danger ra-btn-sm" data-bulk-action="trash"><i class="ph ph-trash"></i> Move to trash</button>
+            <button type="button" class="ra-btn ra-btn-primary ra-btn-sm" data-bulk-action="restore"><i class="ph ph-arrow-counter-clockwise"></i> Restore</button>
+            <button type="button" class="ra-btn ra-btn-danger ra-btn-sm" data-bulk-action="permanent_delete"><i class="ph ph-trash"></i> Permanent delete</button>
+        </div>
     </div>
 </div>
+
+<form method="post" action="{% url 'catalog:retailer-products-bulk-action' %}" id="catalogBulkForm">
+    {% csrf_token %}<input type="hidden" name="action" id="catalogBulkAction">
 
 <!-- Products table -->
 <div class="ra-card" style="border-radius:16px;">
@@ -33,6 +52,7 @@
         <table class="ra-table" id="productsTable">
             <thead>
                 <tr>
+                    <th style="width:42px;"><input type="checkbox" class="catalog-select" id="selectAllProducts" aria-label="Select all active products"></th>
                     <th>Product</th>
                     <th>Category</th>
                     <th>Store</th>
@@ -43,7 +63,8 @@
             </thead>
             <tbody>
                 {% for product in products %}
-                <tr class="product-row" data-name="{{ product.name|lower }}">
+                <tr class="product-row" data-name="{{ product.name|lower }}" data-deleted="false">
+                    <td><input type="checkbox" class="catalog-select product-select" name="product_ids" value="{{ product.pk }}" aria-label="Select {{ product.name }}"></td>
                     <td>
                         <div style="display: flex; align-items: center; gap: 10px;">
                             {% if product.primary_image %}
@@ -82,15 +103,12 @@
                             <a href="{% url 'catalog:retailer-product-edit' pk=product.pk %}" class="ra-btn ra-btn-ghost ra-btn-sm" title="Edit">
                                 <i class="ph ph-pencil-simple"></i>
                             </a>
-                            <a href="{% url 'catalog:retailer-product-variant-create' product_id=product.pk %}" class="ra-btn ra-btn-ghost ra-btn-sm" title="Add Variant">
-                                <i class="ph ph-git-branch"></i>
-                            </a>
                         </div>
                     </td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" class="ra-table-empty">
+                    <td colspan="7" class="ra-table-empty">
                         <i class="ph ph-package" style="font-size: 36px; display: block; margin-bottom: 10px;"></i>
                         No products yet. <a href="{% url 'catalog:retailer-product-create' %}" style="color: var(--primary);">Add your first product →</a>
                     </td>
@@ -101,6 +119,16 @@
     </div>
 </div>
 
+{% if deleted_products %}
+<div class="ra-card catalog-trash-card">
+    <div class="ra-card-header"><span class="ra-card-title"><i class="ph ph-trash"></i> Trash</span><span class="ra-badge neutral">{{ deleted_products|length }} deleted</span></div>
+    <div class="ra-table-wrap"><table class="ra-table"><thead><tr><th style="width:42px;"><input type="checkbox" class="catalog-select" id="selectAllDeletedProducts" aria-label="Select all deleted products"></th><th>Product</th><th>Category</th><th>Store</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead><tbody>
+    {% for product in deleted_products %}<tr class="product-row" data-name="{{ product.name|lower }}" data-deleted="true"><td><input type="checkbox" class="catalog-select product-select" name="product_ids" value="{{ product.pk }}" aria-label="Select {{ product.name }}"></td><td><strong>{{ product.name }}</strong><div style="font-size:12px;color:var(--text-muted);">{{ product.brand.name|default:"No brand" }}</div></td><td>{{ product.category.name|default:"–" }}</td><td>{{ product.store.name|default:"–" }}</td><td>–</td><td><span class="ra-badge neutral">In trash</span></td><td>Restore from toolbar</td></tr>{% endfor %}
+    </tbody></table></div>
+</div>
+{% endif %}
+</form>
+
 <script>
 function filterProducts() {
     const q = document.getElementById('productSearch').value.toLowerCase();
@@ -108,5 +136,44 @@ function filterProducts() {
         row.style.display = row.dataset.name.includes(q) ? '' : 'none';
     });
 }
+
+const bulkForm = document.getElementById('catalogBulkForm');
+const bulkToolbar = document.getElementById('catalogBulkToolbar');
+const bulkCount = document.getElementById('catalogBulkCount');
+const productChecks = () => Array.from(document.querySelectorAll('.product-select'));
+const selectedProducts = () => productChecks().filter(input => input.checked);
+function updateBulkToolbar() {
+    const selected = selectedProducts();
+    bulkToolbar.hidden = selected.length === 0;
+    bulkCount.textContent = selected.length + ' selected';
+    document.querySelectorAll('[data-bulk-action]').forEach(button => {
+        const action = button.dataset.bulkAction;
+        const hasActive = selected.some(input => input.closest('tr').dataset.deleted === 'false');
+        const hasDeleted = selected.some(input => input.closest('tr').dataset.deleted === 'true');
+        button.hidden = action === 'trash' ? !hasActive : (action === 'restore' || action === 'permanent_delete') ? !hasDeleted : false;
+    });
+}
+document.getElementById('selectAllProducts')?.addEventListener('change', function () {
+    productChecks().filter(input => input.closest('tr').dataset.deleted === 'false').forEach(input => input.checked = this.checked);
+    updateBulkToolbar();
+});
+document.getElementById('selectAllDeletedProducts')?.addEventListener('change', function () {
+    productChecks().filter(input => input.closest('tr').dataset.deleted === 'true').forEach(input => input.checked = this.checked);
+    updateBulkToolbar();
+});
+productChecks().forEach(input => input.addEventListener('change', updateBulkToolbar));
+document.querySelectorAll('[data-bulk-action]').forEach(button => button.addEventListener('click', function () {
+    const action = this.dataset.bulkAction;
+    const selected = selectedProducts();
+    if (!selected.length) return;
+    document.getElementById('catalogBulkAction').value = action;
+    const labels = {trash:['Move products to trash','Move the selected product(s) to trash?','Move to Trash','warning'], restore:['Restore products','Restore the selected product(s)?','Restore','restore'], permanent_delete:['Delete products permanently','Permanently delete the selected product(s)? This cannot be undone.','Delete Permanently','danger']};
+    const config = labels[action];
+    bulkForm.dataset.confirm = config[1];
+    bulkForm.dataset.confirmTitle = config[0];
+    bulkForm.dataset.confirmText = config[2];
+    bulkForm.dataset.confirmTone = config[3];
+    bulkForm.requestSubmit();
+}));
 </script>
 {% endblock %}

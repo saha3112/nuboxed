@@ -1,0 +1,13 @@
+Options -Indexes
+
+RewriteEngine On
+
+# Let Apache serve generated assets directly. This keeps Passenger focused on
+# Django requests and prevents the admin from rendering as unstyled HTML.
+RewriteRule ^static/(.*)$ staticfiles/$1 [L]
+RewriteRule ^media/(.*)$ media/$1 [L]
+
+# Passenger settings used by cPanel's Python application runner.
+PassengerEnabled On
+PassengerAppType wsgi
+PassengerStartupFile passenger_wsgi.py

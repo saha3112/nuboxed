@@ -17,6 +17,7 @@ from apps.catalog.models import (
 )
 from apps.catalog.services import unique_sku
 from apps.stores.models import Store
+from apps.marketplace.models import MarketplaceConnection, MarketplaceListing
 
 
 # ─── Attribute Management Forms ──────────────────────────────────────────────
@@ -153,12 +154,27 @@ class ProductForm(forms.ModelForm):
         widget=forms.CheckboxSelectMultiple,
         label="Remove Existing Assets",
     )
+    amazon_seller_sku = forms.CharField(
+        required=False,
+        label="Amazon Seller SKU",
+        max_length=120,
+        widget=forms.TextInput(attrs={"placeholder": "Leave blank to use the Nuboxed SKU"}),
+        help_text="Use the exact SKU shown in Amazon Seller Central for this marketplace.",
+    )
+    amazon_asin = forms.CharField(
+        required=False,
+        label="Amazon ASIN",
+        max_length=20,
+        widget=forms.TextInput(attrs={"placeholder": "Example: B0CVJ8716B"}),
+        help_text="Add the ASIN to enable reliable France listing and offer updates.",
+    )
 
     class Meta:
         model = Product
         fields = [
             "store", "category", "brand",
             "name", "model_name",
+            "barcode",
             "short_description", "description",
             "price", "discount_price", "sale_title", "sale_ends_at", "sale_override_enabled", "tax_rate",
             "product_type",
@@ -172,6 +188,14 @@ class ProductForm(forms.ModelForm):
         allow_sale_message = kwargs.pop("allow_sale_message", True)
         super().__init__(*args, **kwargs)
         self._store_queryset = store_queryset
+        connection = MarketplaceConnection.objects.filter(connector__code="amazon").first()
+        if connection and getattr(self.instance, "pk", None):
+            listing = MarketplaceListing.objects.filter(
+                connection=connection, product=self.instance, variant=None,
+            ).order_by("-external_listing_id", "-updated_at").first()
+            if listing:
+                self.initial["amazon_seller_sku"] = listing.seller_sku
+                self.initial["amazon_asin"] = listing.external_listing_id
         if "sale_mode" in self.fields:
             self.fields["sale_mode"].initial = "manual" if getattr(self.instance, "sale_override_enabled", False) else "global"
         if not allow_sale_countdown:
@@ -244,6 +268,14 @@ class ProductForm(forms.ModelForm):
                         .order_by("-warehouse__is_default", "-created_at")
                         .first()
                     )
+                    amazon_mapping = None
+                    try:
+                        amazon_mapping = MarketplaceListing.objects.filter(
+                            product=self.instance, variant=variant,
+                            connection__connector__code="amazon",
+                        ).order_by("-updated_at").first()
+                    except Exception:
+                        amazon_mapping = None
                     variants_payload.append({
                         "id": str(variant.id),
                         "name": variant.name,
@@ -258,6 +290,8 @@ class ProductForm(forms.ModelForm):
                         "storage": storage_value,
                         "color": color_value,
                         "color_hex": color_hex,
+                        "amazon_seller_sku": amazon_mapping.seller_sku if amazon_mapping else "",
+                        "amazon_asin": amazon_mapping.external_listing_id if amazon_mapping else "",
                     })
                 self.fields["variants_payload"].initial = json.dumps(variants_payload)
             else:
@@ -417,6 +451,15 @@ class ProductForm(forms.ModelForm):
             variant.is_default = bool(row.get("is_default"))
             variant.product = product
             variant.save()
+            try:
+                from apps.marketplace.services import sync_product_amazon_mapping
+                sync_product_amazon_mapping(
+                    product, row.get("amazon_seller_sku", ""),
+                    row.get("amazon_asin", ""), variant=variant,
+                )
+            except Exception:
+                # Amazon mapping is optional during a local product edit.
+                pass
             storage_value = (row.get("storage") or "").strip()
             if storage_value:
                 ProductVariantAttributeValue.objects.update_or_create(
@@ -536,17 +579,32 @@ class ProductForm(forms.ModelForm):
 # ─── Product Variant Form ─────────────────────────────────────────────────────
 
 class ProductVariantForm(forms.ModelForm):
+    amazon_seller_sku = forms.CharField(required=False, label="Amazon Seller SKU", max_length=120, widget=forms.TextInput(attrs={"placeholder": "Exact Amazon seller SKU"}))
+    amazon_asin = forms.CharField(required=False, label="Amazon ASIN", max_length=20, widget=forms.TextInput(attrs={"placeholder": "Example: B0CVJ8716B"}))
+
     class Meta:
         model = ProductVariant
         fields = ["name", "sku", "barcode", "price", "discount_price", "is_default"]
 
     def __init__(self, *args, **kwargs):
+        product = kwargs.pop("product", None)
         super().__init__(*args, **kwargs)
-        product = None
-        if self.instance and self.instance.pk:
-            product = self.instance.product
-        elif "initial" in kwargs and "product" in kwargs["initial"]:
-            product = kwargs["initial"]["product"]
+        if product is None and self.instance and self.instance.pk:
+            # Read the foreign-key id first. Accessing instance.product can
+            # raise RelatedObjectDoesNotExist when a stale/incomplete
+            # instance reaches the form.
+            product_id = getattr(self.instance, "product_id", None)
+            product = Product.objects.filter(pk=product_id).first() if product_id else None
+        if product is None:
+            product = self.initial.get("product")
+        if product and self.instance and self.instance.pk:
+            connection = MarketplaceConnection.objects.filter(connector__code="amazon").first()
+            listing = MarketplaceListing.objects.filter(
+                connection=connection, product=product, variant=self.instance,
+            ).order_by("-external_listing_id", "-updated_at").first() if connection else None
+            if listing:
+                self.initial["amazon_seller_sku"] = listing.seller_sku
+                self.initial["amazon_asin"] = listing.external_listing_id
 
         # Add dynamic select fields for variant-eligible attributes (Color, Size, etc.)
         if product:

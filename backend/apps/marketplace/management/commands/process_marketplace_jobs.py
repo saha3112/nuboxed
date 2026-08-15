@@ -8,6 +8,12 @@ class Command(BaseCommand):
     help = 'Processes pending marketplace sync jobs and webhook events'
 
     def handle(self, *args, **kwargs):
+        stale_before = timezone.now() - timezone.timedelta(minutes=15)
+        MarketplaceSyncJob.objects.filter(
+            status=MarketplaceSyncJob.STATUS_PROCESSING,
+            updated_at__lt=stale_before,
+        ).update(status=MarketplaceSyncJob.STATUS_PENDING, run_at=timezone.now(), updated_at=timezone.now())
+
         # Process Webhooks
         pending_webhooks = MarketplaceWebhookEvent.objects.filter(status=MarketplaceWebhookEvent.STATUS_PENDING)
         webhook_count = pending_webhooks.count()

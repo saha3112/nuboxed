@@ -12,7 +12,7 @@
     </div>
   </div>
 </section>
-<section class="page-shell" style="max-width: 400px; margin: 40px auto;">
+<section class="page-shell auth-page auth-login-page" style="max-width: 400px; margin: 40px auto;">
     <h2 style="margin-bottom: 20px; font-size: 24px; font-weight: 600;">Login to your account</h2>
     <form method="post" class="storefront-form">
         {% csrf_token %}
@@ -38,6 +38,7 @@
             {% endif %}
         </div>
         
+        {% include "shared/captcha_widget.html" with captcha=captcha_customer_login %}
         <button type="submit" class="button" style="width: 100%; padding: 12px;">Login</button>
     </form>
     
@@ -45,5 +46,12 @@
         Don't have an account? <a href="{% url 'storefront:register' %}" style="color: var(--primary); text-decoration: none; font-weight: 500;">Register here</a>
     </div>
 </section>
+<style>
+.auth-page{max-width:460px!important;margin:64px auto!important;padding:34px!important;border:1px solid #e7eaf0;border-radius:24px;background:linear-gradient(145deg,#fff,#fff8f5);box-shadow:0 22px 60px rgba(28,36,52,.10)}.auth-page h2{margin:0 0 26px!important;color:#182235;font-size:28px!important;letter-spacing:-.7px}.auth-page .storefront-form>div{margin-bottom:18px!important}.auth-page .storefront-form label{color:#344054!important;font-size:13px!important;font-weight:800!important}.auth-page .storefront-form input{width:100%!important;min-height:50px!important;padding:0 15px!important;border:1px solid #d9dee8!important;border-radius:12px!important;background:#fff!important;color:#182235!important;font-size:14px!important;transition:border-color .2s,box-shadow .2s}.auth-page .storefront-form input:focus{border-color:#e04420!important;outline:0!important;box-shadow:0 0 0 4px rgba(224,68,32,.12)!important}.auth-page .button{min-height:50px;border:0;border-radius:12px;background:#e04420;color:#fff;font-weight:800;box-shadow:0 10px 20px rgba(224,68,32,.22);transition:transform .2s,box-shadow .2s}.auth-page .button:hover{transform:translateY(-1px);box-shadow:0 14px 26px rgba(224,68,32,.28)}.auth-page .captcha-widget-wrap{margin:4px 0 20px}.auth-page .captcha-widget-wrap>div{display:inline-block}.auth-page a{color:#e04420!important;font-weight:700}.auth-page .storefront-form ul{margin:6px 0 0;padding-left:18px;color:#b42318;font-size:12px}@media(max-width:560px){.auth-page{margin:36px 16px!important;padding:24px!important;border-radius:18px}.auth-page h2{font-size:24px!important}}
+</style>
+<style>
+.auth-page{position:relative;overflow:hidden}.auth-page:before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#e04420,#ff9a72,#e04420)}.auth-page:after{content:"";position:absolute;width:220px;height:220px;right:-120px;top:-130px;border-radius:50%;background:rgba(224,68,32,.08);pointer-events:none}.auth-page h2,.auth-page form,.auth-page>div:last-child{position:relative;z-index:1}.auth-page h2:after{content:"";display:block;width:42px;height:4px;margin-top:12px;border-radius:99px;background:#e04420}.auth-page .storefront-form{display:grid;gap:2px}.auth-page .storefront-form>div{position:relative}.auth-page .captcha-widget-wrap{padding:12px;border:1px solid #f0d8cf;border-radius:13px;background:#fffaf8}.auth-page .button{letter-spacing:.01em;cursor:pointer}.auth-page .button:active{transform:translateY(0);box-shadow:0 6px 12px rgba(224,68,32,.18)}
+</style>
+<style>.auth-page .captcha-widget-wrap{border:0!important;background:transparent!important;box-shadow:none!important;margin:14px 0!important}</style>
 {% endblock %}
 {% block extra_scripts %}<script src="{% static 'common/password-toggle.js' %}"></script>{% endblock %}

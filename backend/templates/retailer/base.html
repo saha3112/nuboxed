@@ -5,10 +5,15 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ page_title|default:"Retailer Dashboard" }} — RetailAdmin</title>
+    {% if global_brand_settings and global_brand_settings.favicon %}
+    <link rel="icon" href="{{ global_brand_settings.favicon.url }}">
+    <link rel="shortcut icon" href="{{ global_brand_settings.favicon.url }}">
+    {% endif %}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web@2.1.1"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <script>
         // Detect if Phosphor icons fail to load, and only then enable fallbacks
         window.addEventListener('DOMContentLoaded', () => {
@@ -170,6 +175,16 @@
             color: #fff;
         }
         .ra-nav-link.active i { opacity: 1; }
+        .ra-nav-toggle{display:flex;align-items:center;width:100%;gap:10px;padding:10px 12px;margin:0 0 2px;border:0;border-radius:14px;background:transparent;color:var(--sidebar-text);font:500 13.5px/1.2 inherit;text-align:left;cursor:pointer;transition:background .15s,color .15s}
+        .ra-nav-toggle:hover,.ra-nav-toggle.active{background:var(--sidebar-hover);color:var(--primary-dark)}
+        .ra-nav-toggle>i:first-child{font-size:18px;opacity:.8}.ra-nav-toggle .ra-nav-arrow{margin-left:auto;font-size:13px;transition:transform .2s ease}.ra-nav-toggle .ra-nav-arrow.is-open{transform:rotate(180deg)}
+        .ra-nav-subnav{display:grid;gap:2px;margin:0 0 4px;padding-left:18px}.ra-nav-subnav .ra-nav-link{font-size:12px!important;padding:8px 10px 8px 24px;margin:0}.ra-nav-subnav .ra-nav-link i{font-size:16px}
+        .ra-sidebar.collapsed .ra-nav-toggle{justify-content:center;padding:0;min-height:48px;border-radius:16px}.ra-sidebar.collapsed .ra-nav-toggle>span,.ra-sidebar.collapsed .ra-nav-toggle .ra-nav-arrow{display:none}.ra-sidebar.collapsed .ra-nav-subnav{padding-left:0}.ra-sidebar.collapsed .ra-nav-subnav .ra-nav-link{justify-content:center;padding:0;min-height:42px}.ra-sidebar.collapsed .ra-nav-subnav .ra-nav-link span{display:none}
+        .ra-nav-link.pincode-eta-link{white-space:nowrap;overflow:visible;font-size:11.5px!important;gap:7px;}
+        .ra-nav-link.pincode-eta-link span{flex:1 1 auto;min-width:max-content;white-space:nowrap;overflow:visible;text-overflow:clip;}
+        @media(max-width:1180px){.ra-nav-link.pincode-eta-link{font-size:11px!important;gap:6px;}}
+        @media(max-width:1024px){.ra-nav-link.pincode-eta-link{font-size:12px!important;padding-left:42px!important;}}
+        @media(max-width:600px){.ra-nav-link.pincode-eta-link{font-size:11.5px!important;padding-left:38px!important;}}
 
         /* Sidebar footer info box */
         .ra-sidebar-footer {
@@ -1855,6 +1870,10 @@
                 <i class="ph ph-buildings"></i>
                 <span>Stores</span>
             </a>
+            <a href="{% url 'retailers:store-preview' %}" class="ra-nav-link {% if request.resolver_match.url_name == 'store-preview' %}active{% endif %}">
+                <i class="ph ph-eye"></i>
+                <span>Preview Store</span>
+            </a>
 
             <div class="ra-nav-separator" aria-hidden="true">•••</div>
             <div class="ra-nav-group-label" style="margin-top: 8px;">Catalog</div>
@@ -1862,6 +1881,13 @@
             <a href="{% url 'retailers:orders' %}" class="ra-nav-link {% if 'retailer/orders' in request.path %}active{% endif %}">
                 <i class="ph ph-receipt"></i><span>Orders</span>
             </a>
+            {% if amazon_retailer_menu_enabled %}<a href="{% url 'retailers:amazon-orders' %}" class="ra-nav-link {% if 'retailer/amazon/orders' in request.path %}active{% endif %}">
+                <i class="ph ph-amazon-logo"></i><span>Amazon SP-API</span>
+            </a>
+            {% if amazon_orders_retailer_menu_enabled %}<a href="{% url 'retailers:amazon-orders' %}" class="ra-nav-link {% if 'retailer/amazon/orders' in request.path %}active{% endif %}" style="padding-left:42px;font-size:12px">
+                <i class="ph ph-trend-up"></i><span>Amazon Order Tracking</span>
+            </a>{% endif %}
+            {% endif %}
             {% if can_manage_coupons %}
             <a href="{% url 'retailers:coupons' %}" class="ra-nav-link {% if 'retailer/coupons' in request.path %}active{% endif %}">
                 <i class="ph ph-ticket"></i><span>Coupons</span>
@@ -1893,10 +1919,17 @@
             <div class="ra-nav-separator" aria-hidden="true">•••</div>
             <div class="ra-nav-group-label" style="margin-top: 8px;">Operations</div>
 
-            <a href="{% url 'inventory:dashboard' %}" class="ra-nav-link {% if 'inventory' in request.path %}active{% endif %}">
-                <i class="ph ph-warehouse"></i>
-                <span>Inventory</span>
-            </a>
+            <section class="ra-nav-group" x-data="{open: {% if 'inventory' in request.path or 'delivery-locations' in request.path %}true{% else %}false{% endif %}}">
+                <button type="button" class="ra-nav-toggle" :class="open ? 'active' : ''" @click="open=!open" :aria-expanded="open.toString()">
+                    <i class="ph ph-warehouse"></i><span>Inventory</span><i class="ph ph-caret-down ra-nav-arrow" :class="open ? 'is-open' : ''"></i>
+                </button>
+                <div class="ra-nav-subnav" x-show="open" x-transition>
+                    <a href="{% url 'inventory:dashboard' %}" class="ra-nav-link {% if request.path == '/retailer/inventory/' or request.resolver_match.url_name == 'inventory-dashboard' %}active{% endif %}"><i class="ph ph-warehouse"></i><span>Inventory</span></a>
+                    <a href="{% url 'inventory:offline-sale-create' %}" class="ra-nav-link {% if request.resolver_match.url_name == 'offline-sale-create' %}active{% endif %}"><i class="ph ph-receipt"></i><span>Offline Sales</span></a>
+                    <a href="{% url 'inventory:offline-sales-settings' %}" class="ra-nav-link {% if request.resolver_match.url_name == 'offline-sales-settings' %}active{% endif %}"><i class="ph ph-sliders-horizontal"></i><span>Offline Sales Settings</span></a>
+                    <a href="{% url 'inventory:delivery-locations' %}" class="ra-nav-link pincode-eta-link {% if 'delivery-locations' in request.path %}active{% endif %}"><i class="ph ph-map-pin"></i><span>Pincode &amp; ETA Rules</span></a>
+                </div>
+            </section>
             <a href="{% url 'retailers:staff' %}" class="ra-nav-link {% if request.resolver_match.url_name == 'staff' %}active{% endif %}">
                 <i class="ph ph-users-three"></i>
                 <span>Staff & Roles</span>

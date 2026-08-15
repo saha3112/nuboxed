@@ -1,0 +1,34 @@
+{% extends "retailer/base.html" %}
+
+{% block content %}
+<div class="ra-card" style="margin-bottom:20px;">
+    <div class="ra-card-header">
+        <div><span class="ra-card-title">Pincode &amp; ETA Rules</span><small style="display:block;color:var(--text-muted);margin-top:4px;">Manage delivery coverage, PIN codes and estimated delivery settings.</small></div>
+        <a href="{% url 'inventory:delivery-location-create' %}" class="ra-btn ra-btn-primary ra-btn-sm"><i class="ph ph-plus"></i> Add location</a>
+    </div>
+    <div class="ra-table-wrap">
+        <table class="ra-table">
+            <thead><tr><th>Delivery Location</th><th>Store</th><th>PIN codes / coverage</th><th>Delivery days</th><th>Handling</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+                {% for location in delivery_locations %}
+                <tr>
+                    <td><strong>{{ location.name }}</strong>{% if location.city or location.state %}<small style="display:block;color:var(--text-muted);">{{ location.city }}{% if location.city and location.state %}, {% endif %}{{ location.state }}</small>{% endif %}</td>
+                    <td>{{ location.store.name|default:"Retailer-wide" }}</td>
+                    <td>{% if location.postal_code %}{{ location.postal_code }}{% elif location.postal_code_prefix %}Prefix: {{ location.postal_code_prefix }}{% elif location.service_radius_km %}{{ location.service_radius_km }} km radius{% else %}Geo coverage{% endif %}</td>
+                    <td>{{ location.delivery_days }}</td>
+                    <td>{{ location.handling_time_days }}</td>
+                    <td><span class="ra-status-pill ra-status-active">Active</span></td>
+                    <td><div style="display:flex;gap:7px;flex-wrap:wrap;"><a href="{% url 'inventory:delivery-location-edit' pk=location.pk %}" class="ra-btn ra-btn-outline ra-btn-sm"><i class="ph ph-pencil-simple"></i> Edit</a><form method="post" action="{% url 'inventory:delivery-location-action' pk=location.pk action='delete' %}" data-confirm="Move this delivery location to trash?" data-confirm-title="Delete delivery location" data-confirm-text="Move to trash" data-confirm-tone="warning">{% csrf_token %}<button class="ra-btn ra-btn-outline ra-btn-sm" type="submit"><i class="ph ph-trash"></i> Delete</button></form></div></td>
+                </tr>
+                {% empty %}<tr><td colspan="7" class="ra-table-empty">No active delivery locations configured yet. Add a location to define PIN coverage and ETA.</td></tr>{% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="ra-card" style="margin-bottom:20px;">
+    <div class="ra-card-header"><div><span class="ra-card-title">Trash</span><small style="display:block;color:var(--text-muted);margin-top:4px;">Deleted locations can be restored or permanently removed.</small></div></div>
+    <div class="ra-table-wrap"><table class="ra-table"><thead><tr><th>Delivery Location</th><th>Store</th><th>PIN codes / coverage</th><th>Actions</th></tr></thead><tbody>
+    {% for location in deleted_delivery_locations %}<tr><td><strong>{{ location.name }}</strong></td><td>{{ location.store.name|default:"Retailer-wide" }}</td><td>{{ location.postal_code|default:location.postal_code_prefix|default:"Geo coverage" }}</td><td><div style="display:flex;gap:7px;flex-wrap:wrap;"><form method="post" action="{% url 'inventory:delivery-location-action' pk=location.pk action='restore' %}" data-confirm="Restore this delivery location?" data-confirm-title="Restore delivery location" data-confirm-text="Restore" data-confirm-tone="restore">{% csrf_token %}<button class="ra-btn ra-btn-outline ra-btn-sm" type="submit"><i class="ph ph-arrow-counter-clockwise"></i> Restore</button></form><form method="post" action="{% url 'inventory:delivery-location-action' pk=location.pk action='delete-permanent' %}" data-confirm="Permanently delete this delivery location? This cannot be undone." data-confirm-title="Delete delivery location permanently" data-confirm-text="Delete permanently" data-confirm-tone="danger">{% csrf_token %}<button class="ra-btn ra-btn-soft-danger ra-btn-sm" type="submit"><i class="ph ph-trash"></i> Permanent delete</button></form></div></td></tr>{% empty %}<tr><td colspan="4" class="ra-table-empty">Trash is empty.</td></tr>{% endfor %}
+    </tbody></table></div>
+</div>
+{% endblock %}

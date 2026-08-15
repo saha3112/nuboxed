@@ -8,7 +8,10 @@
             <h1 style="font-size: 26px; font-weight: 700; color: var(--text-main); margin: 0 0 4px;">📱 Device Models</h1>
             <p style="color: var(--text-muted); font-size: 14px; margin: 0;">Manage phone, tablet, and laptop families, optional brands, models, and their storage/colour variants.</p>
         </div>
-        <div style="display: flex; gap: 10px;">
+        <div style="display: flex; gap: 10px; align-items:center;">
+            <button onclick="syncPresetDeviceCatalog(this)" class="btn-outline-sm" title="Add the maintained phone, tablet and laptop catalogue">
+                <i class="ph ph-database"></i> Load full preset catalogue
+            </button>
             {% for name, label in platforms_choices %}
             {% endfor %}
             <button onclick="openCreatePlatform()" class="btn-primary-action">
@@ -16,6 +19,31 @@
             </button>
         </div>
     </div>
+
+    <div class="device-catalog-toolbar" style="display:flex; gap:12px; align-items:center; margin:0 0 18px; padding:14px 16px; background:var(--surface,#fff); border:1px solid var(--border,#e5e7eb); border-radius:14px; box-shadow:0 5px 18px rgba(15,23,42,.04);">
+        <i class="ph ph-magnifying-glass" style="font-size:20px; color:var(--text-muted);"></i>
+        <input id="device-catalog-search" type="search" class="modal-input" style="margin:0; flex:1; border:0; box-shadow:none; background:transparent;" placeholder="Search brand, model, variant or OS…" autocomplete="off">
+        <span id="device-catalog-result" style="font-size:12px; color:var(--text-muted); white-space:nowrap;">Showing all devices</span>
+    </div>
+
+    <section class="device-explorer" style="margin:0 0 24px; padding:18px; background:linear-gradient(135deg,#fff7f3,#fff); border:1px solid #fed7c8; border-radius:16px; box-shadow:0 8px 22px rgba(234,88,12,.06);">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:14px;">
+            <div><h2 style="margin:0; font-size:17px; color:var(--text-main);">Catalogue explorer</h2><p style="margin:4px 0 0; font-size:12px; color:var(--text-muted);">Filter large refurb catalogue by device type, brand, model or variant.</p></div>
+            <span id="ajax-catalogue-count" style="font-size:12px; color:var(--text-muted);"></span>
+        </div>
+        <div class="ajax-filter-grid">
+            <select id="ajax-platform-filter" class="modal-input" style="margin:0;"><option value="">All device types</option>{% for platform in platforms %}<option value="{{ platform.id }}">{{ platform }}</option>{% endfor %}</select>
+            <select id="ajax-brand-filter" class="modal-input" style="margin:0;"><option value="">All brands</option></select>
+            <input id="ajax-model-filter" class="modal-input" style="margin:0;" placeholder="Model or OS name…">
+            <input id="ajax-variant-filter" class="modal-input" style="margin:0;" placeholder="RAM, storage or colour…">
+        </div>
+        <div id="ajax-catalogue-results" class="ajax-result-grid"></div>
+        <div class="ajax-pagination-bar">
+            <button type="button" id="ajax-prev-page" class="btn-outline-sm">← Previous</button>
+            <span id="ajax-page-label">Loading…</span>
+            <button type="button" id="ajax-next-page" class="btn-outline-sm">Next →</button>
+        </div>
+    </section>
 
     <div class="preset-manager-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr));">
         <div class="platform-card preset-card">
@@ -125,6 +153,25 @@
         </div>
     </div>
 
+    <div class="main-device-filter-bar">
+        <div class="main-device-filter-title"><i class="ph ph-funnel"></i><span>Filter device registry</span><small id="main-filter-count">Showing all</small></div>
+        <select id="main-platform-filter" class="modal-input"><option value="">All device types</option>{% for platform in platforms %}<option value="{{ platform.id }}">{{ platform }}</option>{% endfor %}</select>
+        <select id="main-brand-filter" class="modal-input"><option value="">All brands</option></select>
+        <input id="main-year-filter" class="modal-input" type="number" min="2000" max="2030" placeholder="Year e.g. 2015">
+        <input id="main-variant-filter" class="modal-input" placeholder="RAM, storage, colour…">
+        <button type="button" class="btn-outline-sm" onclick="resetMainDeviceFilters()">Reset</button>
+    </div>
+
+    <div class="main-registry-pagination">
+        <span id="main-registry-count">Loading models…</span>
+        <div class="main-registry-pagination-actions">
+            <button type="button" id="main-prev-page" class="btn-outline-sm">← Previous</button>
+            <strong id="main-page-label">Page 1</strong>
+            <button type="button" id="main-next-page" class="btn-outline-sm">Next →</button>
+        </div>
+        <span>20 models per page</span>
+    </div>
+
     <!-- Platforms Grid -->
     <div id="platforms-grid" style="display: flex; flex-direction: column; gap: 24px;">
         {% for platform in platforms %}
@@ -187,7 +234,7 @@
             <!-- Models List -->
             <div class="models-list" id="models-{{ platform.id }}">
                 {% for model in platform.active_models %}
-                <div class="model-card" data-model-id="{{ model.id }}">
+                <div class="model-card" data-model-id="{{ model.id }}" data-brand-id="{{ model.brand_id|default:'' }}">
                     <div class="model-header">
                         <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
                             <div class="model-badge {% if platform.name == 'laptop' %}laptop{% elif platform.name == 'android' %}tablet{% else %}phone{% endif %}">
@@ -911,6 +958,75 @@
     font-size: 14px;
     line-height: 1.5;
 }
+.ajax-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+.ajax-result-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+    min-height: 76px;
+}
+.ajax-pagination-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid #f3ded5;
+    color: var(--text-muted);
+    font-size: 12px;
+}
+.ajax-pagination-bar button:disabled { opacity: .45; cursor: not-allowed; }
+.main-device-filter-bar {
+    display: grid;
+    grid-template-columns: 1.3fr repeat(4, minmax(130px, 1fr)) auto;
+    gap: 10px;
+    align-items: center;
+    margin: 0 0 18px;
+    padding: 14px 16px;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(15,23,42,.04);
+}
+.main-device-filter-title { display:flex; align-items:center; gap:8px; color:var(--text-main); font-weight:700; font-size:13px; white-space:nowrap; }
+.main-device-filter-title i { color:var(--primary); font-size:18px; }
+.main-device-filter-title small { color:var(--text-muted); font-weight:400; }
+.main-device-filter-bar .modal-input { margin:0; min-width:0; }
+.main-registry-pagination {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    margin:0 0 12px;
+    padding:10px 14px;
+    border:1px solid var(--border);
+    border-radius:12px;
+    background:var(--surface-soft);
+    color:var(--text-muted);
+    font-size:12px;
+}
+.main-registry-pagination-actions { display:flex; align-items:center; gap:12px; color:var(--text-main); }
+.main-registry-pagination button:disabled { opacity:.45; cursor:not-allowed; }
+@media (max-width: 900px) {
+    .ajax-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ajax-result-grid { grid-template-columns: 1fr; }
+    .main-device-filter-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .main-device-filter-title { grid-column: 1 / -1; }
+    .main-registry-pagination { flex-wrap:wrap; justify-content:center; }
+}
+@media (max-width: 560px) {
+    .ajax-filter-grid { grid-template-columns: 1fr; }
+    .ajax-pagination-bar { justify-content: space-between; gap: 8px; }
+    .device-explorer { padding: 14px !important; }
+    .main-device-filter-bar { grid-template-columns: 1fr; }
+    .main-device-filter-title { grid-column: auto; flex-wrap:wrap; }
+}
 </style>
 
 <script>
@@ -921,6 +1037,147 @@ function csrfPost(url, data) {
     for (const [k, v] of Object.entries(data)) fd.append(k, v);
     return fetch(url, { method: 'POST', headers: { 'X-CSRFToken': CSRF }, body: fd });
 }
+
+async function syncPresetDeviceCatalog(button) {
+    if (button) { button.disabled = true; button.classList.add('loading'); }
+    try {
+        const response = await csrfPost("{% url 'backoffice:phone-models-presets-sync' %}", {});
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.error || 'Preset sync failed');
+        showToast(`Catalogue synced: ${result.brands} brands, ${result.models} models, ${result.variants_added || result.variants} variants added`);
+        setTimeout(() => location.reload(), 700);
+    } catch (error) {
+        showToast(error.message || 'Preset sync failed', false);
+        if (button) button.disabled = false;
+    }
+}
+
+let mainRegistryPage = 1;
+const mainRegistryPageSize = 20;
+let mainMatchedModels = [];
+
+async function refreshMainRegistryPage(page = 1) {
+    mainRegistryPage = Math.max(1, page);
+    const totalPages = Math.max(1, Math.ceil(mainMatchedModels.length / mainRegistryPageSize));
+    mainRegistryPage = Math.min(mainRegistryPage, totalPages);
+    const visibleModels = new Set(mainMatchedModels.slice((mainRegistryPage - 1) * mainRegistryPageSize, mainRegistryPage * mainRegistryPageSize));
+    document.querySelectorAll('#platforms-grid > .platform-card').forEach(card => {
+        let cardVisible = false;
+        card.querySelectorAll('.model-card').forEach(row => {
+            const show = visibleModels.has(row.dataset.modelId);
+            row.style.display = show ? '' : 'none';
+            if (show) cardVisible = true;
+        });
+        card.querySelectorAll('.brand-row').forEach(row => {
+            const brandId = row.dataset.brandId;
+            row.style.display = [...card.querySelectorAll('.model-card')].some(model => visibleModels.has(model.dataset.modelId) && (!brandId || model.dataset.brandId === brandId)) ? '' : 'none';
+        });
+        card.style.display = cardVisible ? '' : 'none';
+    });
+    document.getElementById('main-registry-count').textContent = `${mainMatchedModels.length} models found`;
+    document.getElementById('main-page-label').textContent = `Page ${mainRegistryPage} of ${totalPages}`;
+    document.getElementById('main-prev-page').disabled = mainRegistryPage <= 1;
+    document.getElementById('main-next-page').disabled = mainRegistryPage >= totalPages;
+    // Keep pagination server-aware for large catalogues and future feed updates.
+    const params = new URLSearchParams({page: mainRegistryPage, page_size: mainRegistryPageSize, q: document.getElementById('device-catalog-search')?.value.trim() || '', variant: document.getElementById('main-variant-filter')?.value.trim() || ''});
+    fetch(`{% url 'backoffice:api-phone-models-admin-explorer' %}?${params}`).catch(() => {});
+}
+
+function applyMainDeviceFilters(resetPage = true) {
+    const query = document.getElementById('device-catalog-search')?.value.trim().toLowerCase() || '';
+    const platform = document.getElementById('main-platform-filter')?.value || '';
+    const brand = document.getElementById('main-brand-filter')?.value || '';
+    const year = document.getElementById('main-year-filter')?.value.trim() || '';
+    const variant = document.getElementById('main-variant-filter')?.value.trim().toLowerCase() || '';
+    mainMatchedModels = [];
+    let visible = 0;
+    document.querySelectorAll('#platforms-grid > .platform-card').forEach(card => {
+        const platformMatch = !platform || card.dataset.platformId === platform;
+        card.querySelectorAll('.model-card').forEach(row => {
+            const brandMatch = !brand || row.dataset.brandId === brand;
+            const text = row.textContent.toLowerCase();
+            const matches = platformMatch && brandMatch && (!query || text.includes(query)) && (!year || text.includes(year)) && (!variant || text.includes(variant));
+            if (matches) mainMatchedModels.push(row.dataset.modelId);
+        });
+        if (platformMatch) visible += 1;
+    });
+    const active = query || platform || brand || year || variant;
+    document.getElementById('device-catalog-result').textContent = active ? `${visible} device group${visible === 1 ? '' : 's'} matched` : 'Showing all devices';
+    document.getElementById('main-filter-count').textContent = active ? `${mainMatchedModels.length} models matched` : 'Showing all';
+    refreshMainRegistryPage(resetPage ? 1 : mainRegistryPage);
+}
+async function loadMainBrands() {
+    const platform = document.getElementById('main-platform-filter').value;
+    const select = document.getElementById('main-brand-filter');
+    select.innerHTML = '<option value="">All brands</option>';
+    if (!platform) return applyMainDeviceFilters();
+    const response = await fetch(`/admin/api/phone-brands/?platform_id=${encodeURIComponent(platform)}`);
+    const data = await response.json();
+    data.brands.forEach(brand => { const option = document.createElement('option'); option.value = brand.id; option.textContent = brand.label; select.appendChild(option); });
+    applyMainDeviceFilters();
+}
+document.getElementById('device-catalog-search')?.addEventListener('input', applyMainDeviceFilters);
+['main-brand-filter','main-year-filter','main-variant-filter'].forEach(id => document.getElementById(id)?.addEventListener('input', applyMainDeviceFilters));
+document.getElementById('main-platform-filter')?.addEventListener('change', loadMainBrands);
+document.getElementById('main-prev-page')?.addEventListener('click', () => refreshMainRegistryPage(mainRegistryPage - 1));
+document.getElementById('main-next-page')?.addEventListener('click', () => refreshMainRegistryPage(mainRegistryPage + 1));
+function resetMainDeviceFilters() {
+    ['device-catalog-search','main-year-filter','main-variant-filter'].forEach(id => { const node = document.getElementById(id); if (node) node.value = ''; });
+    document.getElementById('main-platform-filter').value = '';
+    document.getElementById('main-brand-filter').innerHTML = '<option value="">All brands</option>';
+    applyMainDeviceFilters();
+}
+
+document.addEventListener('DOMContentLoaded', () => applyMainDeviceFilters());
+
+let ajaxCataloguePage = 1;
+let ajaxCataloguePages = 1;
+let ajaxCatalogueTimer;
+function escapeHtml(value) { const div = document.createElement('div'); div.textContent = value ?? ''; return div.innerHTML; }
+async function loadAjaxCatalogue(page = 1) {
+    ajaxCataloguePage = Math.max(1, page);
+    const params = new URLSearchParams({
+        page: ajaxCataloguePage,
+        page_size: 10,
+        platform_id: document.getElementById('ajax-platform-filter').value,
+        brand_id: document.getElementById('ajax-brand-filter').value,
+        q: document.getElementById('ajax-model-filter').value.trim(),
+        variant: document.getElementById('ajax-variant-filter').value.trim(),
+    });
+    const results = document.getElementById('ajax-catalogue-results');
+    results.innerHTML = '<div style="grid-column:1/-1; padding:24px; text-align:center; color:var(--text-muted);">Loading catalogue…</div>';
+    try {
+        const response = await fetch(`{% url 'backoffice:api-phone-models-admin-explorer' %}?${params}`);
+        const data = await response.json();
+        ajaxCataloguePages = data.pages || 1;
+        document.getElementById('ajax-catalogue-count').textContent = `${data.total || 0} models`;
+        document.getElementById('ajax-page-label').textContent = `Page ${data.page} of ${ajaxCataloguePages}`;
+        document.getElementById('ajax-prev-page').disabled = data.page <= 1;
+        document.getElementById('ajax-next-page').disabled = data.page >= ajaxCataloguePages;
+        results.innerHTML = data.results.length ? data.results.map(model => `
+            <article style="padding:13px 15px; border:1px solid #f1d7ca; border-radius:12px; background:#fff;">
+                <div style="display:flex; justify-content:space-between; gap:10px;"><strong>${escapeHtml(model.display_name)}</strong><span style="font-size:11px; color:#9a3412;">${escapeHtml(model.released_year || 'Year pending')}</span></div>
+                <div style="font-size:12px; color:var(--text-muted); margin:4px 0 9px;">${escapeHtml(model.platform)} · ${escapeHtml(model.brand)} · ${model.variant_count} variants</div>
+                <div style="display:flex; flex-wrap:wrap; gap:5px;">${model.variants.slice(0,12).map(v => `<span style="font-size:11px; padding:4px 7px; border-radius:999px; background:#fff1eb; color:#c2410c;">${escapeHtml(v.label)}</span>`).join('')}${model.variants.length > 12 ? `<span style="font-size:11px; padding:4px 7px; color:#64748b;">+${model.variants.length - 12} more</span>` : ''}</div>
+            </article>`).join('') : '<div style="grid-column:1/-1; padding:24px; text-align:center; color:var(--text-muted);">No matching device models.</div>';
+    } catch (error) {
+        results.innerHTML = '<div style="grid-column:1/-1; padding:24px; text-align:center; color:#b91c1c;">Unable to load catalogue. Please try again.</div>';
+    }
+}
+async function loadAjaxBrands() {
+    const platform = document.getElementById('ajax-platform-filter').value;
+    const select = document.getElementById('ajax-brand-filter');
+    select.innerHTML = '<option value="">All brands</option>';
+    if (!platform) return;
+    const response = await fetch(`/admin/api/phone-brands/?platform_id=${encodeURIComponent(platform)}`);
+    const data = await response.json();
+    data.brands.forEach(brand => { const option = document.createElement('option'); option.value = brand.id; option.textContent = brand.label; select.appendChild(option); });
+}
+['ajax-model-filter','ajax-variant-filter','ajax-brand-filter'].forEach(id => document.getElementById(id)?.addEventListener('input', () => { clearTimeout(ajaxCatalogueTimer); ajaxCatalogueTimer = setTimeout(() => loadAjaxCatalogue(1), 250); }));
+document.getElementById('ajax-platform-filter')?.addEventListener('change', async () => { await loadAjaxBrands(); loadAjaxCatalogue(1); });
+document.getElementById('ajax-prev-page')?.addEventListener('click', () => loadAjaxCatalogue(ajaxCataloguePage - 1));
+document.getElementById('ajax-next-page')?.addEventListener('click', () => loadAjaxCatalogue(ajaxCataloguePage + 1));
+loadAjaxCatalogue();
 
 function showToast(msg, success=true) {
     const t = document.getElementById('toast');

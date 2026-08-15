@@ -68,6 +68,15 @@
                     <div class="ra-field-error">{{ form.name.errors.as_text }}</div>
                     {% endif %}
                 </div>
+                <div class="ra-section" style="margin-top:18px;">
+                    <div class="ra-section-title">Amazon France mapping</div>
+                    <div class="ra-section-copy">Map this product to the exact Amazon Seller SKU and ASIN. The Nuboxed SKU remains unchanged while automatic product and stock sync uses this marketplace identity.</div>
+                    <div class="ra-form-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));">
+                        <div class="ra-field"><label class="ra-label">Barcode / EAN / UPC</label>{{ form.barcode }}{% if form.barcode.errors %}<div class="ra-field-error">{{ form.barcode.errors.as_text }}</div>{% endif %}</div>
+                        <div class="ra-field"><label class="ra-label">Amazon Seller SKU</label>{{ form.amazon_seller_sku }}{% if form.amazon_seller_sku.help_text %}<small class="ra-help">{{ form.amazon_seller_sku.help_text }}</small>{% endif %}{% if form.amazon_seller_sku.errors %}<div class="ra-field-error">{{ form.amazon_seller_sku.errors.as_text }}</div>{% endif %}</div>
+                        <div class="ra-field"><label class="ra-label">Amazon ASIN</label>{{ form.amazon_asin }}{% if form.amazon_asin.help_text %}<small class="ra-help">{{ form.amazon_asin.help_text }}</small>{% endif %}{% if form.amazon_asin.errors %}<div class="ra-field-error">{{ form.amazon_asin.errors.as_text }}</div>{% endif %}</div>
+                    </div>
+                </div>
                 <div class="ra-section" style="margin-top: 18px;">
                     <div class="ra-section-title">Retailer & Store Assignment</div>
                     <div class="ra-section-copy">Choose a retailer first, then select one of that retailer's stores. Products uploaded from the retailer panel are assigned automatically.</div>
@@ -103,8 +112,8 @@
                     })();
                 </script>
                 {% for field in form %}
-                {% if field.name != "name" and field.name != "model_name" and field.name != "retailer" and field.name != "store" and field.name != "price" and field.name != "discount_price" and field.name != "sale_mode" and field.name != "sale_title" and field.name != "sale_ends_at" and field.name != "sale_override_enabled" and field.name != "product_images" and field.name != "product_videos" and field.name != "product_360_images" and field.name != "product_video_urls" and field.name != "remove_asset_ids" and field.name != "phone_variant_id" and field.name != "variants_payload" and field.name != "default_variant" and field.name != "tax_rate" and field.name != "product_type" and field.name != "weight" and field.name != "length" and field.name != "width" and field.name != "height" and field.name != "warranty" and field.name|slice:":4" != "attr_" %}
-                <div class="ra-field">
+                {% if field.name != "name" and field.name != "model_name" and field.name != "barcode" and field.name != "amazon_seller_sku" and field.name != "amazon_asin" and field.name != "retailer" and field.name != "store" and field.name != "price" and field.name != "discount_price" and field.name != "sale_mode" and field.name != "sale_title" and field.name != "sale_ends_at" and field.name != "sale_override_enabled" and field.name != "product_images" and field.name != "product_videos" and field.name != "product_360_images" and field.name != "product_video_urls" and field.name != "remove_asset_ids" and field.name != "phone_variant_id" and field.name != "variants_payload" and field.name != "default_variant" and field.name != "tax_rate" and field.name != "product_type" and field.name != "weight" and field.name != "length" and field.name != "width" and field.name != "height" and field.name != "warranty" and field.name != "is_featured" and field.name != "is_active" and field.name|slice:":4" != "attr_" %}
+                <div class="ra-field{% if field.name == 'is_featured' or field.name == 'is_active' %} ra-boolean-field{% endif %}">
                     <label class="ra-label">{{ field.label }}</label>
                     {{ field }}
                     {% if field.errors %}
@@ -113,6 +122,21 @@
                 </div>
                 {% endif %}
                 {% endfor %}
+
+                <div class="ra-boolean-options">
+                    {% if form.is_featured %}
+                    <label class="ra-boolean-option">
+                        {{ form.is_featured }}
+                        <span><strong>Is featured</strong><small>Show in featured sections</small></span>
+                    </label>
+                    {% endif %}
+                    {% if form.is_active %}
+                    <label class="ra-boolean-option">
+                        {{ form.is_active }}
+                        <span><strong>Is active</strong><small>Available on storefront</small></span>
+                    </label>
+                    {% endif %}
+                </div>
 
                 <div class="ra-section" style="margin-top: 18px;">
                     <div class="ra-section-title">Product Specs</div>
@@ -478,7 +502,7 @@
                 <span class="ra-card-title">Product Gallery, Video, 360</span>
             </div>
             <div class="ra-table-wrap">
-                <table class="ra-table">
+                <table class="ra-table ra-assets-table">
                     <thead>
                         <tr>
                             <th>Asset</th>
@@ -875,6 +899,8 @@
             price: row.querySelector('[data-field="price"]').value.trim(),
             discount_price: row.querySelector('[data-field="discount_price"]').value.trim(),
             quantity: row.querySelector('[data-field="quantity"]').value.trim(),
+            amazon_seller_sku: row.querySelector('[data-field="amazon_seller_sku"]')?.value.trim() || '',
+            amazon_asin: row.querySelector('[data-field="amazon_asin"]')?.value.trim() || '',
             ram: row.querySelector('[data-field="ram"]') ? row.querySelector('[data-field="ram"]').value.trim() : '',
             storage: row.querySelector('[data-field="storage"]').value.trim(),
             color: row.querySelector('[data-field="color"]').value.trim(),
@@ -925,8 +951,8 @@
                     <input data-field="sku" type="text" class="ra-input" placeholder="Optional SKU" value="${(data.sku || '').replace(/"/g, '&quot;')}">
                 </div>
                 <div>
-                    <label style="font-size:11px; font-weight:600; color:var(--muted);">Barcode</label>
-                    <input data-field="barcode" type="text" class="ra-input" placeholder="Optional barcode" value="${(data.barcode || '').replace(/"/g, '&quot;')}">
+                    <label style="font-size:11px; font-weight:600; color:var(--muted);">IMEI No.</label>
+                    <input data-field="barcode" type="text" class="ra-input" placeholder="Optional IMEI No." value="${(data.barcode || '').replace(/"/g, '&quot;')}">
                 </div>
                 <div>
                     <label style="font-size:11px; font-weight:600; color:var(--muted);">RAM</label>
@@ -944,7 +970,7 @@
                     </div>
                 </div>
             </div>
-            <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap:10px; align-items:end;">
+            <div style="display:grid; grid-template-columns: repeat(5, minmax(0, 1fr)) auto; gap:10px; align-items:end;">
                 <div>
                     <label style="font-size:11px; font-weight:600; color:var(--muted);">Price</label>
                     <input data-field="price" type="number" step="0.01" class="ra-input" placeholder="0.00" value="${data.price || ''}">
@@ -956,6 +982,14 @@
                 <div>
                     <label style="font-size:11px; font-weight:600; color:var(--muted);">Quantity</label>
                     <input data-field="quantity" type="number" min="0" step="1" class="ra-input" placeholder="0" value="${data.quantity || ''}">
+                </div>
+                <div>
+                    <label style="font-size:11px; font-weight:600; color:var(--muted);">Amazon Seller SKU</label>
+                    <input data-field="amazon_seller_sku" type="text" class="ra-input" placeholder="Same as Amazon" value="${(data.amazon_seller_sku || '').replace(/"/g, '&quot;')}">
+                </div>
+                <div>
+                    <label style="font-size:11px; font-weight:600; color:var(--muted);">Amazon ASIN</label>
+                    <input data-field="amazon_asin" type="text" class="ra-input" placeholder="B0XXXXXXXXX" value="${(data.amazon_asin || '').replace(/"/g, '&quot;')}">
                 </div>
                 <button type="button" class="ra-btn ra-btn-soft-danger" title="Remove variant" aria-label="Remove variant">Remove</button>
             </div>
@@ -1001,7 +1035,7 @@
                 syncRows();
             });
         }
-        row.querySelectorAll('input[data-field="sku"], input[data-field="barcode"], input[data-field="price"], input[data-field="discount_price"], input[data-field="quantity"]').forEach((input) => input.addEventListener('input', syncRows));
+        row.querySelectorAll('input[data-field="sku"], input[data-field="barcode"], input[data-field="price"], input[data-field="discount_price"], input[data-field="quantity"], input[data-field="amazon_seller_sku"], input[data-field="amazon_asin"]').forEach((input) => input.addEventListener('input', syncRows));
         populateRowOptions(row, data.model_id || '', data);
         return row;
     }

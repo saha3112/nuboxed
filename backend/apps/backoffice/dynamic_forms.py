@@ -14,6 +14,7 @@ from django.views.generic import TemplateView, View
 
 from apps.cms.models import DynamicForm, DynamicFormField, DynamicFormSubmission
 from apps.backoffice.views import SuperAdminRequiredMixin
+from apps.common.captcha import public_captcha_settings, verify_captcha
 
 
 def _active_fields(form):
@@ -93,6 +94,7 @@ class DynamicFormEditView(SuperAdminRequiredMixin, View):
             form.success_message = request.POST.get("success_message", "")
             form.error_message = request.POST.get("error_message", "")
             form.show_heading = request.POST.get("show_heading") == "on"
+            form.captcha_enabled = request.POST.get("captcha_enabled") == "on"
             form.field_gap = max(0, min(int(request.POST.get("field_gap") or 18), 80))
             form.is_published = request.POST.get("is_published") == "on"
             form.save()
@@ -222,6 +224,9 @@ class DynamicFormPublicView(View):
 
     def post(self, request, slug):
         form = get_object_or_404(DynamicForm, slug=slug, is_published=True, is_active=True, deleted_at__isnull=True)
+        valid, captcha_error = verify_captcha(request, "public_forms", enabled_override=form.captcha_enabled)
+        if not valid:
+            return render(request, "storefront/dynamic_form.html", {"dynamic_form": form, "fields": _active_fields(form), "error": captcha_error})
         data = {}
         for field in _active_fields(form):
             value = request.POST.getlist(field.key) if field.field_type == "checkbox" else request.POST.get(field.key, "")

@@ -3,6 +3,7 @@ from datetime import timedelta
 from django.db import models
 from django.utils import timezone
 from django.conf import settings
+from urllib.parse import parse_qs, urlparse
 
 from apps.common.models import BaseModel
 
@@ -272,12 +273,60 @@ class Product(BaseModel):
         return self.variants.filter(is_default=True).first() or self.variants.first()
 
     @property
+    def amazon_asin(self):
+        """ASINs mapped to this product in the Amazon connector."""
+        from apps.marketplace.models import MarketplaceListing
+        values = MarketplaceListing.objects.filter(
+            product=self, connection__connector__code="amazon",
+        ).exclude(external_listing_id="").values_list("external_listing_id", flat=True).distinct()
+        valid = [
+            str(value) for value in values
+            if value and len(str(value)) == 10 and str(value).startswith("B")
+            and all(char.isdigit() or ("A" <= char <= "Z") for char in str(value))
+        ]
+        return ", ".join(valid) or "—"
+
+    @property
+    def amazon_seller_sku(self):
+        """Amazon Seller SKUs mapped to this product and its variants."""
+        from apps.marketplace.models import MarketplaceListing
+        values = MarketplaceListing.objects.filter(
+            product=self, connection__connector__code="amazon",
+        ).values_list("seller_sku", flat=True).distinct()
+        return ", ".join(str(value) for value in values if value) or "—"
+
+    @property
+    def variant_skus(self):
+        """Show each local variant together with its Amazon mapping."""
+        from apps.marketplace.models import MarketplaceListing
+        rows = []
+        for variant in self.variants.all():
+            mappings = MarketplaceListing.objects.filter(
+                product=self, variant=variant, connection__connector__code="amazon",
+            ).values_list("seller_sku", "external_listing_id")
+            amazon = [
+                f"{seller_sku}{f' / {asin}' if asin and len(str(asin)) == 10 and str(asin).startswith('B') else ''}"
+                for seller_sku, asin in mappings if seller_sku
+            ]
+            suffix = f" → {', '.join(amazon)}" if amazon else ""
+            rows.append(f"{variant.name} ({variant.sku}{suffix})")
+        return "; ".join(rows) or "—"
+
+    @property
     def primary_image(self):
         items = list(self.media_items.all())
         img = next((asset for asset in items if asset.media_type == "image" and asset.is_primary), None)
         if not img:
             img = next((asset for asset in items if asset.media_type == "image"), None)
         return img.file if img and img.file else None
+
+    @property
+    def primary_image_url(self):
+        """Uploaded primary image, falling back to a curated external product image."""
+        if self.primary_image:
+            return self.primary_image.url
+        media = self.media_items.filter(media_type="image").exclude(external_url="").first()
+        return media.external_url if media else ""
 
     @property
     def discount_percentage(self):
@@ -287,6 +336,9 @@ class Product(BaseModel):
 
     @property
     def available_qty(self):
+        prefetched_stock = getattr(self, "_prefetched_objects_cache", {}).get("stock_items")
+        if prefetched_stock is not None:
+            return max(0, sum((item.on_hand_quantity or 0) - (item.reserved_quantity or 0) for item in prefetched_stock))
         variant_ids = list(self.variants.values_list("id", flat=True))
         stock_qs = self.stock_items.filter(variant_id__in=variant_ids) if variant_ids else self.stock_items.filter(variant__isnull=True)
         aggregate = stock_qs.aggregate(
@@ -311,6 +363,15 @@ class Product(BaseModel):
     @property
     def storefront_stock_tone(self):
         return self.storefront_stock_snapshot["tone"]
+
+    @staticmethod
+    def _prefetched_variant_attribute(variant, name_fragment):
+        """Read variant attributes without defeating prefetch_related()."""
+        cached = getattr(variant, "_prefetched_objects_cache", {}).get("attribute_values")
+        if cached is None:
+            return variant.attribute_values.filter(attribute__name__icontains=name_fragment).first()
+        needle = name_fragment.lower()
+        return next((item for item in cached if item.attribute and needle in item.attribute.name.lower()), None)
 
     @property
     def quickview_variant_labels(self):
@@ -347,7 +408,7 @@ class Product(BaseModel):
             
         variants = sorted(self.variants.all(), key=lambda item: (item.available_qty <= 0, storage_sort_value(item.name), item.name.lower()))
         for variant in variants:
-            storage_val = variant.attribute_values.filter(attribute__name__icontains="storage").first()
+            storage_val = self._prefetched_variant_attribute(variant, "storage")
             if storage_val and storage_val.value:
                 add_normalized(storage_val.value, variant.available_qty > 0)
             else:
@@ -404,7 +465,7 @@ class Product(BaseModel):
             
         variants = sorted(self.variants.all(), key=lambda item: (item.available_qty <= 0, ram_sort_value(item.name), item.name.lower()))
         for variant in variants:
-            ram_val = variant.attribute_values.filter(attribute__name__icontains="ram").first()
+            ram_val = self._prefetched_variant_attribute(variant, "ram")
             if ram_val and ram_val.value:
                 add_normalized(ram_val.value, variant.available_qty > 0)
                 
@@ -442,7 +503,7 @@ class Product(BaseModel):
             
         variants = sorted(self.variants.all(), key=lambda item: (item.available_qty <= 0, item.name.lower()))
         for variant in variants:
-            color_val = variant.attribute_values.filter(attribute__name__icontains="color").first()
+            color_val = self._prefetched_variant_attribute(variant, "color")
             if color_val and color_val.value:
                 hex_color = "#cccccc"
                 color_source = AttributeValue.objects.filter(attribute__name__icontains="color", label__iexact=color_val.value.strip()).first()
@@ -490,7 +551,7 @@ class Product(BaseModel):
             
         variants = sorted(self.variants.all(), key=lambda item: (item.available_qty <= 0, item.name.lower()))
         for variant in variants:
-            color_val = variant.attribute_values.filter(attribute__name__icontains="color").first()
+            color_val = self._prefetched_variant_attribute(variant, "color")
             if color_val and color_val.value:
                 hex_color = "#cccccc"
                 color_source = AttributeValue.objects.filter(attribute__name__icontains="color", label__iexact=color_val.value.strip()).first()
@@ -766,6 +827,9 @@ class ProductVariant(BaseModel):
 
     @property
     def available_qty(self):
+        prefetched_stock = getattr(self, "_prefetched_objects_cache", {}).get("stock_items")
+        if prefetched_stock is not None:
+            return max(0, sum((item.on_hand_quantity or 0) - (item.reserved_quantity or 0) for item in prefetched_stock))
         from apps.inventory.models import StockItem
         aggregate = StockItem.objects.filter(variant=self).aggregate(
             on_hand=models.Sum("on_hand_quantity"),
@@ -774,6 +838,33 @@ class ProductVariant(BaseModel):
         on_hand = aggregate["on_hand"] or 0
         reserved = aggregate["reserved"] or 0
         return max(0, on_hand - reserved)
+
+    @property
+    def amazon_asin(self):
+        """ASINs returned by Amazon for this exact variant mapping."""
+        from apps.marketplace.models import MarketplaceListing
+        values = MarketplaceListing.objects.filter(
+            product=self.product,
+            variant=self,
+            connection__connector__code="amazon",
+        ).exclude(external_listing_id="").values_list("external_listing_id", flat=True).distinct()
+        valid = [
+            str(value) for value in values
+            if value and len(str(value)) == 10 and str(value).startswith("B")
+            and all(char.isdigit() or ("A" <= char <= "Z") for char in str(value))
+        ]
+        return ", ".join(valid) or "—"
+
+    @property
+    def amazon_seller_sku(self):
+        """Amazon offer SKUs linked to this exact Nubox variant."""
+        from apps.marketplace.models import MarketplaceListing
+        values = MarketplaceListing.objects.filter(
+            product=self.product,
+            variant=self,
+            connection__connector__code="amazon",
+        ).values_list("seller_sku", flat=True).distinct()
+        return ", ".join(str(value) for value in values if value) or "—"
 
     def __str__(self) -> str:
         return f"{self.product.name} / {self.name}"
@@ -826,6 +917,13 @@ class ProductMedia(BaseModel):
         return f"{self.product.name} / {self.media_type}"
 
     @property
+    def display_url(self):
+        """Return uploaded media when present, otherwise its external URL."""
+        if self.file:
+            return self.file.url
+        return self.external_url or ""
+
+    @property
     def embed_url(self):
         url = self.external_url
         if not url:
@@ -843,6 +941,20 @@ class ProductMedia(BaseModel):
             video_id = url.split("vimeo.com/")[-1].split("?")[0]
             return f"https://player.vimeo.com/video/{video_id}"
         return url
+
+    @property
+    def video_thumbnail_url(self):
+        """Return a real provider thumbnail for external video gallery items."""
+        url = self.external_url or ""
+        parsed = urlparse(url)
+        video_id = ""
+        if "youtube.com" in parsed.netloc:
+            video_id = parse_qs(parsed.query).get("v", [""])[0]
+        elif "youtu.be" in parsed.netloc:
+            video_id = parsed.path.strip("/").split("/")[0]
+        if video_id:
+            return f"https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
+        return ""
 
 
 class MediaLibrary(BaseModel):

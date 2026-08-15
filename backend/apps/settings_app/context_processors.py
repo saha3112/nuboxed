@@ -1,6 +1,18 @@
 from apps.settings_app.models import BrandSettings, MenuItem, PageText, SiteLogo, SocialLink, MegaMenuSettings, StorefrontLocationMessages, Setting
+from apps.common.captcha import public_captcha_settings
+from django.core.cache import cache
 
 def global_brand_settings(request):
+    """Reuse the request-independent storefront settings for a short period."""
+    cached = cache.get("global-brand-settings-context-v2")
+    if cached is not None:
+        return cached
+    context = _build_global_brand_settings(request)
+    cache.set("global-brand-settings-context-v2", context, 60)
+    return context
+
+
+def _build_global_brand_settings(request):
     settings = BrandSettings.objects.filter(is_active=True).first()
     footer_setting = Setting.objects.filter(key="footer_customization", is_active=True).values_list("value", flat=True).first() or {}
     contact_defaults = {
@@ -41,8 +53,12 @@ def global_brand_settings(request):
         "visit_store_prefix": "Visit the", "reviews_label": "Reviews", "highlight_1": "Verified product data from Nuboxed", "highlight_2": "Store-aware delivery estimate and seller comparison", "highlight_3": "Shop confidently from verified retailers.", "sale_countdown": "Hurry up! Sale ends in:", "delivery_label": "Est. Delivery Time", "add_to_cart": "ADD TO CART", "buy_now": "BUY NOW", "add_wishlist": "Add to Wishlist", "add_compare": "Add to Compare", "share_label": "Share", "policy_1": "Free Shipping & Returns: Available on all orders over $99.", "policy_2": "Estimated Delivery: Orders are typically dispatched within 24 hours.", "policy_3": "Security Policy: Ensuring top-level security for your data and transactions.", "description_tab": "Description", "details_tab": "Product Details", "description_heading": "Its much more than mobile product", "description_fallback": "Shop the most popular featured products.", "description_note": "Your trusted marketplace page, wired to admin product data and structured for fast comparison, clear pricing, and clean buying actions.", "specifications_heading": "PRODUCT DETAILS", "related_heading": "You might also like", "category_heading_suffix": "in the same category:", "comments_heading": "Comments", "grade_label": "Grade", "write_review": "WRITE YOUR REVIEW", "view_all_comments": "View all comments", "customer_voice": "Customer voice", "all_comments": "All comments", "review_modal_heading": "Write your review", "review_title_label": "Title", "review_name_label": "Your name", "review_text_label": "Review", "review_terms": "I agree to the terms and the privacy policy", "required_note": "* Required fields", "cancel_button": "CANCEL", "send_button": "SEND", "review_success": "Thank you. Your review has been submitted successfully.",
         "quick_brand_fallback": "Store", "quick_delivery": "Est. Delivery Time 2-3 Days", "quick_reviews": "Reviews", "quick_point_1": "Verified product data from Nuboxed", "quick_point_2": "Store-aware delivery estimate and seller comparison", "quick_ram_label": "RAM:", "quick_storage_label": "Internal Storage:", "quick_color_label": "Color:", "quick_add_to_cart": "ADD TO CART", "quick_buy_now": "BUY NOW", "quick_wishlist": "Add to Wishlist", "quick_compare": "Add to Compare", "quick_stock": "Available Stock", "quick_share": "Share", "quick_save_prefix": "Save",
     }
+    product_page_defaults.setdefault("show_sale_countdown", "1")
     product_page_setting = Setting.objects.filter(key="product_page_customization", is_active=True).values_list("value", flat=True).first() or {}
     product_page_defaults.update(product_page_setting)
+    # Storefront pricing is EUR-focused; never expose the legacy dollar
+    # threshold when an older saved customization still contains it.
+    product_page_defaults["policy_1"] = product_page_defaults.get("policy_1", "").replace("$99", "€99")
     product_page_defaults.setdefault("show_share_icons", "1")
     product_page_defaults.setdefault("share_platforms", ["facebook", "x", "linkedin", "pinterest", "email"])
     site_logo = SiteLogo.objects.filter(is_active=True).order_by("-updated_at").first()
@@ -57,4 +73,9 @@ def global_brand_settings(request):
         "storefront_location_messages": StorefrontLocationMessages.objects.filter(is_active=True).first(),
         "global_social_links": SocialLink.objects.filter(is_active=True).order_by("sort_order", "platform"),
         "global_mega_menu_settings": MegaMenuSettings.objects.first(),
+        "captcha_customer_login": public_captcha_settings("customer_login"),
+        "captcha_customer_register": public_captcha_settings("customer_register"),
+        "captcha_retailer_login": public_captcha_settings("retailer_login"),
+        "captcha_admin_login": public_captcha_settings("admin_login"),
+        "captcha_public_forms": public_captcha_settings("public_forms"),
     }

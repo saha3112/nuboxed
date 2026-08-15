@@ -41,6 +41,8 @@
         {% for id in selected_category_ids %}<input type="hidden" name="category_id" value="{{ id }}">{% endfor %}
         {% for id in selected_brand_ids %}<input type="hidden" name="brand_id" value="{{ id }}">{% endfor %}
         {% for id in selected_color_ids %}<input type="hidden" name="color_id" value="{{ id }}">{% endfor %}
+        {% for value in selected_storage_values %}<input type="hidden" name="storage" value="{{ value }}">{% endfor %}
+        {% for value in selected_ram_values %}<input type="hidden" name="ram" value="{{ value }}">{% endfor %}
         <input type="hidden" name="min_price" value="{{ min_price }}">
         <input type="hidden" name="max_price" value="{{ max_price }}">
         <select id="sortSelect" name="sort" onchange="this.form.submit()">
@@ -54,7 +56,7 @@
 
     <section class="product-grid" id="products">
       {% for product in products %}
-        {% include "storefront/partials/product_card.html" with product=product listing_card=True %}
+                        {% include "storefront/partials/product_card.html" with product=product listing_card=True hide_store_name=True %}
       {% empty %}
         <p>No products available in this category yet.</p>
       {% endfor %}

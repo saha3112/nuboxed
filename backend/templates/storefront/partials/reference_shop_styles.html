@@ -76,8 +76,15 @@
 .reference-shop-page .price-slider input[type=range]::-moz-range-thumb{width:12px;height:12px;border:2px solid #555;border-radius:50%;background:#fff;pointer-events:auto;cursor:pointer}
 
 /* Color Filter */
-.reference-shop-page .color-filter{display:grid;gap:6px}
-.reference-shop-page .color-option{border:0;background:transparent;display:flex;align-items:center;gap:8px;padding:5px 2px;font-size:14px;color:#555;cursor:pointer;text-align:left}
+.reference-shop-page .filter-options-scroll{max-width:100%;min-width:0;box-sizing:border-box;max-height:170px;overflow-y:auto;overflow-x:hidden;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:2px 6px 2px 0;scrollbar-width:thin;scrollbar-color:#cbd5e1 transparent}
+.reference-shop-page .filter-options-scroll::-webkit-scrollbar{width:6px}
+.reference-shop-page .filter-options-scroll::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:99px}
+.reference-shop-page .color-filter{display:grid;width:100%;max-width:100%;min-width:0;box-sizing:border-box;max-height:260px;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.reference-shop-page .color-option{position:relative;min-width:0;width:100%;box-sizing:border-box;border:0;background:transparent;display:flex;align-items:center;justify-content:center;gap:8px;padding:5px 2px;font-size:14px;color:#555;cursor:pointer;text-align:left}
+.reference-shop-page .color-option>span:last-child{display:none}
+.reference-shop-page .filter-options-scroll .check{position:relative;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.reference-shop-page [data-tooltip]::after{content:attr(data-tooltip);position:absolute;left:50%;bottom:calc(100% + 6px);z-index:20;transform:translateX(-50%) translateY(3px);padding:5px 8px;border-radius:5px;background:#172033;color:#fff;font-size:11px;font-weight:600;line-height:1.2;white-space:nowrap;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .15s ease,transform .15s ease}
+.reference-shop-page [data-tooltip]:hover::after,.reference-shop-page [data-tooltip]:focus-within::after{opacity:1;visibility:visible;transform:translateX(-50%) translateY(0)}
 .reference-shop-page .color-swatch{width:18px;height:18px;border-radius:50%;background:var(--swatch);border:1px solid rgba(0,0,0,.2);position:relative;flex:0 0 18px}
 .reference-shop-page .color-option.selected .color-swatch:after{content:'✓';position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:11px;font-weight:900;text-shadow:0 1px 2px #0008}
 .reference-shop-page .color-option[data-white='1'].selected .color-swatch:after{color:#111;text-shadow:none}
@@ -98,7 +105,7 @@
 
 /* Products Grid */
 .reference-shop-page .product-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:15px}
-.reference-shop-page .product-card{border:1px solid #e5e5e5;background:#fff;position:relative;transition:.25s;min-width:0}
+.reference-shop-page .product-card{display:flex;flex-direction:column;height:100%;border:1px solid #e5e5e5;background:#f7f7f7;position:relative;transition:.25s;min-width:0}
 .reference-shop-page .product-card:hover{box-shadow:0 10px 25px rgba(0,0,0,.1);transform:translateY(-3px)}
 .reference-shop-page .discount{position:absolute;top:8px;left:8px;background:var(--red);color:#fff;padding:5px 9px;font-size:13px;font-weight:700;z-index:3}
 .reference-shop-page .product-media{height:280px;background:#fff;display:grid;place-items:center;padding:17px;position:relative;overflow:hidden}
@@ -107,7 +114,7 @@
 .reference-shop-page .phone:before{content:"";position:absolute;top:5px;left:50%;transform:translateX(-50%);width:8px;height:8px;background:#111;border-radius:50%;z-index:2}
 .reference-shop-page .phone:after{content:"";position:absolute;width:200px;height:200px;border:3px solid rgba(0,105,170,.8);border-radius:50%;left:-100px;top:75px}
 .reference-shop-page .timer{position:absolute;bottom:5px;left:50%;transform:translateX(-50%);font-size:12px;font-weight:600;color:#e94f55;white-space:nowrap;background:#fff;padding:4px 6px;border-radius:3px;box-shadow:0 1px 4px rgba(0,0,0,0.1)}
-.reference-shop-page .card-body{padding:16px;background:#f7f7f7;min-height:155px}
+.reference-shop-page .card-body{display:flex;flex:1 1 auto;flex-direction:column;padding:16px;background:#f7f7f7;min-height:155px}
 .reference-shop-page .seller{font-size:13px;color:#555;margin-bottom:7px}
 .reference-shop-page .product-name{font-size:15px;font-weight:700;line-height:1.4;min-height:43px;margin-bottom:6px;color:#111}
 .reference-shop-page .rating{font-size:13px;color:var(--yellow)}
@@ -120,7 +127,8 @@
 .reference-shop-page .card-actions button,
 .reference-shop-page .card-actions .quick-view{
   width:40px !important;height:40px !important;min-width:40px !important;min-height:40px !important;padding:0 !important;border:1px solid #e5e7eb !important;border-radius:50% !important;background:#fff !important;color:#334155 !important;box-shadow:0 6px 18px rgba(15,23,42,.18);cursor:pointer;display:grid !important;place-items:center !important;line-height:1 !important;font-size:16px !important;transition:background .18s ease,color .18s ease,border-color .18s ease,transform .18s ease}
-.reference-shop-page .card-actions button:hover{background:var(--primary) !important;border-color:var(--primary) !important;color:#fff !important;transform:translateY(-2px)}
+.reference-shop-page .card-actions button:hover,.reference-shop-page .card-actions button:focus-visible{background:var(--primary,#e04420) !important;border-color:var(--primary,#e04420) !important;color:#fff !important;transform:translateY(-2px);outline:none}
+.reference-shop-page .card-actions button:hover i,.reference-shop-page .card-actions button:focus-visible i,.reference-shop-page .card-actions button:hover svg,.reference-shop-page .card-actions button:focus-visible svg{color:#fff !important;stroke:currentColor;transform:scale(1.08)}
 .reference-shop-page .card-actions button.selected{background:#fff1ed !important;border-color:var(--primary) !important;color:var(--primary) !important}
 .reference-shop-page .card-actions svg{display:block;width:17px;height:17px;margin:0 !important}
 
@@ -301,7 +309,7 @@
   place-items:center;
   cursor:pointer;
 }
-.quick-thumb.active{border:2px solid var(--primary)}
+.quick-thumb.active{border:2px solid var(--quick-selected-color,var(--primary))}
 .quick-thumb .phone{
   width:46px;
   height:88px;

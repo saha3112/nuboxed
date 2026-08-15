@@ -4,12 +4,15 @@ from datetime import datetime, timedelta
 from urllib.parse import urlencode
 
 from django.utils import timezone
+from django.utils.dateparse import parse_datetime
+from django.utils.text import slugify
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.contrib.auth.views import LoginView, LogoutView
-from django.db.models import Case, F, IntegerField, Q, Value, When
+from django.db.models import Case, F, IntegerField, Q, Sum, Value, When
 from django.db.models.functions import Coalesce
-from django.forms import modelform_factory
+from django.forms import modelform_factory, modelformset_factory
+from django.core.paginator import Paginator
 from django.http import Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse, reverse_lazy
@@ -23,6 +26,8 @@ from apps.backoffice.forms import (
     BackofficeAttributeOptionsForm,
     BackofficeCategoryForm,
     BackofficeLoginForm,
+    SuperAdminSecurityForm,
+    AmazonRetailerMenuSettingsForm,
     BackofficeProductForm,
     BackofficeProductAttributeForm,
     BackofficePermissionForm,
@@ -37,20 +42,26 @@ from apps.backoffice.forms import (
     EmailSettingsForm,
     CourierPartnerForm,
     WarehouseForm,
+    AmazonConnectionForm, MASKED_SECRET_VALUE,
+    SellerVerificationPageSettingForm, SellerVerificationDocumentSettingForm,
+    SellerVerificationDocumentCreateForm,
+    RetailerRegistrationFieldForm,
 )
 from apps.backoffice.registry import MODULES, grouped_modules
 from apps.catalog.models import (
-    AttributeValue, ProductAttribute, Product, ProductVariantAttributeValue,
+    AttributeValue, ProductAttribute, Product, ProductVariantAttributeValue, Brand,
     PhonePlatform, PhoneBrand, PhoneModel, PhoneModelVariant,
     PhoneStorageOption, PhoneColorOption, PhoneRamOption,
 )
 from apps.catalog.services import normalize_comma_separated_phone_models, split_comma_values, sync_split_phone_models_from_combined
+from apps.catalog.device_presets import seed_device_catalog, rebuild_device_options_and_variants
 from apps.rbac.constants import ROLE_SUPER_ADMIN
 from apps.users.models import User
 from apps.notifications.models import Notification
-from apps.inventory.models import LowStockAlert, StockItem
-from apps.inventory.services import canonical_stock_items
-from apps.retailers.models import Retailer
+from apps.inventory.models import LowStockAlert, StockItem, Warehouse, OfflineSale
+from apps.inventory.forms import OfflineSaleForm
+from apps.inventory.services import canonical_stock_items, offline_sales_enabled, set_offline_sales_enabled, set_offline_sale_active
+from apps.retailers.models import Retailer, SellerVerificationDocumentSetting, SellerVerificationPageSetting, RetailerRegistrationFieldSetting
 from apps.stores.models import Store, StoreRating
 from apps.orders.models import Coupon, Order
 from apps.orders.forms import OrderStatusForm, OrderWorkflowGlobalSettingForm, OrderWorkflowStoreOverrideForm, OrderWorkflowSettingForm, EmailTemplateForm
@@ -67,6 +78,384 @@ from apps.notifications.services import ensure_order_email_templates
 from apps.notifications.services import send_test_email
 from apps.common.security import build_public_url
 from apps.cms.models import HomePageSettings, HomeReviewCard, HomeTrustCard, Page
+from apps.marketplace.models import MarketplaceConnector, MarketplaceConnection, MarketplaceListing, MarketplaceStoreMapping, MarketplaceSyncJob, AmazonOrderTracking, MarketplaceSetting
+from apps.marketplace.drivers.providers import get_driver
+from apps.common.encryption import encrypt, decrypt
+from apps.common.captcha import verify_captcha, get_captcha_settings, DEFAULTS as CAPTCHA_DEFAULTS
+
+
+def sync_device_brand_to_catalog_brand(phone_brand, previous_name=""):
+    """Expose Device Models brands in the regular Catalog > Brands module."""
+    name = (phone_brand.name or "").strip()
+    if not name:
+        return None
+    catalog_brand = None
+    if previous_name:
+        catalog_brand = Brand.objects.filter(name__iexact=previous_name).order_by("created_at").first()
+    if not catalog_brand:
+        catalog_brand = Brand.objects.filter(name__iexact=name).order_by("created_at").first()
+    if catalog_brand is None:
+        base_slug = slugify(name) or "brand"
+        brand_slug = base_slug
+        counter = 1
+        while Brand.objects.filter(slug=brand_slug).exists():
+            brand_slug = f"{base_slug}-{counter}"
+            counter += 1
+        return Brand.objects.create(name=name, slug=brand_slug, is_active=phone_brand.is_active)
+    changed = []
+    if catalog_brand.name != name:
+        catalog_brand.name = name
+        changed.append("name")
+    if catalog_brand.is_active != phone_brand.is_active:
+        catalog_brand.is_active = phone_brand.is_active
+        changed.append("is_active")
+    if changed:
+        catalog_brand.save(update_fields=[*changed, "updated_at"])
+    return catalog_brand
+from apps.marketplace.services import enqueue_sync_job, process_sync_job, sync_product_amazon_mapping
+
+
+class AmazonIntegrationView(LoginRequiredMixin, UserPassesTestMixin, View):
+    login_url = reverse_lazy("backoffice:login")
+    session_user_key = "backoffice_user_id"
+
+    def dispatch(self, request, *args, **kwargs):
+        user_id = request.session.get(self.session_user_key)
+        self.portal_user = User.objects.filter(pk=user_id, is_active=True).first() if user_id else None
+        if self.portal_user:
+            request.user = self.portal_user
+        return super().dispatch(request, *args, **kwargs)
+
+    def test_func(self):
+        user = getattr(self, "portal_user", None)
+        return bool(user) and user.is_authenticated and (user.is_superuser or user.global_roles.filter(role__code=ROLE_SUPER_ADMIN, account_membership__isnull=True).exists())
+
+    def handle_no_permission(self):
+        return redirect(self.login_url)
+    template_name = "backoffice/amazon_integration.html"
+    AMAZON_ENDPOINTS = {
+        "sandbox": {"na": "https://sandbox.sellingpartnerapi-na.amazon.com", "eu": "https://sandbox.sellingpartnerapi-eu.amazon.com", "fe": "https://sandbox.sellingpartnerapi-fe.amazon.com"},
+        "production": {"na": "https://sellingpartnerapi-na.amazon.com", "eu": "https://sellingpartnerapi-eu.amazon.com", "fe": "https://sellingpartnerapi-fe.amazon.com"},
+    }
+
+    def _amazon_endpoint(self, environment, region):
+        return self.AMAZON_ENDPOINTS.get(environment, self.AMAZON_ENDPOINTS["sandbox"]).get(region, self.AMAZON_ENDPOINTS["sandbox"]["eu"])
+
+    def _amazon_mode_credentials(self, credentials, environment):
+        """Return the selected mode's credentials, with legacy fallback.
+
+        Older connections stored one shared credential set.  Keeping the
+        fallback here lets those connections continue to work while every
+        subsequent save creates an independent sandbox/production profile.
+        """
+        credentials = credentials or {}
+        profile = credentials.get(environment)
+        if isinstance(profile, dict):
+            return dict(profile)
+        # Once either explicit profile exists, a missing mode is intentionally
+        # blank rather than inheriting the other mode's credentials.
+        if any(isinstance(credentials.get(name), dict) for name in ("sandbox", "production")):
+            return {}
+        return dict(credentials)
+
+    def _amazon_mode_profiles(self, credentials):
+        """Build safe, browser-readable mode profiles (never expose secrets)."""
+        profiles = {}
+        for environment in ("sandbox", "production"):
+            profile = self._amazon_mode_credentials(credentials, environment)
+            regions = profile.get("regions") or [profile.get("region", "eu")]
+            marketplaces = profile.get("marketplace_ids") or [profile.get("marketplace_id", "A1PA6795UKMFR9")]
+            token_key = "live_refresh_token" if environment == "production" else "sandbox_refresh_token"
+            token_exists = bool(profile.get(token_key) or (environment == "sandbox" and profile.get("refresh_token")))
+            profiles[environment] = {
+                "application_name": profile.get("application_name", ""),
+                "application_id": profile.get("application_id", ""),
+                "client_identifier": profile.get("client_identifier", profile.get("client_id", "")),
+                "client_secret": MASKED_SECRET_VALUE if profile.get("client_secret") else "",
+                "refresh_token": MASKED_SECRET_VALUE if token_exists else "",
+                "endpoint": profile.get("endpoint", self._amazon_endpoint(environment, profile.get("region", regions[0]))),
+                "seller_id": profile.get("seller_id", ""),
+                "region_mode": profile.get("region_mode", "single" if len(regions) == 1 else "multiple"),
+                "region": profile.get("region", regions[0]),
+                "regions": regions,
+                "marketplace_mode": profile.get("marketplace_mode", "single" if len(marketplaces) == 1 else "multiple"),
+                "marketplace_id": profile.get("marketplace_id", marketplaces[0]),
+                "marketplace_ids": marketplaces,
+                "aws_access_key_id": profile.get("aws_access_key_id", ""),
+                "aws_secret_access_key": MASKED_SECRET_VALUE if profile.get("aws_secret_access_key") else "",
+                "auto_sync": profile.get("auto_sync", True),
+            }
+        return profiles
+
+    def _connection(self):
+        connector = MarketplaceConnector.objects.filter(code="amazon").first()
+        return MarketplaceConnection.objects.filter(connector=connector).select_related("retailer", "store").order_by("retailer_id", "-created_at").first() if connector else None
+
+    def _production_token_monitor(self, connection):
+        profile = ((connection.credentials or {}).get("production") or {}) if connection else {}
+        refreshed_at = parse_datetime(profile.get("token_refreshed_at", "")) if profile.get("token_refreshed_at") else None
+        if refreshed_at and timezone.is_naive(refreshed_at):
+            refreshed_at = timezone.make_aware(refreshed_at, timezone.get_current_timezone())
+        next_refresh_at = refreshed_at + timedelta(minutes=55) if refreshed_at else None
+        now = timezone.now()
+        if not profile.get("live_refresh_token"):
+            state = "missing"
+            label = "Production token not configured"
+        elif profile.get("last_refresh_result") == "failed":
+            state = "error"
+            label = "Last production refresh failed"
+        elif not refreshed_at:
+            state = "pending"
+            label = "Waiting for first automatic access-token refresh"
+        elif next_refresh_at and next_refresh_at <= now:
+            state = "due"
+            label = "Refresh due"
+        else:
+            state = "healthy"
+            label = "Auto-refresh active"
+        continuity = profile.get("refresh_token_continuity")
+        continuity_label = {
+            "unchanged": "Amazon returned the same refresh token",
+            "rotated": "Amazon rotated the refresh token and it was saved",
+        }.get(continuity, "Not verified yet")
+        return {
+            "state": state,
+            "label": label,
+            "last_refresh_at": refreshed_at,
+            "next_refresh_at": next_refresh_at,
+            "fingerprint": profile.get("refresh_token_fingerprint") or "—",
+            "continuity": continuity_label,
+            "continuity_label": continuity_label,
+            "last_error": profile.get("last_refresh_error", ""),
+        }
+
+    def _context(self, form=None, notice="", notice_type=""):
+        connection = self._connection()
+        listings = MarketplaceListing.objects.filter(connection=connection).select_related("product", "fulfillment_location") if connection else MarketplaceListing.objects.none()
+        store_mappings = MarketplaceStoreMapping.objects.filter(connection=connection).select_related("store", "warehouse") if connection else MarketplaceStoreMapping.objects.none()
+        if connection:
+            job_rows = MarketplaceSyncJob.objects.filter(connection=connection).order_by("-created_at")
+            latest_jobs, seen_flows = [], set()
+            for job in job_rows:
+                flow = (job.job_type, job.direction)
+                if flow in seen_flows:
+                    continue
+                latest_jobs.append(job)
+                seen_flows.add(flow)
+                if len(latest_jobs) >= 8:
+                    break
+            jobs = latest_jobs
+        else:
+            jobs = []
+        # A newer pending job has an empty result. Use the latest completed
+        # import for the monitor counters so a queued retry cannot reset a
+        # previously verified Amazon catalog to zero.
+        latest_product_import = MarketplaceSyncJob.objects.filter(connection=connection, job_type=MarketplaceSyncJob.TYPE_PRODUCT_SYNC, direction=MarketplaceSyncJob.DIRECTION_INBOUND, status=MarketplaceSyncJob.STATUS_COMPLETED).order_by("-created_at").first() if connection else None
+        saved_credentials = connection.credentials if connection else {}
+        production_profile = saved_credentials.get("production") if isinstance(saved_credentials.get("production"), dict) else {}
+        production_token_refreshed_at = production_profile.get("token_refreshed_at")
+        sync_ready = bool(saved_credentials.get("seller_id") and saved_credentials.get("marketplace_id") and saved_credentials.get("refresh_token") and saved_credentials.get("regions", [saved_credentials.get("region", "eu")]))
+        health_score = 0
+        health_label = "Not connected"
+        health_tone = "neutral"
+        health_components = []
+        if connection:
+            latest_job = jobs[0] if jobs else None
+            recent_sync = bool(connection.last_sync_at and connection.last_sync_at >= timezone.now() - timedelta(hours=24))
+            mapped_count = listings.count()
+            store_count = store_mappings.count()
+            health_components = [
+                {"label": "LWA authentication", "status": "ok" if connection.status == MarketplaceConnection.STATUS_ACTIVE else "error", "detail": "Amazon token is valid" if connection.status == MarketplaceConnection.STATUS_ACTIVE else (connection.error_message or "Authentication needs attention")},
+                {"label": "SP-API endpoint", "status": "ok" if saved_credentials.get("endpoint") else "error", "detail": "European sandbox endpoint configured" if saved_credentials.get("endpoint") else "Endpoint is missing"},
+                {"label": "Seller & marketplace access", "status": "ok" if sync_ready else "warning", "detail": "Product, stock and order sync ready for the selected country" if sync_ready else "Seller ID, marketplace or selected refresh token is missing"},
+                {"label": "Retailer store mapping", "status": "ok" if store_count else "warning", "detail": f"{store_count} store{'s' if store_count != 1 else ''} connected automatically" if store_count else "Save settings to map active stores"},
+                {"label": "Sync heartbeat", "status": "ok" if recent_sync else "warning", "detail": f"Last successful sync {connection.last_sync_at:%d %b %Y, %H:%M}" if recent_sync else ("Waiting for the first sync" if not latest_job else f"Latest job: {latest_job.get_status_display()}")},
+            ]
+            health_score = (45 if connection.status == MarketplaceConnection.STATUS_ACTIVE else 15) + (15 if saved_credentials.get("endpoint") else 0) + (20 if sync_ready else 0) + (10 if store_count else 0) + (10 if recent_sync else 0)
+            if connection.status == MarketplaceConnection.STATUS_ERROR:
+                health_label, health_tone = "Action required", "error"
+            elif health_score >= 85:
+                health_label, health_tone = "Healthy", "ok"
+            elif health_score >= 60:
+                health_label, health_tone = "Connected · setup incomplete", "warning"
+            else:
+                health_label, health_tone = "Needs attention", "error"
+        menu_setting = MarketplaceSetting.objects.filter(key="amazon_retailer_menu_enabled").first()
+        return {"form": form or AmazonConnectionForm(), "connection": connection, "listings": listings, "store_mappings": store_mappings, "jobs": jobs, "latest_product_import": latest_product_import, "production_token_refreshed_at": production_token_refreshed_at, "production_token_monitor": self._production_token_monitor(connection), "sync_ready": sync_ready, "health_score": health_score, "health_label": health_label, "health_tone": health_tone, "health_components": health_components, "amazon_retailer_menu_enabled": (menu_setting.value or {}).get("enabled", False) if menu_setting else False, "notice": notice, "notice_type": notice_type, "page_title": "Amazon SP-API", "active_group": "Amazon SP-API", "sidebar_groups": grouped_modules()}
+
+    def get(self, request):
+        if request.GET.get("snapshot") == "1":
+            snapshot = self._context()
+            latest_import = snapshot.get("latest_product_import")
+            result = (latest_import.result or {}) if latest_import else {}
+            jobs = snapshot["jobs"]
+            listings = snapshot["listings"]
+            return JsonResponse({
+                "ok": True,
+                "connection_status": snapshot["connection"].status if snapshot["connection"] else "inactive",
+                "production_token_monitor": snapshot["production_token_monitor"],
+                "import": {
+                    "status": latest_import.status if latest_import else "not_run",
+                    "imported_count": result.get("imported_count", 0),
+                    "matched_count": result.get("matched_count", 0),
+                    "unmatched_count": result.get("unmatched_count", 0),
+                    "created_at": latest_import.created_at.isoformat() if latest_import else None,
+                },
+                "jobs": [{"type": job.get_job_type_display(), "direction": job.direction, "direction_label": "Amazon → Nuboxed" if job.direction == MarketplaceSyncJob.DIRECTION_INBOUND else "Nuboxed → Amazon", "status": job.status, "created_at": job.created_at.isoformat() if job.created_at else None, "updated_at": job.updated_at.isoformat() if job.updated_at else None} for job in jobs],
+                "listings": [{"sku": item.seller_sku, "product": item.product.name, "store": item.product.store.name, "warehouse": item.fulfillment_location.name if item.fulfillment_location else "Auto / retailer stock", "status": item.status, "last_pushed": item.last_pushed_at.isoformat() if item.last_pushed_at else "—"} for item in listings[:50]],
+            })
+        if request.GET.get("health") == "1":
+            snapshot = self._context()
+            connection = snapshot["connection"]
+            return JsonResponse({
+                "ok": True,
+                "score": snapshot["health_score"],
+                "label": snapshot["health_label"],
+                "tone": snapshot["health_tone"],
+                "components": snapshot["health_components"],
+                "status": connection.status if connection else "inactive",
+                "last_sync": connection.last_sync_at.isoformat() if connection and connection.last_sync_at else None,
+                "production_token_refreshed_at": snapshot.get("production_token_refreshed_at"),
+                "server_time": timezone.now().isoformat(),
+            })
+        connection = self._connection()
+        initial = {}
+        if connection:
+            c = connection.credentials or {}
+            environment = c.get("environment", "sandbox")
+            active = self._amazon_mode_credentials(c, environment)
+            saved_regions = active.get("regions") or [active.get("region", "eu")]
+            saved_marketplaces = active.get("marketplace_ids") or [active.get("marketplace_id", "A1PA6795UKMFR9")]
+            initial = {"environment": environment, "region_mode": active.get("region_mode", "single" if len(saved_regions) == 1 else "multiple"), "region": active.get("region", saved_regions[0]), "regions": saved_regions, "application_name": active.get("application_name", connection.name), "application_id": active.get("application_id", ""), "client_identifier": active.get("client_identifier", active.get("client_id", "")), "client_secret": MASKED_SECRET_VALUE if active.get("client_secret") else "", "sandbox_refresh_token": MASKED_SECRET_VALUE if self._amazon_mode_credentials(c, "sandbox").get("sandbox_refresh_token", self._amazon_mode_credentials(c, "sandbox").get("refresh_token")) else "", "live_refresh_token": MASKED_SECRET_VALUE if self._amazon_mode_credentials(c, "production").get("live_refresh_token") else "", "endpoint": active.get("endpoint", self._amazon_endpoint(environment, active.get("region", saved_regions[0]))), "seller_id": active.get("seller_id", ""), "marketplace_id": active.get("marketplace_id", saved_marketplaces[0]), "marketplace_mode": active.get("marketplace_mode", "single" if len(saved_marketplaces) == 1 else "multiple"), "marketplace_ids": saved_marketplaces, "aws_access_key_id": active.get("aws_access_key_id", ""), "aws_secret_access_key": MASKED_SECRET_VALUE if active.get("aws_secret_access_key") else "", "auto_sync": active.get("auto_sync", True)}
+        context = self._context(AmazonConnectionForm(initial=initial))
+        context["amazon_mode_profiles"] = self._amazon_mode_profiles(connection.credentials if connection else {})
+        return render(request, self.template_name, context)
+
+    def post(self, request):
+        action = request.POST.get("action", "save")
+        ajax = request.headers.get("x-requested-with") == "XMLHttpRequest" or "application/json" in request.headers.get("accept", "")
+        connection = self._connection()
+        if action == "test" and connection:
+            try:
+                result = get_driver(connection).refresh_token()
+                if ajax:
+                    return JsonResponse({"ok": True, "message": "Amazon connection verified successfully.", "status": connection.status})
+                messages.success(request, "Amazon connection verified successfully.")
+                return redirect("backoffice:amazon-integration")
+            except Exception as exc:
+                connection.status = MarketplaceConnection.STATUS_ERROR
+                connection.error_message = str(exc)
+                connection.save(update_fields=["status", "error_message", "updated_at"])
+                if ajax:
+                    return JsonResponse({"ok": False, "message": str(exc), "status": connection.status}, status=400)
+                messages.error(request, str(exc))
+                return redirect("backoffice:amazon-integration")
+        if action == "sync" and connection:
+            queued = []
+            sync_plan = (
+                (MarketplaceSyncJob.TYPE_PRODUCT_SYNC, MarketplaceSyncJob.DIRECTION_INBOUND, {}),
+                (MarketplaceSyncJob.TYPE_ORDER_IMPORT, MarketplaceSyncJob.DIRECTION_INBOUND, {}),
+                (MarketplaceSyncJob.TYPE_STOCK_SYNC, MarketplaceSyncJob.DIRECTION_INBOUND, {"from_product_import": True}),
+                (MarketplaceSyncJob.TYPE_PRODUCT_SYNC, MarketplaceSyncJob.DIRECTION_OUTBOUND, {}),
+                (MarketplaceSyncJob.TYPE_STOCK_SYNC, MarketplaceSyncJob.DIRECTION_OUTBOUND, {}),
+            )
+            for job_type, direction, payload in sync_plan:
+                job = enqueue_sync_job(connection, job_type, direction, payload)
+                # If this is an older pending row, enqueue_sync_job correctly
+                # deduplicates it. In the local no-worker profile, execute it
+                # here so Sync Now cannot leave a stale pending state.
+                if job.status == MarketplaceSyncJob.STATUS_PENDING:
+                    process_sync_job(job)
+                queued.append(str(job.id))
+            if ajax:
+                return JsonResponse({"ok": True, "message": "Amazon products, orders and stock were reconciled. Matched quantities were pushed back to Amazon.", "status": connection.status, "job_ids": queued})
+            messages.success(request, "Product, stock and order sync jobs were started. Review the job status below.")
+            return redirect("backoffice:amazon-integration")
+        form = AmazonConnectionForm(request.POST)
+        if not form.is_valid():
+            if ajax:
+                return JsonResponse({"ok": False, "message": "Please correct the highlighted fields.", "errors": form.errors.get_json_data()}, status=400)
+            return render(request, self.template_name, self._context(form))
+        data = form.cleaned_data
+        connector, _ = MarketplaceConnector.objects.update_or_create(code="amazon", defaults={"name": "Amazon Selling Partner API", "connector_type": "amazon", "status": "active"})
+        environment = data["environment"]
+        region = data["region"]
+        regions = list(data.get("regions") or [region])
+        marketplace_ids = list(data.get("marketplace_ids") or [data["marketplace_id"]])
+        existing = connection.credentials if connection else {}
+        # Each mode owns its complete configuration.  The top-level values
+        # remain as a compatibility mirror for older marketplace services.
+        mode_profile = self._amazon_mode_credentials(existing, environment)
+        has_mode_profiles = any(isinstance(existing.get(name), dict) for name in ("sandbox", "production"))
+        mode_profile.update({"environment": environment, "region_mode": data["region_mode"], "region": region, "regions": regions, "region_profiles": {code: {"endpoint": self._amazon_endpoint(environment, code)} for code in regions}, "marketplace_mode": data["marketplace_mode"], "marketplace_id": data["marketplace_id"], "marketplace_ids": marketplace_ids, "marketplace_profiles": {marketplace_id: {"region": AmazonConnectionForm.MARKETPLACES[marketplace_id][1], "marketplace_id": marketplace_id} for marketplace_id in marketplace_ids if marketplace_id in AmazonConnectionForm.MARKETPLACES}, "application_name": data["application_name"], "application_id": data["application_id"], "client_identifier": data["client_identifier"], "endpoint": self._amazon_endpoint(environment, region), "seller_id": data["seller_id"], "auto_sync": data["auto_sync"]})
+        secret_keys = (("client_secret", "client_secret"), ("sandbox_refresh_token", "sandbox_refresh_token"), ("live_refresh_token", "live_refresh_token"), ("aws_secret_access_key", "aws_secret_access_key"))
+        for key, stored_key in secret_keys:
+            old_value = mode_profile.get(stored_key) or (existing.get(stored_key) if not has_mode_profiles else None)
+            if key == "sandbox_refresh_token" and not has_mode_profiles:
+                old_value = old_value or existing.get("refresh_token")
+            if data.get(key) and data[key] != MASKED_SECRET_VALUE:
+                mode_profile[stored_key] = encrypt(data[key])
+            elif old_value:
+                mode_profile[stored_key] = old_value
+        # A new production secret or refresh token starts a fresh verification
+        # cycle; do not keep displaying an error generated by the old pair.
+        if environment == "production" and (
+            data.get("client_secret") not in (None, "", MASKED_SECRET_VALUE)
+            or data.get("live_refresh_token") not in (None, "", MASKED_SECRET_VALUE)
+        ):
+            for key in ("token_refreshed_at", "refresh_token_fingerprint", "refresh_token_continuity", "last_refresh_failed_at"):
+                mode_profile.pop(key, None)
+            mode_profile["last_refresh_result"] = "pending"
+            mode_profile["last_refresh_error"] = ""
+        mode_profile["aws_access_key_id"] = data.get("aws_access_key_id") or mode_profile.get("aws_access_key_id", "")
+        credentials = dict(existing)
+        credentials[environment] = mode_profile
+        credentials.update(mode_profile)
+        # Keep both token names available in the compatibility mirror.
+        for profile_name, token_name in (("sandbox", "sandbox_refresh_token"), ("production", "live_refresh_token")):
+            saved_profile = credentials.get(profile_name) or {}
+            if saved_profile.get(token_name):
+                credentials[token_name] = saved_profile[token_name]
+        active_token = mode_profile.get("live_refresh_token") if environment == "production" else mode_profile.get("sandbox_refresh_token")
+        if active_token: credentials["refresh_token"] = active_token
+        credentials["client_id"] = data["client_identifier"]
+        # One Amazon seller connection belongs to the retailer. Stores below
+        # that retailer are tracked separately through store mappings.
+        connection = MarketplaceConnection.objects.filter(connector=connector).order_by("retailer_id", "-created_at").first()
+        if connection is None:
+            connection = MarketplaceConnection(connector=connector)
+        connection.retailer = None
+        connection.store = None
+        connection.name = data["application_name"]
+        connection.credentials = credentials
+        connection.status = MarketplaceConnection.STATUS_INACTIVE
+        connection.save()
+        for store in Store.objects.filter(is_active=True):
+            warehouse = Warehouse.objects.filter(retailer=store.retailer, store=store, is_active=True).order_by("-is_default", "name").first()
+            MarketplaceStoreMapping.objects.update_or_create(connection=connection, store=store, defaults={"warehouse": warehouse, "amazon_store_code": store.slug, "is_enabled": True, "error_message": ""})
+        products = Product.objects.all()
+        for product in products.filter(is_active=True):
+            mapping = MarketplaceStoreMapping.objects.filter(connection=connection, store=product.store, is_enabled=True).select_related("warehouse").first()
+            MarketplaceListing.objects.update_or_create(connection=connection, product=product, variant=None, defaults={"seller_sku": product.sku, "marketplace_id": data["marketplace_id"], "fulfillment_location": mapping.warehouse if mapping else None})
+            for variant in product.variants.filter(deleted_at__isnull=True):
+                MarketplaceListing.objects.update_or_create(connection=connection, product=product, variant=variant, defaults={"seller_sku": variant.sku, "marketplace_id": data["marketplace_id"], "fulfillment_location": mapping.warehouse if mapping else None})
+        # Saving validates LWA immediately, while product/order sync remains a
+        # separate action because Amazon also needs Seller ID and AWS signing.
+        save_message = "Amazon settings were saved, but the connection test failed."
+        save_ok = False
+        try:
+            get_driver(connection).refresh_token()
+            save_ok = True
+            save_message = "Amazon settings saved. LWA connection is active and all retailer stores/SKUs are mapped."
+            messages.success(request, "Amazon settings saved. LWA connection is active and all retailer stores/SKUs are mapped.")
+        except Exception as exc:
+            connection.status = MarketplaceConnection.STATUS_ERROR
+            connection.error_message = str(exc)
+            connection.save(update_fields=["status", "error_message", "updated_at"])
+            messages.warning(request, f"Amazon settings were saved, but the connection test failed: {exc}")
+        if ajax:
+            return JsonResponse({"ok": save_ok, "message": save_message, "status": connection.status, "mapped_skus": MarketplaceListing.objects.filter(connection=connection, is_active=True).count()})
+        return redirect("backoffice:amazon-integration")
 
 
 class SuperAdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
@@ -95,25 +484,443 @@ class SuperAdminRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
             or user.global_roles.filter(role__code=ROLE_SUPER_ADMIN, account_membership__isnull=True).exists()
         )
 
-    def handle_no_permission(self):
-        # The URL selects the portal. Never send an unauthenticated or
-        # retailer-session request from /admin/ to the retailer portal.
-        return redirect(self.login_url)
-
     def get_context_data(self, **kwargs):
         """Expose real, relevant notifications in every backoffice view."""
         context = super().get_context_data(**kwargs)
         user = getattr(self, "portal_user", None) or self.request.user
         notification_queryset = Notification.objects.filter(Q(user__isnull=True) | Q(user=user))
         notifications = notification_queryset.order_by("-created_at")[:8]
-        context.update(
-            {
-                "backoffice_notifications": notifications,
-                "backoffice_unread_notification_count": notification_queryset.filter(read_at__isnull=True).count(),
-            }
-        )
+        context.update({
+            "backoffice_notifications": notifications,
+            "backoffice_unread_notification_count": notification_queryset.filter(read_at__isnull=True).count(),
+        })
         return context
 
+    def handle_no_permission(self):
+        # The URL selects the portal. Never send an unauthenticated or
+        # retailer-session request from /admin/ to the retailer portal.
+        return redirect(self.login_url)
+
+
+class BackofficeStorePreviewView(SuperAdminRequiredMixin, TemplateView):
+    template_name = "backoffice/store_preview.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({
+            "page_title": "Store Preview",
+            "preview_stores": Store.objects.filter(
+                status=Store.STATUS_ACTIVE, is_active=True
+            ).select_related("retailer").order_by("retailer__display_name", "name"),
+            "active_group": "Commerce",
+            "sidebar_groups": grouped_modules(),
+        })
+        return context
+
+
+class BackofficeOfflineSalesView(SuperAdminRequiredMixin, TemplateView):
+    template_name = "backoffice/offline_sales.html"
+
+    def post(self, request, *args, **kwargs):
+        sale_id = request.POST.get("sale_id")
+        if sale_id:
+            sale = get_object_or_404(OfflineSale, pk=sale_id)
+            action = request.POST.get("action")
+            try:
+                if action == "delete-permanent":
+                    if sale.is_active:
+                        messages.error(request, "Move the sale to trash before permanently deleting it.")
+                    else:
+                        sale.delete()
+                        messages.success(request, "Offline sale permanently deleted.")
+                elif action in {"delete", "restore"}:
+                    set_offline_sale_active(sale, action == "restore", actor=getattr(self, "portal_user", request.user))
+                    messages.success(request, f"Offline sale {('restored' if action == 'restore' else 'moved to trash')}.")
+            except ValueError as exc:
+                messages.error(request, str(exc))
+            return redirect("backoffice:offline-sales")
+        retailer = get_object_or_404(Retailer, pk=request.POST.get("retailer_id"))
+        enabled = request.POST.get("enabled") == "on"
+        set_offline_sales_enabled(retailer, enabled, actor=getattr(self, "portal_user", request.user))
+        messages.success(request, f"Offline Sales {('enabled' if enabled else 'disabled')} for {retailer.display_name or retailer.legal_name}.")
+        return redirect("backoffice:offline-sales")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        retailers = Retailer.objects.select_related("account").filter(is_active=True).order_by("display_name", "legal_name")
+        setting_map = {
+            setting.key.rsplit(".", 1)[-1]: setting
+            for setting in Setting.objects.filter(key__startswith="retailer.offline_sales.")
+        }
+        retailer_rows = []
+        for retailer in retailers:
+            setting = setting_map.get(str(retailer.pk))
+            retailer_rows.append({
+                "retailer": retailer,
+                "enabled": bool((setting.value or {}).get("enabled", True)) if setting else True,
+            })
+        sales = OfflineSale.objects.select_related("store", "product", "product__retailer", "created_by").order_by("-sold_at")
+        context.update({
+            "page_title": "Offline Sales Tracking",
+            "active_group": "Operations",
+            "sidebar_groups": grouped_modules(),
+            "offline_retailer_rows": retailer_rows,
+            "offline_sales": sales[:100],
+            "offline_sales_count": sales.count(),
+            "offline_sales_revenue": sales.aggregate(total=Sum("total_amount"))["total"] or 0,
+        })
+        return context
+
+
+class BackofficeOfflineSaleEditView(SuperAdminRequiredMixin, UpdateView):
+    model = OfflineSale
+    form_class = OfflineSaleForm
+    template_name = "backoffice/offline_sale_edit.html"
+
+    def get_queryset(self):
+        return OfflineSale.objects.select_related("product__retailer", "store", "delivery_location")
+
+    def get_form(self, form_class=None):
+        retailer = self.object.product.retailer
+        form = self.form_class(self.request.POST or None, instance=self.object, retailer=retailer, store=self.object.store, initial={"brand": self.object.product.brand_id, "delivery_location": self.object.delivery_location_id})
+        for field_name in ("store", "brand", "product", "variant", "quantity"):
+            form.fields[field_name].disabled = True
+        return form
+
+    def form_valid(self, form):
+        sale = form.save(commit=False)
+        sale.warehouse = self.object.warehouse
+        sale.store = self.object.store
+        sale.product = self.object.product
+        sale.variant = self.object.variant
+        sale.quantity = self.object.quantity
+        sale.total_amount = sale.unit_price * sale.quantity
+        sale.delivery_location = form.cleaned_data.get("delivery_location", sale.delivery_location)
+        sale.selected_pincode = form.cleaned_data.get("selected_pincode", sale.selected_pincode)
+        sale.save(update_fields=["delivery_location", "selected_pincode", "unit_price", "sold_at", "note", "total_amount", "updated_at"])
+        messages.success(self.request, "Offline sale updated successfully.")
+        return redirect("backoffice:offline-sales")
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context.update({"page_title": "Edit Offline Sale", "active_group": "Operations", "sidebar_groups": grouped_modules()})
+        return context
+        return context
+
+class AmazonRetailerMenuSettingsView(SuperAdminRequiredMixin, View):
+    template_name = "backoffice/amazon_retailer_menu_settings.html"
+
+    def _context(self, form):
+        return {"form": form, "page_title": "Retailer Menu Visibility", "active_group": "Amazon SP-API", "sidebar_groups": grouped_modules()}
+
+    def _initial(self):
+        menu = MarketplaceSetting.objects.filter(key="amazon_retailer_menu_enabled").values_list("value", flat=True).first() or {}
+        orders = MarketplaceSetting.objects.filter(key="amazon_orders_retailer_menu_enabled").values_list("value", flat=True).first() or {}
+        return {"show_retailer_menu": bool(menu.get("enabled", False)), "show_retailer_orders": bool(orders.get("enabled", False))}
+
+    def get(self, request, *args, **kwargs):
+        return render(request, self.template_name, self._context(AmazonRetailerMenuSettingsForm(initial=self._initial())))
+
+    def post(self, request, *args, **kwargs):
+        form = AmazonRetailerMenuSettingsForm(request.POST)
+        if form.is_valid():
+            MarketplaceSetting.objects.update_or_create(key="amazon_retailer_menu_enabled", defaults={"value": {"enabled": form.cleaned_data["show_retailer_menu"]}})
+            MarketplaceSetting.objects.update_or_create(key="amazon_orders_retailer_menu_enabled", defaults={"value": {"enabled": form.cleaned_data["show_retailer_orders"]}})
+            messages.success(request, "Retailer Amazon menu visibility saved successfully.")
+            return redirect("backoffice:amazon-retailer-menu-settings")
+        return render(request, self.template_name, self._context(form))
+
+
+class BackofficeSecurityView(SuperAdminRequiredMixin, View):
+    template_name = "backoffice/security.html"
+
+    def get(self, request, *args, **kwargs):
+        return render(request, self.template_name, self._context(SuperAdminSecurityForm(user=self.portal_user)))
+
+    def post(self, request, *args, **kwargs):
+        form = SuperAdminSecurityForm(request.POST, user=self.portal_user)
+        if form.is_valid():
+            user = self.portal_user
+            user.email = form.cleaned_data["email"]
+            changed_fields = ["email", "updated_at"]
+            if form.cleaned_data.get("new_password"):
+                user.set_password(form.cleaned_data["new_password"])
+                changed_fields.append("password")
+            user.save(update_fields=changed_fields)
+            messages.success(request, "Super Admin login details updated successfully.")
+            return redirect("backoffice:security")
+        return render(request, self.template_name, self._context(form))
+
+    def _context(self, form):
+        return {"form": form, "page_title": "Security Settings", "active_group": "Platform", "sidebar_groups": grouped_modules()}
+
+
+class AmazonOrderTrackingAdminView(SuperAdminRequiredMixin, TemplateView):
+    template_name = "backoffice/amazon_orders.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        orders = AmazonOrderTracking.objects.select_related("retailer", "store", "connection", "local_order").prefetch_related("items").order_by("-purchase_date", "-created_at")
+        context.update({
+            "page_title": "Amazon Order Tracking", "active_group": "Amazon SP-API", "sidebar_groups": grouped_modules(),
+            "amazon_orders": orders[:200], "amazon_order_count": orders.count(),
+            "amazon_pending_count": orders.filter(amazon_order_status__in=["Pending", "Unshipped", "PartiallyShipped"]).count(),
+            "amazon_unattributed_count": orders.filter(attribution_status__in=["pending_items", "multiple_stores"]).count(),
+        })
+        return context
+
+
+class AmazonCatalogAdminView(SuperAdminRequiredMixin, View):
+    template_name = "backoffice/amazon_catalog.html"
+
+    def _connection(self):
+        connector = MarketplaceConnector.objects.filter(code="amazon").first()
+        return MarketplaceConnection.objects.filter(connector=connector).first() if connector else None
+
+    def _snapshot(self, connection):
+        listings = MarketplaceListing.objects.filter(connection=connection).select_related("product", "product__store", "variant", "fulfillment_location").order_by("seller_sku") if connection else MarketplaceListing.objects.none()
+        latest = MarketplaceSyncJob.objects.filter(connection=connection, job_type=MarketplaceSyncJob.TYPE_PRODUCT_SYNC, direction=MarketplaceSyncJob.DIRECTION_INBOUND, status=MarketplaceSyncJob.STATUS_COMPLETED).order_by("-created_at").first() if connection else None
+        result = (latest.result or {}) if latest else {}
+        remote_items = result.get("items", []) or []
+        listing_by_sku = {listing.seller_sku: listing for listing in listings}
+        listing_rows = []
+        if latest:
+            # The latest Amazon import is authoritative. Do not display old
+            # local fallback SKUs as Amazon listings; that was the reason
+            # entries such as SGS24 appeared as pending beside real offers.
+            for item in remote_items:
+                sku = item.get("sku")
+                if not sku:
+                    continue
+                listing = listing_by_sku.get(sku)
+                product = listing.product if listing else None
+                variant = listing.variant if listing else None
+                product_label = product.name if product else "Not matched in Nuboxed"
+                if variant:
+                    product_label = f"{product_label} · {variant.name}"
+                listing_rows.append({
+                    "sku": sku,
+                    "asin": item.get("asin") or (listing.external_listing_id if listing else "—") or "—",
+                    "marketplace": item.get("marketplace_id") or (listing.marketplace_id if listing else "—"),
+                    "product": product_label,
+                    "store": product.store.name if product else "—",
+                    "warehouse": listing.fulfillment_location.name if listing and listing.fulfillment_location else "Auto / retailer stock" if product else "—",
+                    "quantity": item.get("quantity") if item.get("quantity") is not None else (listing.last_pulled_quantity if listing and listing.last_pulled_quantity is not None else 0),
+                    "status": "active" if listing else "unmatched",
+                    "source": "Amazon ↔ Nuboxed" if listing and listing.last_pushed_at else "Amazon → Nuboxed",
+                    "error": "" if listing else "Amazon Seller SKU is not mapped to a Nuboxed product or variant.",
+                })
+            remote_skus = {item.get("sku") for item in remote_items if item.get("sku")}
+            # Show local mappings that were pushed outbound but are not in the
+            # current Amazon import, including rejected or processing offers.
+            for listing in listings:
+                if listing.seller_sku in remote_skus:
+                    continue
+                product_label = listing.product.name
+                if listing.variant:
+                    product_label = f"{product_label} · {listing.variant.name}"
+                listing_rows.append({
+                    "sku": listing.seller_sku,
+                    "asin": listing.external_listing_id or "—",
+                    "marketplace": listing.marketplace_id or "—",
+                    "product": product_label,
+                    "store": listing.product.store.name if listing.product.store else "—",
+                    "warehouse": listing.fulfillment_location.name if listing.fulfillment_location else "Auto / retailer stock",
+                    "quantity": listing.last_pushed_quantity if listing.last_pushed_quantity is not None else 0,
+                    "status": listing.status,
+                    "source": "Nuboxed → Amazon",
+                    "error": listing.last_error,
+                })
+        else:
+            listing_rows = [{"sku": x.seller_sku, "asin": x.external_listing_id or "—", "marketplace": x.marketplace_id, "product": f"{x.product.name}{f' · {x.variant.name}' if x.variant else ''}", "store": x.product.store.name, "warehouse": x.fulfillment_location.name if x.fulfillment_location else "Auto / retailer stock", "quantity": x.last_pulled_quantity if x.last_pulled_quantity is not None else (x.last_pushed_quantity if x.last_pushed_quantity is not None else 0), "status": x.status, "source": "Nuboxed → Amazon", "error": x.last_error} for x in listings[:500]]
+        return {
+            "import_status": latest.status if latest else "not_run",
+            "imported_count": result.get("imported_count", 0),
+            "matched_count": result.get("matched_count", 0),
+            "unmatched_count": result.get("unmatched_count", 0),
+            "last_import": latest.created_at.isoformat() if latest else None,
+            "listings": listing_rows,
+        }
+
+    def get(self, request):
+        connection = self._connection()
+        if request.GET.get("snapshot") == "1":
+            return JsonResponse({"ok": True, **self._snapshot(connection)})
+        context = {"connection": connection, "page_title": "Amazon Catalog", "active_group": "Amazon SP-API", "sidebar_groups": grouped_modules(), "snapshot": self._snapshot(connection)}
+        return render(request, self.template_name, context)
+
+    def post(self, request):
+        connection = self._connection()
+        if not connection:
+            return JsonResponse({"ok": False, "message": "Configure the Amazon connection first."}, status=400)
+        pending = MarketplaceSyncJob.objects.filter(connection=connection, job_type=MarketplaceSyncJob.TYPE_PRODUCT_SYNC, direction=MarketplaceSyncJob.DIRECTION_INBOUND, status__in=(MarketplaceSyncJob.STATUS_PENDING, MarketplaceSyncJob.STATUS_PROCESSING)).exists()
+        job = None
+        if not pending:
+            job = enqueue_sync_job(connection, MarketplaceSyncJob.TYPE_PRODUCT_SYNC, MarketplaceSyncJob.DIRECTION_INBOUND)
+        # The catalog button is an explicit manual action. Execute that one
+        # job now so a local install does not silently depend on a Celery
+        # worker being started; the UI remains AJAX and never reloads.
+        if job and request.POST.get("execute") == "1":
+            process_sync_job(job)
+            if job.status == MarketplaceSyncJob.STATUS_FAILED:
+                return JsonResponse({"ok": False, "message": job.error_message or "Amazon listing import failed."}, status=400)
+            return JsonResponse({"ok": True, "message": "Amazon listings imported and reconciled."})
+        return JsonResponse({"ok": True, "message": "Amazon listing import queued. This page will update automatically."})
+
+
+class BackofficeSellerVerificationDocumentsView(SuperAdminRequiredMixin, View):
+    template_name = "backoffice/seller_verification_documents.html"
+
+    def _page_setting(self):
+        setting, _ = SellerVerificationPageSetting.objects.get_or_create(
+            singleton_key="registration",
+            defaults={
+                "section_title": "Seller Verification Documents",
+                "section_description": "Upload documents to speed up your seller verification. All documents are optional during registration — you can upload them later from your profile.",
+            },
+        )
+        return setting
+
+    def _context(self, page_form, document_formset):
+        return {
+            "page_form": page_form,
+            "document_formset": document_formset,
+            "active_group": "Platform",
+            "sidebar_groups": grouped_modules(),
+            "page_title": "Seller Verification Documents",
+        }
+
+    def get(self, request, *args, **kwargs):
+        document_formset_class = modelformset_factory(
+            SellerVerificationDocumentSetting,
+            form=SellerVerificationDocumentSettingForm,
+            extra=0,
+        )
+        return render(
+            request,
+            self.template_name,
+            self._context(
+                SellerVerificationPageSettingForm(instance=self._page_setting()),
+                document_formset_class(queryset=SellerVerificationDocumentSetting.objects.filter(is_active=True)),
+            ),
+        )
+
+    def post(self, request, *args, **kwargs):
+        document_formset_class = modelformset_factory(
+            SellerVerificationDocumentSetting,
+            form=SellerVerificationDocumentSettingForm,
+            extra=0,
+        )
+        page_form = SellerVerificationPageSettingForm(request.POST, instance=self._page_setting())
+        document_formset = document_formset_class(
+            request.POST,
+            queryset=SellerVerificationDocumentSetting.objects.filter(is_active=True),
+        )
+        if page_form.is_valid() and document_formset.is_valid():
+            page_form.save()
+            document_formset.save()
+            messages.success(request, "Seller verification document settings saved.")
+            return redirect("backoffice:seller-verification-documents")
+        return render(request, self.template_name, self._context(page_form, document_formset))
+
+
+class BackofficeSellerVerificationDocumentCreateView(SuperAdminRequiredMixin, View):
+    template_name = "backoffice/seller_verification_document_create.html"
+
+    def get(self, request, *args, **kwargs):
+        return render(request, self.template_name, {
+            "form": SellerVerificationDocumentCreateForm(),
+            "active_group": "Platform", "sidebar_groups": grouped_modules(),
+            "page_title": "Add Seller Verification Field",
+        })
+
+    def post(self, request, *args, **kwargs):
+        form = SellerVerificationDocumentCreateForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "New seller verification field added.")
+            return redirect("backoffice:seller-verification-documents")
+        return render(request, self.template_name, {"form": form, "active_group": "Platform", "sidebar_groups": grouped_modules(), "page_title": "Add Seller Verification Field"})
+
+
+class BackofficeRetailerRegistrationFieldsView(SuperAdminRequiredMixin, View):
+    template_name = "backoffice/retailer_registration_fields.html"
+
+    def _formset(self, *args, **kwargs):
+        return modelformset_factory(RetailerRegistrationFieldSetting, form=RetailerRegistrationFieldForm, extra=0)(*args, queryset=RetailerRegistrationFieldSetting.objects.filter(is_active=True), **kwargs)
+
+    def _context(self, formset, new_form=None):
+        return {"formset": formset, "new_form": new_form or RetailerRegistrationFieldForm(), "active_group": "Platform", "sidebar_groups": grouped_modules(), "page_title": "Retailer Registration Fields"}
+
+    def get(self, request, *args, **kwargs):
+        return render(request, self.template_name, self._context(self._formset()))
+
+    def post(self, request, *args, **kwargs):
+        delete_id = request.POST.get("delete_field")
+        if delete_id:
+            setting = get_object_or_404(RetailerRegistrationFieldSetting, pk=delete_id)
+            if setting.is_system:
+                messages.error(request, "System fields can be hidden but cannot be deleted.")
+            else:
+                setting.delete()
+                messages.success(request, "Retailer registration field removed.")
+            return redirect("backoffice:retailer-registration-fields")
+        if "add_field" in request.POST:
+            new_form = RetailerRegistrationFieldForm(request.POST)
+            if new_form.is_valid():
+                new_form.save()
+                messages.success(request, "Retailer registration field added.")
+                return redirect("/admin/retailer-registration-fields/?added=1")
+            return render(request, self.template_name, self._context(self._formset(), new_form))
+        # Keep the immutable field key server-side as a safety net for an older
+        # cached page that was opened before the hidden field_name input existed.
+        # The key is displayed as read-only in the grid and must never be lost.
+        post_data = request.POST.copy()
+        current_settings = list(RetailerRegistrationFieldSetting.objects.filter(is_active=True))
+        for index, setting in enumerate(current_settings):
+            post_data.setdefault(f"form-{index}-field_name", setting.field_name)
+        formset = self._formset(post_data)
+        if formset.is_valid():
+            formset.save()
+            # Checkbox inputs are omitted from POST when unchecked. Persist
+            # the two toggle values explicitly by form prefix so a hidden
+            # field can never be silently restored to its old value.
+            for form in formset.forms:
+                setting = form.instance
+                prefix = form.prefix
+                setting.is_visible = request.POST.get(f"{prefix}-is_visible") in {"1", "on", "true"}
+                setting.is_required = request.POST.get(f"{prefix}-is_required") in {"1", "on", "true"}
+                setting.save(update_fields=["is_visible", "is_required", "updated_at"])
+            messages.success(request, "Retailer registration fields saved.")
+            return redirect("/admin/retailer-registration-fields/?saved=1")
+        messages.error(request, "Fields could not be saved. Please check the highlighted values.")
+        return render(request, self.template_name, self._context(formset))
+
+
+class BackofficeRetailerRegistrationFieldCreateView(SuperAdminRequiredMixin, View):
+    template_name = "backoffice/retailer_registration_field_create.html"
+
+    def get(self, request, *args, **kwargs):
+        return render(request, self.template_name, {"form": RetailerRegistrationFieldForm(), "active_group": "Platform", "sidebar_groups": grouped_modules(), "page_title": "Add Retailer Registration Field"})
+
+    def post(self, request, *args, **kwargs):
+        form = RetailerRegistrationFieldForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Retailer registration field added.")
+            return redirect("/admin/retailer-registration-fields/?saved=1")
+        return render(request, self.template_name, {"form": form, "active_group": "Platform", "sidebar_groups": grouped_modules(), "page_title": "Add Retailer Registration Field"})
+
+
+class BackofficeRetailerRegistrationFieldDeleteView(SuperAdminRequiredMixin, View):
+    def post(self, request, pk, *args, **kwargs):
+        setting = get_object_or_404(RetailerRegistrationFieldSetting, pk=pk)
+        if setting.is_system:
+            messages.error(request, "System fields can be hidden but cannot be deleted.")
+        else:
+            setting.delete()
+            messages.success(request, "Retailer registration field removed.")
+        return redirect("backoffice:retailer-registration-fields")
 
 class BackofficeHomepageSettingsView(SuperAdminRequiredMixin, View):
     template_name = "backoffice/homepage_settings.html"
@@ -164,6 +971,8 @@ class BackofficeHomepageSettingsView(SuperAdminRequiredMixin, View):
             trust_formset.save()
             review_formset.save()
             messages.success(request, "Homepage settings saved successfully.")
+            if request.POST.get("save_action") == "close":
+                return redirect("backoffice:pages")
             return redirect("backoffice:homepage-settings")
         return render(request, self.template_name, self.page_context(settings_form, trust_formset, review_formset))
 
@@ -188,6 +997,10 @@ class BackofficeLoginView(LoginView):
         return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
+        valid, message = verify_captcha(self.request, "admin_login")
+        if not valid:
+            form.add_error(None, message)
+            return self.form_invalid(form)
         self.request.session[self.session_user_key] = str(form.get_user().pk)
         self.request.session.modified = True
         return redirect(self.get_success_url())
@@ -688,7 +1501,7 @@ class BackofficeFooterSettingsView(SuperAdminRequiredMixin, View):
     def _defaults(self):
         labels = ["All Products", "Best Sellers", "Trending Now", "Our Stores", "Contact Us", "Help Center", "Track Order", "Shipping & Delivery", "Returns & Refunds", "Contact Support", "About Nuboxed", "Our Stores", "Contact Us", "Top Deals", "Privacy Policy", "Terms & Conditions", "Cookie Policy", "Accessibility"]
         targets = ["/products/", "/products/", "#n8-products", "/stores/", "/contact/", "/contact/", "/account/orders/", "/contact/", "/account/orders/", "/contact/", "/", "/stores/", "/contact/", "/products/", "/contact/", "/contact/", "/contact/", "/contact/"]
-        return {"links": [{"text": text, "target": target, "manual": ""} for text, target in zip(labels, targets)], "trust": [{"title": "Secure checkout", "subtitle": "Protected payments"}, {"title": "Fast delivery", "subtitle": "Reliable order updates"}, {"title": "Easy returns", "subtitle": "Simple return process"}, {"title": "Customer support", "subtitle": "Here when you need us"}], "brand_mode": "text", "brand_image": "", "trust_color": "#ffffff", "trust_muted_color": "#8f99aa", "trust_font": "Inter", "copyright": "© 2026 Nuboxed. All rights reserved.", "copyright_align": "left", "payment_images": [], "payment_width": 54, "payment_height": 32, "payment_fit": "contain"}
+        return {"links": [{"text": text, "target": target, "manual": ""} for text, target in zip(labels, targets)], "trust": [{"title": "Secure checkout", "subtitle": "Protected payments"}, {"title": "Fast delivery", "subtitle": "Reliable order updates"}, {"title": "Easy returns", "subtitle": "Simple return process"}, {"title": "Customer support", "subtitle": "Here when you need us"}], "brand_mode": "text", "brand_image": "", "trust_color": "#ffffff", "trust_muted_color": "#8f99aa", "trust_font": "Inter", "copyright": "© 2026 Nuboxed. All rights reserved.", "copyright_align": "left", "show_payment_images": True, "payment_images": [], "payment_width": 54, "payment_width_unit": "px", "payment_height": 32, "payment_height_unit": "px", "payment_fit": "contain"}
 
     def get(self, request, *args, **kwargs):
         setting = Setting.objects.filter(key="footer_customization", is_active=True).first()
@@ -711,7 +1524,11 @@ class BackofficeFooterSettingsView(SuperAdminRequiredMixin, View):
             subtitle = request.POST.get(f"trust_subtitle_{index}", "").strip()
             if title or subtitle:
                 trust.append({"title": title, "subtitle": subtitle})
-        values = {"links": links, "trust": trust, "brand_mode": request.POST.get("brand_mode", "text"), "brand_image": request.POST.get("brand_image", "").strip(), "trust_color": request.POST.get("trust_color", "#ffffff"), "trust_muted_color": request.POST.get("trust_muted_color", "#8f99aa"), "trust_font": request.POST.get("trust_font", "Inter"), "copyright": request.POST.get("copyright", "").strip(), "copyright_align": request.POST.get("copyright_align", "left"), "payment_images": [x.strip() for x in request.POST.get("payment_images", "").splitlines() if x.strip()], "payment_width": max(24, min(int(request.POST.get("payment_width") or 54), 180)), "payment_height": max(20, min(int(request.POST.get("payment_height") or 32), 100)), "payment_fit": request.POST.get("payment_fit", "contain")}
+        dimension_units = {"px", "%", "rem", "em", "vw", "vh", "auto"}
+        width_unit = request.POST.get("payment_width_unit", "px") if request.POST.get("payment_width_unit", "px") in dimension_units else "px"
+        height_unit = request.POST.get("payment_height_unit", "px") if request.POST.get("payment_height_unit", "px") in dimension_units else "px"
+        payment_image = next((x.strip() for x in request.POST.get("payment_images", "").splitlines() if x.strip()), "")
+        values = {"links": links, "trust": trust, "brand_mode": request.POST.get("brand_mode", "text"), "brand_image": request.POST.get("brand_image", "").strip(), "trust_color": request.POST.get("trust_color", "#ffffff"), "trust_muted_color": request.POST.get("trust_muted_color", "#8f99aa"), "trust_font": request.POST.get("trust_font", "Inter"), "copyright": request.POST.get("copyright", "").strip(), "copyright_align": request.POST.get("copyright_align", "left"), "show_payment_images": request.POST.get("show_payment_images") == "on", "payment_images": [payment_image] if payment_image else [], "payment_width": max(1, min(int(request.POST.get("payment_width") or 54), 1000)), "payment_width_unit": width_unit, "payment_height": max(1, min(int(request.POST.get("payment_height") or 32), 1000)), "payment_height_unit": height_unit, "payment_fit": request.POST.get("payment_fit", "contain")}
         brand = BrandSettings.objects.filter(is_active=True).first()
         if brand:
             brand.brand_name = request.POST.get("brand_name", brand.brand_name).strip() or brand.brand_name
@@ -728,11 +1545,44 @@ class BackofficeFooterSettingsView(SuperAdminRequiredMixin, View):
         return redirect("backoffice:footer-settings")
 
 
+class BackofficeCaptchaSettingsView(SuperAdminRequiredMixin, View):
+    template_name = "backoffice/captcha_settings.html"
+
+    def get(self, request, *args, **kwargs):
+        values = get_captcha_settings()
+        values["secret_saved"] = bool(values.get("secret_key"))
+        values["secret_key"] = ""
+        return render(request, self.template_name, {"settings": values, "sidebar_groups": grouped_modules(), "active_group": "Platform", "page_title": "Captcha Settings"})
+
+    def post(self, request, *args, **kwargs):
+        provider = request.POST.get("provider", "turnstile")
+        if provider not in {"turnstile", "hcaptcha", "recaptcha"}:
+            provider = "turnstile"
+        existing = Setting.objects.filter(key="captcha_settings").first()
+        current = existing.value if existing and isinstance(existing.value, dict) else {}
+        secret = request.POST.get("secret_key", "").strip()
+        values = {
+            "enabled": request.POST.get("enabled") == "on",
+            "provider": provider,
+            "alignment": request.POST.get("alignment", "left") if request.POST.get("alignment", "left") in {"left", "center", "right"} else "left",
+            "site_key": request.POST.get("site_key", "").strip(),
+            "secret_key": encrypt(secret) if secret else current.get("secret_key", ""),
+            "protect_customer_login": request.POST.get("protect_customer_login") == "on",
+            "protect_customer_register": request.POST.get("protect_customer_register") == "on",
+            "protect_retailer_login": request.POST.get("protect_retailer_login") == "on",
+            "protect_admin_login": request.POST.get("protect_admin_login") == "on",
+            "protect_public_forms": request.POST.get("protect_public_forms") == "on",
+        }
+        Setting.objects.update_or_create(key="captcha_settings", defaults={"value": values, "is_active": True})
+        messages.success(request, "Captcha settings saved successfully.")
+        return redirect("backoffice:captcha-settings")
+
+
 class BackofficeContactSettingsView(SuperAdminRequiredMixin, View):
     template_name = "backoffice/contact_settings.html"
 
     def defaults(self):
-        return {
+        defaults = {
             "hero_eyebrow": "We are here to help", "hero_title": "Let’s start a conversation.",
             "hero_description": "Questions about an order, product, partnership or your Nuboxed account? Reach the right team and receive clear, friendly support.",
             "info_heading": "Contact information", "info_description": "Choose the fastest channel for your enquiry. Our team will guide you from there.",
@@ -748,6 +1598,7 @@ class BackofficeContactSettingsView(SuperAdminRequiredMixin, View):
             "faq_items": [{"question": "How quickly will I receive a response?", "answer": "Most messages receive a response within two business hours during support hours. Complex order or payment cases may require additional verification."}, {"question": "What information should I include?", "answer": "Include your order number, registered email or phone number, and a clear description of the issue."}, {"question": "Can I contact you about a partnership?", "answer": "Yes. Select Business partnership in the form or email business@nuboxed.com so the enquiry reaches the appropriate team."}],
             "hero_eyebrow_color": "#ffffff", "hero_eyebrow_font": "Inter", "hero_eyebrow_size": "12", "hero_title_color": "#ffffff", "hero_title_font": "Manrope", "hero_title_size": "72", "hero_description_color": "#d0d5dd", "hero_description_font": "Inter", "hero_description_size": "18", "info_heading_color": "#ffffff", "info_heading_font": "Manrope", "info_heading_size": "30", "info_description_color": "#e7e5ff", "info_description_font": "Inter", "info_description_size": "16", "form_heading_color": "#111827", "form_heading_font": "Manrope", "form_heading_size": "30", "form_description_color": "#667085", "form_description_font": "Inter", "form_description_size": "16", "support_eyebrow_color": "#e04420", "support_eyebrow_font": "Inter", "support_eyebrow_size": "12", "support_heading_color": "#111827", "support_heading_font": "Manrope", "support_heading_size": "46", "support_description_color": "#667085", "support_description_font": "Inter", "support_description_size": "16", "support_card_title_color": "#111827", "support_card_title_font": "Manrope", "support_card_title_size": "19", "support_card_text_color": "#667085", "support_card_text_font": "Inter", "support_card_text_size": "14", "faq_eyebrow_color": "#e04420", "faq_eyebrow_font": "Inter", "faq_eyebrow_size": "12", "faq_heading_color": "#111827", "faq_heading_font": "Manrope", "faq_heading_size": "46", "faq_description_color": "#667085", "faq_description_font": "Inter", "faq_description_size": "16", "faq_question_color": "#111827", "faq_question_font": "Inter", "faq_question_size": "16", "faq_answer_color": "#667085", "faq_answer_font": "Inter", "faq_answer_size": "16",
         }
+        return defaults
 
     def get(self, request, *args, **kwargs):
         values = self.defaults()
@@ -763,6 +1614,8 @@ class BackofficeContactSettingsView(SuperAdminRequiredMixin, View):
         values["body_font_size"] = request.POST.get("body_font_size", "16")
         Setting.objects.update_or_create(key="contact_page_customization", defaults={"value": values, "is_active": True})
         messages.success(request, "Contact page settings saved successfully.")
+        if request.POST.get("save_action") == "close":
+            return redirect("backoffice:pages")
         return redirect("backoffice:contact-settings")
 
 
@@ -770,23 +1623,29 @@ class BackofficeProductPageSettingsView(SuperAdminRequiredMixin, View):
     template_name = "backoffice/product_page_settings.html"
 
     def defaults(self):
-        return {
+        defaults = {
             "visit_store_prefix": "Visit the", "reviews_label": "Reviews", "highlight_1": "Verified product data from Nuboxed", "highlight_2": "Store-aware delivery estimate and seller comparison", "highlight_3": "Shop confidently from verified retailers.", "sale_countdown": "Hurry up! Sale ends in:", "delivery_label": "Est. Delivery Time", "add_to_cart": "ADD TO CART", "buy_now": "BUY NOW", "add_wishlist": "Add to Wishlist", "add_compare": "Add to Compare", "share_label": "Share", "policy_1": "Free Shipping & Returns: Available on all orders over $99.", "policy_2": "Estimated Delivery: Orders are typically dispatched within 24 hours.", "policy_3": "Security Policy: Ensuring top-level security for your data and transactions.", "description_tab": "Description", "details_tab": "Product Details", "description_heading": "Its much more than mobile product", "description_fallback": "Shop the most popular featured products.", "description_note": "Your trusted marketplace page, wired to admin product data and structured for fast comparison, clear pricing, and clean buying actions.", "specifications_heading": "PRODUCT DETAILS", "related_heading": "You might also like", "category_heading_suffix": "in the same category:", "comments_heading": "Comments", "grade_label": "Grade", "write_review": "WRITE YOUR REVIEW", "view_all_comments": "View all comments", "customer_voice": "Customer voice", "all_comments": "All comments", "review_modal_heading": "Write your review", "review_title_label": "Title", "review_name_label": "Your name", "review_text_label": "Review", "review_terms": "I agree to the terms and the privacy policy", "required_note": "* Required fields", "cancel_button": "CANCEL", "send_button": "SEND", "review_success": "Thank you. Your review has been submitted successfully.", "quick_brand_fallback": "Store", "quick_delivery": "Est. Delivery Time 2-3 Days", "quick_reviews": "Reviews", "quick_point_1": "Verified product data from Nuboxed", "quick_point_2": "Store-aware delivery estimate and seller comparison", "quick_ram_label": "RAM:", "quick_storage_label": "Internal Storage:", "quick_color_label": "Color:", "quick_add_to_cart": "ADD TO CART", "quick_buy_now": "BUY NOW", "quick_wishlist": "Add to Wishlist", "quick_compare": "Add to Compare", "quick_stock": "Available Stock", "quick_share": "Share", "quick_save_prefix": "Save",
         }
+        defaults["show_sale_countdown"] = "1"
+        return defaults
 
     def get(self, request, *args, **kwargs):
         values = self.defaults()
         values.update(Setting.objects.filter(key="product_page_customization", is_active=True).values_list("value", flat=True).first() or {})
+        values["policy_1"] = values.get("policy_1", "").replace("$99", "€99")
         values.setdefault("show_share_icons", "1")
         values.setdefault("share_platforms", ["facebook", "x", "linkedin", "pinterest", "email"])
         return render(request, self.template_name, {"settings": values, "sidebar_groups": grouped_modules(), "active_group": "Page Settings", "page_title": "Product Page Settings"})
 
     def post(self, request, *args, **kwargs):
         values = {key: request.POST.get(key, "").strip() for key in self.defaults()}
+        values["show_sale_countdown"] = "1" if request.POST.get("show_sale_countdown") == "1" else "0"
         values["show_share_icons"] = "1" if request.POST.get("show_share_icons") == "1" else "0"
         values["share_platforms"] = [item for item in request.POST.getlist("share_platforms") if item in {"facebook", "x", "linkedin", "pinterest", "email"}]
         Setting.objects.update_or_create(key="product_page_customization", defaults={"value": values, "is_active": True})
         messages.success(request, "Product page settings saved successfully.")
+        if request.POST.get("save_action") == "close":
+            return redirect("backoffice:pages")
         return redirect("backoffice:product-page-settings")
 
 
@@ -932,6 +1791,10 @@ class BackofficeModuleListView(SuperAdminRequiredMixin, RegistryMixin, TemplateV
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         module, config = self.get_module_config()
+        if module == "brands":
+            # Backfill older Device Models brands whenever the Brands page opens.
+            for device_brand in PhoneBrand.objects.all():
+                sync_device_brand_to_catalog_brand(device_brand)
         queryset = self.get_base_queryset()
         search = self.request.GET.get("q", "").strip()
         status = self.request.GET.get("status", "").strip()
@@ -1058,6 +1921,7 @@ class BackofficeModuleCreateView(SuperAdminRequiredMixin, RegistryMixin, CreateV
             product.is_active = True
             product.save()
             self.object = product
+            sync_product_amazon_mapping(product, form.cleaned_data.get("amazon_seller_sku"), form.cleaned_data.get("amazon_asin"))
             form.save_product_attributes(product)
             form.sync_product_variants(product)
             sync_mixin = ProductAssetSyncMixin()
@@ -1214,6 +2078,7 @@ class BackofficeModuleUpdateView(SuperAdminRequiredMixin, RegistryMixin, UpdateV
         if module == "attributes":
             self.save_color_values(self.object, form.cleaned_data.get("color_values_payload"))
         elif module in ("products", "featured-products"):
+            sync_product_amazon_mapping(self.object, form.cleaned_data.get("amazon_seller_sku"), form.cleaned_data.get("amazon_asin"))
             from apps.catalog.views import ProductAssetSyncMixin
             sync_mixin = ProductAssetSyncMixin()
             sync_mixin.request = self.request
@@ -1858,6 +2723,15 @@ class PhoneModelsView(SuperAdminRequiredMixin, RegistryMixin, TemplateView):
         return presets
 
 
+class DeviceCatalogPresetSyncView(SuperAdminRequiredMixin, View):
+    """Add the maintained device catalogue without touching admin-created data."""
+
+    def post(self, request):
+        stats = seed_device_catalog()
+        stats.update(rebuild_device_options_and_variants())
+        return JsonResponse({"success": True, **stats})
+
+
 class PhonePlatformCreateView(SuperAdminRequiredMixin, View):
     """POST only – create a platform (Apple / Android)."""
     def post(self, request):
@@ -1908,6 +2782,7 @@ class PhoneBrandCreateView(SuperAdminRequiredMixin, View):
             slug = f"{base_slug}-{counter}"
             counter += 1
         obj = PhoneBrand.objects.create(platform=platform, name=name, slug=slug)
+        sync_device_brand_to_catalog_brand(obj)
         return JsonResponse({"id": str(obj.id), "name": obj.name, "platform_id": str(platform.id)})
 
 
@@ -1916,8 +2791,10 @@ class PhoneBrandUpdateView(SuperAdminRequiredMixin, View):
         brand = get_object_or_404(PhoneBrand, id=pk)
         name = request.POST.get("name", "").strip()
         if name:
+            previous_name = brand.name
             brand.name = name
             brand.save(update_fields=["name", "updated_at"])
+            sync_device_brand_to_catalog_brand(brand, previous_name=previous_name)
         return JsonResponse({"id": str(brand.id), "name": brand.name})
 
 
@@ -1934,6 +2811,7 @@ class PhoneBrandRestoreView(SuperAdminRequiredMixin, View):
         brand = get_object_or_404(PhoneBrand, id=pk)
         brand.is_active = True
         brand.save(update_fields=["is_active", "updated_at"])
+        sync_device_brand_to_catalog_brand(brand)
         return JsonResponse({"success": True, "status": "restored"})
 
 
@@ -2315,6 +3193,58 @@ class PhoneModelsAPIView(SuperAdminRequiredMixin, View):
             for m in qs
         ]
         return JsonResponse({"models": data})
+
+
+class PhoneModelsAdminAPIView(SuperAdminRequiredMixin, View):
+    """Filterable, paginated catalogue explorer for the large Device Models registry."""
+
+    def get(self, request):
+        qs = PhoneModel.objects.select_related("brand", "platform").prefetch_related("variants").filter(is_active=True)
+        platform_id = request.GET.get("platform_id", "").strip()
+        brand_id = request.GET.get("brand_id", "").strip()
+        query = request.GET.get("q", "").strip()
+        variant_query = request.GET.get("variant", "").strip()
+        if platform_id:
+            qs = qs.filter(platform_id=platform_id)
+        if brand_id:
+            qs = qs.filter(brand_id=brand_id)
+        if query:
+            qs = qs.filter(Q(name__icontains=query) | Q(brand__name__icontains=query) | Q(platform__name__icontains=query))
+        if variant_query:
+            qs = qs.filter(variants__is_active=True).filter(
+                Q(variants__ram__icontains=variant_query)
+                | Q(variants__storage__icontains=variant_query)
+                | Q(variants__color__icontains=variant_query)
+            )
+        qs = qs.distinct().order_by("platform__name", "brand__name", "sort_order", "name")
+        try:
+            page_number = max(1, int(request.GET.get("page", 1)))
+        except (TypeError, ValueError):
+            page_number = 1
+        try:
+            page_size = min(50, max(10, int(request.GET.get("page_size", 20))))
+        except (TypeError, ValueError):
+            page_size = 20
+        page = Paginator(qs, page_size).get_page(page_number)
+        results = []
+        for model in page.object_list:
+            variants = [
+                {"id": str(v.id), "label": v.display_name, "ram": v.ram, "storage": v.storage, "color": v.color}
+                for v in model.variants.filter(is_active=True).order_by("sort_order", "storage", "color")
+            ]
+            results.append({
+                "id": str(model.id), "name": model.name, "display_name": model.display_name,
+                "brand": model.brand.name if model.brand else "—", "platform": model.platform.get_name_display(),
+                "platform_id": str(model.platform_id), "released_year": model.released_year,
+                "variant_count": len(variants), "variants": variants,
+            })
+        return JsonResponse({
+            "results": results,
+            "page": page.number,
+            "pages": page.paginator.num_pages,
+            "total": page.paginator.count,
+            "page_size": page_size,
+        })
 
 
 class PhoneBrandsAPIView(SuperAdminRequiredMixin, View):

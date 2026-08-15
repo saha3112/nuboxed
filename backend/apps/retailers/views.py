@@ -27,9 +27,12 @@ from apps.settings_app.models import SaleCountdownSetting
 from apps.orders.models import Coupon, Order
 from apps.orders.forms import OrderStatusForm, OrderWorkflowSettingForm
 from apps.orders.services import build_order_timeline, coupon_feature_enabled, get_order_workflow_setting, get_order_workflow_setting_for_order, update_order_status, generate_delivery_label
+from apps.marketplace.models import AmazonOrderTracking
+from apps.marketplace.models import MarketplaceSetting
 from apps.payments.models import Invoice, PaymentTransaction
 from apps.payments.services import generate_invoice_for_order, process_refund, amount_in_words
 from apps.common.security import build_public_url
+from apps.common.captcha import verify_captcha
 from decimal import Decimal, InvalidOperation
 from django.template.response import TemplateResponse
 
@@ -54,6 +57,10 @@ class RetailerLoginView(LoginView):
         return super().dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
+        valid, message = verify_captcha(self.request, "retailer_login")
+        if not valid:
+            form.add_error(None, message)
+            return self.form_invalid(form)
         self.request.session[self.session_user_key] = str(form.get_user().pk)
         self.request.session.modified = True
         return redirect(self.get_success_url())
@@ -153,6 +160,8 @@ class RetailerPortalMixin(LoginRequiredMixin, UserPassesTestMixin):
                 "primary_store": self.get_primary_store(retailer),
                 "can_manage_sale_countdown": self.has_retailer_permission("sale_countdown.manage"),
                 "can_manage_coupons": coupon_feature_enabled(),
+                "amazon_retailer_menu_enabled": (MarketplaceSetting.objects.filter(key="amazon_retailer_menu_enabled").values_list("value", flat=True).first() or {}).get("enabled", False),
+                "amazon_orders_retailer_menu_enabled": (MarketplaceSetting.objects.filter(key="amazon_orders_retailer_menu_enabled").values_list("value", flat=True).first() or {}).get("enabled", False),
             }
         )
         return context
@@ -197,6 +206,24 @@ class RetailerPortalMixin(LoginRequiredMixin, UserPassesTestMixin):
         return queryset
 
 
+class RetailerAmazonOrdersView(RetailerPortalMixin, TemplateView):
+    template_name = "retailer/amazon_orders.html"
+
+    def test_func(self):
+        enabled = (MarketplaceSetting.objects.filter(key="amazon_orders_retailer_menu_enabled").values_list("value", flat=True).first() or {}).get("enabled", False)
+        return enabled and super().test_func()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        retailer = self.get_retailer()
+        stores = self.get_store_queryset(retailer)
+        orders = AmazonOrderTracking.objects.filter(
+            Q(retailer=retailer) | Q(retailer__isnull=True, connection__retailer=retailer)
+        ).filter(Q(store__isnull=True) | Q(store__in=stores)).select_related("store", "local_order", "connection").prefetch_related("items").order_by("-purchase_date", "-created_at")
+        context.update({"page_title": "Amazon Orders", "amazon_orders": orders[:200], "amazon_order_count": orders.count(), "amazon_pending_count": orders.filter(amazon_order_status__in=["Pending", "Unshipped", "PartiallyShipped"]).count()})
+        return context
+
+
 class RetailerSaleCountdownListView(RetailerPortalMixin, TemplateView):
     template_name = "retailer/sale_countdown_settings.html"
 
@@ -208,7 +235,8 @@ class RetailerSaleCountdownListView(RetailerPortalMixin, TemplateView):
         retailer = self.get_retailer()
         context.update({
             "page_title": "Sale Countdown",
-            "sale_settings": SaleCountdownSetting.objects.filter(retailer=retailer).select_related("category").order_by("category__name", "-updated_at"),
+            "sale_settings": SaleCountdownSetting.objects.filter(retailer=retailer, deleted_at__isnull=True).select_related("category").order_by("category__name", "-updated_at"),
+            "deleted_sale_settings": SaleCountdownSetting.objects.filter(retailer=retailer, deleted_at__isnull=False).select_related("category").order_by("-deleted_at"),
             "form": RetailerSaleCountdownSettingForm(retailer=retailer),
         })
         return context
@@ -225,6 +253,20 @@ class RetailerSaleCountdownListView(RetailerPortalMixin, TemplateView):
         return self.render_to_response(context)
 
 
+class RetailerSaleCountdownOptionsView(RetailerPortalMixin, View):
+    def get(self, request, *args, **kwargs):
+        retailer = self.get_retailer()
+        category_id = request.GET.get("category_id")
+        product_id = request.GET.get("product_id")
+        if product_id:
+            variants = ProductVariant.objects.filter(product_id=product_id, product__retailer=retailer, deleted_at__isnull=True).order_by("name")
+            return JsonResponse({"variants": [{"id": str(v.pk), "name": v.name} for v in variants]})
+        products = Product.objects.filter(retailer=retailer, is_active=True, deleted_at__isnull=True).select_related("store")
+        if category_id:
+            products = products.filter(category_id=category_id)
+        return JsonResponse({"products": [{"id": str(p.pk), "name": f"{p.name} — {p.store.name}" if p.store_id else p.name} for p in products.order_by("name")]})
+
+
 class RetailerSaleCountdownUpdateView(RetailerPortalMixin, UpdateView):
     template_name = "retailer/sale_countdown_edit.html"
     form_class = RetailerSaleCountdownSettingForm
@@ -233,7 +275,7 @@ class RetailerSaleCountdownUpdateView(RetailerPortalMixin, UpdateView):
         return super().test_func() and self.has_retailer_permission("sale_countdown.manage")
 
     def get_queryset(self):
-        return SaleCountdownSetting.objects.filter(retailer=self.get_retailer())
+        return SaleCountdownSetting.objects.filter(retailer=self.get_retailer(), deleted_at__isnull=True)
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
@@ -249,8 +291,47 @@ class RetailerSaleCountdownDeleteView(RetailerPortalMixin, View):
         return super().test_func() and self.has_retailer_permission("sale_countdown.manage")
 
     def post(self, request, pk):
-        SaleCountdownSetting.objects.filter(pk=pk, retailer=self.get_retailer()).update(is_active=False)
-        messages.success(request, "Sale countdown setting disabled.")
+        setting = get_object_or_404(SaleCountdownSetting, pk=pk, retailer=self.get_retailer(), deleted_at__isnull=True)
+        setting.is_active = not setting.is_active
+        setting.save(update_fields=["is_active", "updated_at"])
+        messages.success(request, f"Sale countdown setting {'enabled' if setting.is_active else 'disabled'}.")
+        return redirect("retailers:sale-countdown")
+
+
+class RetailerSaleCountdownTrashView(RetailerPortalMixin, View):
+    def test_func(self):
+        return super().test_func() and self.has_retailer_permission("sale_countdown.manage")
+
+    def post(self, request, pk):
+        setting = get_object_or_404(SaleCountdownSetting, pk=pk, retailer=self.get_retailer(), deleted_at__isnull=True)
+        setting.deleted_at = timezone.now()
+        setting.is_active = False
+        setting.save(update_fields=["deleted_at", "is_active", "updated_at"])
+        messages.success(request, "Sale countdown rule moved to trash.")
+        return redirect("retailers:sale-countdown")
+
+
+class RetailerSaleCountdownRestoreView(RetailerPortalMixin, View):
+    def test_func(self):
+        return super().test_func() and self.has_retailer_permission("sale_countdown.manage")
+
+    def post(self, request, pk):
+        setting = get_object_or_404(SaleCountdownSetting, pk=pk, retailer=self.get_retailer(), deleted_at__isnull=False)
+        setting.deleted_at = None
+        setting.is_active = True
+        setting.save(update_fields=["deleted_at", "is_active", "updated_at"])
+        messages.success(request, "Sale countdown rule restored.")
+        return redirect("retailers:sale-countdown")
+
+
+class RetailerSaleCountdownPermanentDeleteView(RetailerPortalMixin, View):
+    def test_func(self):
+        return super().test_func() and self.has_retailer_permission("sale_countdown.manage")
+
+    def post(self, request, pk):
+        setting = get_object_or_404(SaleCountdownSetting, pk=pk, retailer=self.get_retailer(), deleted_at__isnull=False)
+        setting.delete()
+        messages.success(request, "Sale countdown rule permanently deleted.")
         return redirect("retailers:sale-countdown")
 
 
@@ -461,6 +542,17 @@ class RetailerProfileUpdateView(RetailerPortalMixin, UpdateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["page_title"] = "Retailer Profile"
+        from apps.retailers.models import SellerVerificationDocumentSetting, SellerVerificationPageSetting
+        page_setting = SellerVerificationPageSetting.objects.filter(singleton_key="registration", is_active=True).first()
+        docs = SellerVerificationDocumentSetting.objects.filter(is_active=True, is_visible=True)
+        context["seller_verification_page_settings"] = page_setting
+        context["seller_verification_documents"] = docs if page_setting and page_setting.is_visible else docs.none()
+        context["seller_verification_documents_map"] = {item.field_name: item for item in context["seller_verification_documents"]}
+        context["seller_verification_dynamic_documents"] = context["seller_verification_documents"].exclude(field_name__in=RetailerProfileForm.DOCUMENT_FIELDS)
+        context["seller_verification_visible_fields"] = list(context["seller_verification_documents"].values_list("field_name", flat=True))
+        from apps.retailers.models import RetailerRegistrationFieldSetting
+        context["registration_field_settings"] = RetailerRegistrationFieldSetting.objects.filter(is_active=True, is_visible=True)
+        context["registration_field_settings_map"] = {item.field_name: item for item in context["registration_field_settings"]}
         return context
 
 
@@ -506,7 +598,7 @@ class RetailerStoreCreateView(RetailerPortalMixin, CreateView):
 
         store = form.save(commit=False)
         store.retailer = self.get_retailer()
-        store.slug = unique_slug(Store, store.name)
+        store.slug = form.cleaned_data.get("slug") or unique_slug(Store, store.name)
         store.save()
         self.object = store
         messages.success(self.request, "Store created successfully.")
@@ -545,6 +637,19 @@ class RetailerStoreUpdateView(RetailerPortalMixin, UpdateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["page_title"] = "Edit Store"
+        return context
+
+
+class RetailerStorePreviewView(RetailerPortalMixin, TemplateView):
+    template_name = "retailer/store_preview.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        retailer = self.get_retailer()
+        stores = self.get_store_queryset(retailer).filter(
+            status=Store.STATUS_ACTIVE, is_active=True
+        ).order_by("name")
+        context.update({"page_title": "Store Preview", "preview_stores": stores})
         return context
 
 
@@ -648,9 +753,33 @@ from apps.accounts.models import Account, AccountMembership
 from apps.retailers.forms import RetailerRegistrationForm
 from django.contrib import messages
 
+@method_decorator(never_cache, name="dispatch")
 class RetailerRegisterView(FormView):
     template_name = "retailer/register.html"
     form_class = RetailerRegistrationForm
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        from apps.retailers.models import SellerVerificationDocumentSetting, SellerVerificationPageSetting
+        page_setting = SellerVerificationPageSetting.objects.filter(
+            singleton_key="registration", is_active=True
+        ).first()
+        context["seller_verification_page_settings"] = page_setting
+        context["seller_verification_documents"] = (
+            SellerVerificationDocumentSetting.objects.filter(is_active=True, is_visible=True)
+            if page_setting and page_setting.is_visible else SellerVerificationDocumentSetting.objects.none()
+        )
+        context["seller_verification_documents_map"] = {
+            item.field_name: item for item in context["seller_verification_documents"]
+        }
+        context["seller_verification_visible_fields"] = list(
+            context["seller_verification_documents_map"].keys()
+        )
+        context["seller_verification_dynamic_documents"] = context["seller_verification_documents"].exclude(field_name__in=RetailerRegistrationForm.DOCUMENT_FIELDS)
+        from apps.retailers.models import RetailerRegistrationFieldSetting
+        context["registration_field_settings"] = RetailerRegistrationFieldSetting.objects.filter(is_active=True, is_visible=True)
+        context["registration_field_settings_map"] = {item.field_name: item for item in context["registration_field_settings"]}
+        return context
     
     def form_valid(self, form):
         from django.utils.text import slugify
@@ -705,6 +834,19 @@ class RetailerRegisterView(FormView):
             fssai_license=form.cleaned_data.get("fssai_license"),
             status=Retailer.STATUS_APPROVED
         )
+        from apps.retailers.models import RetailerRegistrationFieldSetting
+        retailer.custom_registration_data = {
+            setting.field_name: form.cleaned_data.get(setting.field_name) or ""
+            for setting in RetailerRegistrationFieldSetting.objects.filter(is_active=True, is_system=False)
+            if setting.field_name in form.cleaned_data
+        }
+        retailer.save(update_fields=["custom_registration_data", "updated_at"])
+
+        from apps.retailers.models import SellerVerificationDocumentSetting, SellerVerificationDocumentUpload
+        for setting in SellerVerificationDocumentSetting.objects.filter(is_active=True, is_visible=True):
+            uploaded = form.cleaned_data.get(setting.field_name)
+            if uploaded and not hasattr(Retailer, setting.field_name):
+                SellerVerificationDocumentUpload.objects.create(retailer=retailer, setting=setting, file=uploaded)
         
         membership = AccountMembership.objects.create(
             account=account,

@@ -11,7 +11,9 @@ BASE_DIR = Path(__file__).resolve().parents[3]
 SECRET_KEY = os.getenv("SECRET_KEY", "change-me")
 DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 ALLOWED_HOSTS = [host.strip() for host in os.getenv("ALLOWED_HOSTS", "").split(",") if host.strip()]
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if origin.strip()]
 PUBLIC_APP_URL = os.getenv("PUBLIC_APP_URL", "").strip().rstrip("/")
+DEVICE_CATALOG_FEED_URL = os.getenv("DEVICE_CATALOG_FEED_URL", "").strip()
 
 INSTALLED_APPS = [
     # "jazzmin",  # Temporarily disabled
@@ -55,6 +57,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "django.middleware.gzip.GZipMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -97,26 +100,18 @@ DATABASES = {
         "PORT": os.getenv("DB_PORT", "3306"),
         "OPTIONS": {
             "charset": "utf8mb4",
+            "collation": "utf8mb4_general_ci",
+            "init_command": "SET NAMES utf8mb4 COLLATE utf8mb4_general_ci",
         },
     }
 }
 
 AUTH_USER_MODEL = "users.User"
 
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
-    },
-    {
-        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
-    },
-]
+# Customers may choose any non-empty password. The form still requires the
+# password fields and confirmation, but does not reject passwords based on
+# username similarity, length, common-password, or numeric checks.
+AUTH_PASSWORD_VALIDATORS = []
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
@@ -190,6 +185,20 @@ CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_BEAT_SCHEDULE = {
+    "marketplace-sync-every-five-minutes": {
+        "task": "marketplace.process_jobs",
+        "schedule": 300.0,
+    },
+    "amazon-production-token-refresh": {
+        "task": "marketplace.refresh_production_tokens",
+        "schedule": 3300.0,
+    },
+    "device-catalog-daily-sync": {
+        "task": "catalog.sync_device_catalog",
+        "schedule": 86400.0,
+    },
+}
 
 USE_S3 = os.getenv("USE_S3", "False").lower() == "true"
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID", "")

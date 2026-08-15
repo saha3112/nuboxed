@@ -2,6 +2,14 @@
 {% block content %}
 <style>
 .footer-settings-page{max-width:1180px;margin:auto;padding:30px 28px 60px}.footer-settings-hero,.footer-settings-card{border:1px solid var(--border);border-radius:18px;background:var(--surface);box-shadow:0 10px 26px rgba(15,23,42,.06)}.footer-settings-hero{padding:28px 30px;margin-bottom:20px}.footer-settings-hero h1{margin:0 0 8px}.footer-settings-hero p{margin:0;color:var(--muted);line-height:1.6}.footer-settings-card{padding:24px 28px;margin-bottom:18px}.footer-settings-card h2{margin:0 0 6px;font-size:18px}.footer-settings-card>p{margin:0 0 20px;color:var(--muted);font-size:13px}.footer-settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.footer-settings-field{display:flex;flex-direction:column;gap:7px}.footer-settings-field.full{grid-column:1/-1}.footer-settings-field label{font-size:13px;font-weight:800;color:var(--text-main)}.footer-settings-field input,.footer-settings-field select,.footer-settings-field textarea{width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text-main);font:inherit}.footer-settings-field textarea{min-height:95px;resize:vertical}.footer-link-row,.footer-trust-row{display:grid;grid-template-columns:1fr 1.2fr 1.2fr auto;gap:10px;align-items:end;padding:14px 0;border-bottom:1px solid var(--border)}.footer-trust-row{grid-template-columns:1fr 1.5fr}.footer-link-row:last-child,.footer-trust-row:last-child{border-bottom:0}.footer-gallery-row{display:flex;gap:10px;align-items:flex-start}.footer-gallery-row textarea{flex:1}.footer-settings-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:24px}.footer-settings-actions button{min-height:44px;padding:0 18px}.footer-delete-row{width:40px;height:40px;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:#b42318;cursor:pointer}.footer-hint{color:var(--muted);font-size:12px;line-height:1.5}@media(max-width:760px){.footer-settings-page{padding:20px 14px 40px}.footer-settings-grid{grid-template-columns:1fr}.footer-settings-field.full{grid-column:auto}.footer-link-row,.footer-trust-row{grid-template-columns:1fr}.footer-delete-row{width:100%}}
+ .footer-settings-field:has(input[type="color"]){display:flex;flex-direction:row;align-items:center;gap:12px;min-height:46px;padding:10px 12px;border:1px solid color-mix(in srgb,var(--border) 80%,var(--primary));border-radius:14px;background:color-mix(in srgb,var(--surface) 94%,var(--bg));transition:border-color .2s,box-shadow .2s}.footer-settings-field:has(input[type="color"]):focus-within{border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 14%,transparent)}.footer-settings-field:has(input[type="color"]) label{flex:1;margin:0}.footer-settings-page input[type="color"]{appearance:none;-webkit-appearance:none;width:42px!important;height:42px!important;min-width:42px!important;padding:3px!important;border:2px solid var(--surface)!important;border-radius:50%!important;background:transparent!important;overflow:hidden;cursor:pointer;box-shadow:0 0 0 1px var(--border),0 3px 9px rgba(15,23,42,.14);transition:transform .2s,box-shadow .2s}.footer-settings-page input[type="color"]:hover{transform:scale(1.08);box-shadow:0 0 0 2px var(--primary),0 5px 14px rgba(15,23,42,.2)}.footer-settings-page input[type="color"]::-webkit-color-swatch-wrapper{padding:0!important;border-radius:50%}.footer-settings-page input[type="color"]::-webkit-color-swatch{border:0!important;border-radius:50%}.footer-settings-page input[type="color"]::-moz-color-swatch{border:0!important;border-radius:50%}.footer-settings-page .color-value,.contact-settings-page .color-value{font:600 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--muted);letter-spacing:.03em}
+<style>
+.footer-payment-controls{padding-top:20px}.footer-live-preview{margin-top:18px;padding:18px;border:1px solid color-mix(in srgb,var(--primary) 28%,var(--border));border-radius:16px;background:linear-gradient(135deg,#111827,#1f2937);color:#fff}.footer-live-preview-label{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;color:#cbd5e1;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.footer-live-preview-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 5px rgb(34 197 94 / .12)}.footer-live-preview-bottom{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-top:16px;border-top:1px solid rgb(255 255 255 / .12)}.footer-live-preview-copy{color:#cbd5e1;font-size:13px}.footer-live-preview-payments{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-height:38px;flex-wrap:wrap}.footer-live-preview-payments img{display:block}.footer-live-preview-empty{color:#94a3b8;font-size:12px}@media(max-width:760px){.footer-live-preview-bottom{align-items:flex-start;flex-direction:column}.footer-live-preview-payments{justify-content:flex-start}}
+.footer-payment-controls .footer-settings-field>label{display:inline-flex;flex-direction:row;align-items:center;gap:10px;width:max-content}.footer-payment-controls input[type="checkbox"]{width:18px!important;height:18px;min-width:18px;padding:0;border:0;border-radius:4px;accent-color:var(--primary);cursor:pointer}
+.footer-settings-page .footer-gallery-row:has(#payment-images),.footer-settings-page .footer-gallery-row:has(#brand-image){align-items:center;padding:5px 8px;border:1px solid color-mix(in srgb,var(--primary) 20%,var(--border));border-radius:13px;background:color-mix(in srgb,var(--surface) 97%,var(--bg));box-shadow:0 4px 12px rgb(15 23 42 / .04)}.footer-settings-page #payment-images{height:58px;min-height:58px;max-height:140px;padding:9px 12px;border:0;border-radius:9px;background:transparent;line-height:1.45;resize:vertical}.footer-settings-page .footer-gallery-row:has(#payment-images) #payment-images{box-shadow:none}.footer-settings-page #brand-image{height:42px;min-height:42px;padding:9px 12px;border:0;background:transparent}.footer-settings-page .footer-gallery-row:has(#payment-images) .ghost-button,.footer-settings-page .footer-gallery-row:has(#brand-image) .ghost-button{display:inline-flex;align-items:center;justify-content:center;align-self:center;min-width:104px;height:40px;padding:0 14px;border:0;border-radius:9px;background:var(--primary);color:#fff;font-weight:800;white-space:nowrap;box-shadow:0 5px 12px color-mix(in srgb,var(--primary) 18%,transparent);transition:transform .2s,box-shadow .2s,background .2s}.footer-settings-page .footer-gallery-row:has(#payment-images) .ghost-button:hover,.footer-settings-page .footer-gallery-row:has(#brand-image) .ghost-button:hover{transform:translateY(-1px);background:color-mix(in srgb,var(--primary) 88%,#000);box-shadow:0 8px 16px color-mix(in srgb,var(--primary) 25%,transparent)}.footer-settings-page .footer-gallery-row:has(#payment-images) .ghost-button i,.footer-settings-page .footer-gallery-row:has(#brand-image) .ghost-button i{margin-right:6px;font-size:16px}@media(max-width:600px){.footer-settings-page .footer-gallery-row:has(#payment-images),.footer-settings-page .footer-gallery-row:has(#brand-image){flex-direction:column;align-items:stretch;padding:7px}.footer-settings-page .footer-gallery-row:has(#payment-images) .ghost-button,.footer-settings-page .footer-gallery-row:has(#brand-image) .ghost-button{width:100%;height:40px}}
+</style>
+<style>
+.footer-payment-controls{padding-top:20px}.footer-live-preview{margin-top:18px;padding:18px;border:1px solid color-mix(in srgb,var(--primary) 28%,var(--border));border-radius:16px;background:linear-gradient(135deg,#111827,#1f2937);color:#fff}.footer-live-preview-label{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;color:#cbd5e1;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}.footer-live-preview-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 5px rgb(34 197 94 / .12)}.footer-live-preview-bottom{display:flex;align-items:center;justify-content:space-between;gap:18px;padding-top:16px;border-top:1px solid rgb(255 255 255 / .12)}.footer-live-preview-copy{color:#cbd5e1;font-size:13px}.footer-live-preview-payments{display:flex;align-items:center;justify-content:flex-end;gap:8px;min-height:38px;flex-wrap:wrap}.footer-live-preview-payments img{display:block}.footer-live-preview-empty{color:#94a3b8;font-size:12px}@media(max-width:760px){.footer-live-preview-bottom{align-items:flex-start;flex-direction:column}.footer-live-preview-payments{justify-content:flex-start}}
 </style>
 <section class="footer-settings-page">
     <div class="footer-settings-hero"><p class="eyebrow">Platform / Storefront presentation</p><h1>Footer Settings</h1><p>Control footer links, trust messages, copyright alignment and payment badges from one place.</p></div>
@@ -11,7 +19,9 @@
         <section class="footer-settings-card"><h2>Trust highlights</h2><p>Update the four reassurance cards shown above the footer copyright row.</p><div id="footer-trust-rows"></div></section>
         <section class="footer-settings-card"><h2>Footer typography and colors</h2><p>Choose the footer font and visual colors. Trust-card text colors can be adjusted independently.</p><div class="footer-settings-grid"><div class="footer-settings-field"><label>Footer font family</label><select name="footer_font_family">{% for value,label in fonts %}<option value="{{ value }}" {% if brand.footer_font_family == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div><div class="footer-settings-field"><label>Trust text font</label><select name="trust_font" id="trust-font">{% for value,label in fonts %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div><div class="footer-settings-field"><label>Trust title color</label><input type="color" name="trust_color" id="trust-color" value="{{ settings.trust_color }}"></div><div class="footer-settings-field"><label>Trust supporting text color</label><input type="color" name="trust_muted_color" id="trust-muted-color" value="{{ settings.trust_muted_color }}"></div><div class="footer-settings-field"><label>Footer heading color</label><input type="color" name="footer_heading_color" value="{{ brand.footer_heading_color|default:'#ffffff' }}"></div><div class="footer-settings-field"><label>Footer link color</label><input type="color" name="footer_link_color" value="{{ brand.footer_link_color|default:'#ffffff' }}"></div></div></section>
         <section class="footer-settings-card"><h2>Copyright and payment badges</h2><div class="footer-settings-grid"><div class="footer-settings-field full"><label for="footer-copyright">Copyright text</label><input id="footer-copyright" name="copyright" value="{{ settings.copyright }}"></div><div class="footer-settings-field"><label for="copyright-align">Copyright alignment</label><select id="copyright-align" name="copyright_align"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div><div class="footer-settings-field"><label for="payment-fit">Payment image fit</label><select id="payment-fit" name="payment_fit"><option value="contain">Contain</option><option value="cover">Cover</option><option value="fill">Fill</option></select></div><div class="footer-settings-field"><label for="payment-width">Payment image width (px)</label><input id="payment-width" type="number" name="payment_width" min="24" max="180" value="{{ settings.payment_width }}"></div><div class="footer-settings-field"><label for="payment-height">Payment image height (px)</label><input id="payment-height" type="number" name="payment_height" min="20" max="100" value="{{ settings.payment_height }}"></div><div class="footer-settings-field full"><label for="payment-images">Payment images</label><div class="footer-gallery-row"><textarea id="payment-images" name="payment_images" placeholder="Select images from the gallery or paste one image URL per line.">{% for image in settings.payment_images %}{{ image }}{% if not forloop.last %}
-{% endif %}{% endfor %}</textarea><button type="button" class="ghost-button" onclick="window.openMediaLibrary(function(asset){var box=document.getElementById('payment-images');box.value=box.value.trim() ? box.value.trim()+'\n'+asset.url : asset.url;})"><i class="ph ph-images"></i> Gallery</button></div><small class="footer-hint">Payment image order follows the lines above. Leave empty to keep the default text badges.</small></div></div></section>
+{% endif %}{% endfor %}</textarea><button type="button" class="ghost-button" onclick="window.openMediaLibrary(function(asset){var box=document.getElementById('payment-images');box.value=asset.url;box.dispatchEvent(new Event('input',{bubbles:true}));})"><i class="ph ph-images"></i> Gallery</button></div><small class="footer-hint">Select one payment image. Choosing another image replaces the current one.</small></div></div></section>
+        <div class="footer-settings-card footer-payment-controls"><div class="footer-settings-field"><label><input id="show-payment-images" type="checkbox" name="show_payment_images" {% if settings.show_payment_images %}checked{% endif %}> Show payment images in footer</label><small class="footer-hint">Turn this off to hide the payment image row on the storefront.</small></div><div class="footer-live-preview"><div class="footer-live-preview-label"><span>Live footer preview</span><span class="footer-live-preview-dot"></span></div><div class="footer-live-preview-bottom"><span id="footer-preview-copy" class="footer-live-preview-copy"></span><div id="footer-preview-payments" class="footer-live-preview-payments"></div></div></div></div>
+        <section class="footer-settings-card footer-dimension-card"><h2>Payment image dimensions</h2><p>Choose a numeric value and unit independently for width and height.</p><div class="footer-settings-grid"><div class="footer-settings-field"><label for="payment-width-unit">Width unit</label><select id="payment-width-unit" name="payment_width_unit"><option value="px">Pixels (px)</option><option value="%">Percent (%)</option><option value="rem">Root em (rem)</option><option value="em">Em (em)</option><option value="vw">Viewport width (vw)</option><option value="vh">Viewport height (vh)</option><option value="auto">Auto</option></select></div><div class="footer-settings-field"><label for="payment-height-unit">Height unit</label><select id="payment-height-unit" name="payment_height_unit"><option value="px">Pixels (px)</option><option value="%">Percent (%)</option><option value="rem">Root em (rem)</option><option value="em">Em (em)</option><option value="vw">Viewport width (vw)</option><option value="vh">Viewport height (vh)</option><option value="auto">Auto</option></select></div></div></section>
         <div class="footer-settings-actions"><a class="ghost-button" href="{% url 'backoffice:dashboard' %}">Cancel</a><button class="primary-button" type="submit"><i class="ph ph-floppy-disk"></i> Save footer settings</button></div>
     </form>
 </section>
@@ -24,5 +34,103 @@ function buildTrustRows(){const wrap=document.getElementById('footer-trust-rows'
 document.getElementById('copyright-align').value=footerConfig.copyright_align||'left';document.getElementById('payment-fit').value=footerConfig.payment_fit||'contain';document.getElementById('trust-font').value=footerConfig.trust_font||'Inter';const brandMode=document.getElementById('brand-mode');const brandImageField=document.getElementById('brand-image-field');brandMode.value=footerConfig.brand_mode||'text';function syncBrandMode(){brandImageField.style.display=brandMode.value==='image'?'flex':'none';}brandMode.addEventListener('change',syncBrandMode);syncBrandMode();buildFooterRows();buildTrustRows();
 const brandInput=document.getElementById('brand-image');const brandPreview=document.createElement('img');brandPreview.alt='Brand logo preview';brandPreview.style.cssText='display:block;max-width:190px;max-height:70px;margin-top:10px;object-fit:contain;border:1px solid var(--border);border-radius:10px;padding:8px;';brandInput.parentElement.parentElement.appendChild(brandPreview);function syncBrandPreview(){brandPreview.src=brandInput.value;brandPreview.style.display=brandInput.value?'block':'none';}syncBrandPreview();setInterval(syncBrandPreview,300);
 let footerLinkCount=20;document.getElementById('add-footer-link').addEventListener('click',function(){const last=document.querySelector('#footer-link-rows .footer-link-row:last-child');const row=last.cloneNode(true);footerLinkCount++;row.querySelectorAll('input,select').forEach(function(field){field.name=field.name.replace(/_\d+$/, '_'+footerLinkCount);field.value='';});row.querySelector('button').onclick=function(){row.querySelectorAll('input').forEach(function(x){x.value='';});row.querySelector('select').value='';};document.getElementById('footer-link-rows').appendChild(row);});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.footer-settings-page input[type="color"]').forEach(function(input){const value=document.createElement('span');value.className='color-value';value.textContent=input.value.toUpperCase();input.insertAdjacentElement('afterend',value);input.addEventListener('input',function(){value.textContent=input.value.toUpperCase();});});});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const copy=document.getElementById('footer-preview-copy');
+    const payments=document.getElementById('footer-preview-payments');
+    const copyright=document.getElementById('footer-copyright');
+    const align=document.getElementById('copyright-align');
+    const images=document.getElementById('payment-images');
+    const show=document.getElementById('show-payment-images');
+    const width=document.getElementById('payment-width');
+    const height=document.getElementById('payment-height');
+    const fit=document.getElementById('payment-fit');
+    if (!copy || !payments) return;
+    function render(){
+        copy.textContent=copyright.value || '© 2026 Nuboxed. All rights reserved.';
+        copy.style.textAlign=align.value || 'left';
+        payments.innerHTML='';
+        if (!show.checked) { payments.innerHTML='<span class="footer-live-preview-empty">Payment images hidden</span>'; return; }
+        const urls=images.value.split(/\n+/).map(function(value){return value.trim();}).filter(Boolean);
+        if (!urls.length) { payments.innerHTML='<span class="footer-live-preview-empty">Add images from Gallery to preview them here</span>'; return; }
+        urls.forEach(function(src){
+            const image=document.createElement('img');
+            image.src=src; image.alt='Payment method preview';
+            image.style.width=(parseInt(width.value,10)||54)+'px';
+            image.style.height=(parseInt(height.value,10)||32)+'px';
+            image.style.objectFit=fit.value || 'contain';
+            payments.appendChild(image);
+        });
+    }
+    [copyright,align,images,show,width,height,fit].forEach(function(field){field.addEventListener('input',render);field.addEventListener('change',render);});
+    render();
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+    const config=JSON.parse(document.getElementById('footer-settings-json').textContent || '{}');
+    const widthUnit=document.getElementById('payment-width-unit');
+    const heightUnit=document.getElementById('payment-height-unit');
+    const width=document.getElementById('payment-width');
+    const height=document.getElementById('payment-height');
+    if(!widthUnit || !heightUnit) return;
+    widthUnit.value=config.payment_width_unit || 'px';
+    heightUnit.value=config.payment_height_unit || 'px';
+    function dimension(value,unit){return unit === 'auto' ? 'auto' : (parseFloat(value)||0)+unit;}
+    function apply(){
+        document.querySelectorAll('#footer-preview-payments img').forEach(function(image){
+            image.style.width=dimension(width.value,widthUnit.value);
+            image.style.height=dimension(height.value,heightUnit.value);
+        });
+    }
+    [widthUnit,heightUnit,width,height].forEach(function(field){field.addEventListener('input',apply);field.addEventListener('change',apply);});
+    apply();
+    setInterval(apply,300);
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded',function(){
+    const box=document.getElementById('payment-images');
+    const preview=document.getElementById('footer-preview-payments');
+    const show=document.getElementById('show-payment-images');
+    const width=document.getElementById('payment-width');
+    const height=document.getElementById('payment-height');
+    const widthUnit=document.getElementById('payment-width-unit');
+    const heightUnit=document.getElementById('payment-height-unit');
+    const fit=document.getElementById('payment-fit');
+    if(!box) return;
+    const imagePreview=document.createElement('img');
+    imagePreview.alt='Payment image preview';
+    imagePreview.style.cssText='display:none;max-width:220px;max-height:90px;margin-top:10px;padding:8px;border:1px solid var(--border);border-radius:10px;object-fit:contain;background:var(--surface);';
+    box.parentElement.parentElement.appendChild(imagePreview);
+    function previewDimension(value,unit){return unit === 'auto' ? 'auto' : (parseFloat(value)||0)+(unit||'px');}
+    function syncImagePreview(){
+        const value=box.value.trim().split(/\n+/).map(function(item){return item.trim();}).filter(Boolean)[0] || '';
+        imagePreview.src=value;
+        imagePreview.style.display=value?'block':'none';
+        imagePreview.style.width=previewDimension(width.value,widthUnit.value);
+        imagePreview.style.height=previewDimension(height.value,heightUnit.value);
+        imagePreview.style.objectFit=fit.value || 'contain';
+    }
+    function keepSingleImage(){
+        const value=box.value.split(/\n+/).map(function(item){return item.trim();}).filter(Boolean)[0] || '';
+        if(box.value !== value) box.value=value;
+        if(value && show && !show.checked){show.checked=true;show.dispatchEvent(new Event('change',{bubbles:true}));}
+        syncImagePreview();
+        if(preview){
+            const images=preview.querySelectorAll('img');
+            images.forEach(function(image,index){if(index>0) image.remove();});
+        }
+    }
+    box.addEventListener('input',keepSingleImage);
+    box.addEventListener('change',keepSingleImage);
+    [width,height,widthUnit,heightUnit,fit].forEach(function(field){field.addEventListener('input',syncImagePreview);field.addEventListener('change',syncImagePreview);});
+    keepSingleImage();
+    setInterval(keepSingleImage,300);
+});
 </script>
 {% endblock %}

@@ -1,0 +1,146 @@
+{% extends "backoffice/base.html" %}
+{% load static %}
+
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<script src="{% static 'backoffice/fontawesome-icons.js' %}"></script>
+<style>
+  .svd-page { max-width: 1320px; margin: 0 auto; padding: 24px; color: #1f2937; }
+  .svd-card { background: #fff; border: 1px solid #e5eaf2; border-radius: 16px; box-shadow: 0 8px 28px rgba(30, 55, 90, .06); margin-bottom: 20px; overflow: hidden; }
+  .svd-head { padding: 22px 24px; border-bottom: 1px solid #e8edf4; display:flex; justify-content:space-between; gap:20px; align-items:center; }
+  .svd-head h1 { margin:0; font-size:24px; } .svd-head p { margin:6px 0 0; color:#718096; }
+  .svd-body { padding: 24px; } .svd-grid { display:grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap:18px; }
+  .svd-field label, .svd-row label { display:block; font-size:12px; font-weight:700; color:#64748b; margin-bottom:7px; text-transform:uppercase; letter-spacing:.04em; }
+  .svd-field input:not([type=checkbox]), .svd-field textarea, .svd-row input:not([type=checkbox]) { width:100%; box-sizing:border-box; border:1px solid #dbe3ee; border-radius:10px; padding:11px 12px; font:inherit; color:#1f2937; background:#fff; }
+  .svd-field textarea { resize:vertical; } .svd-check { display:flex; align-items:center; gap:8px; min-height:44px; }
+  .svd-check label { margin:0; text-transform:none; letter-spacing:0; font-size:14px; color:#334155; }
+  .svd-table { width:100%; border-collapse:separate; border-spacing:0; } .svd-table th { text-align:left; padding:14px 16px; background:#f5f8fc; color:#64748b; font-size:11px; text-transform:uppercase; letter-spacing:.05em; }
+  .svd-table td { padding:16px; border-top:1px solid #e8edf4; vertical-align:top; } .svd-table tr:first-child td { border-top:0; }
+  .svd-row { min-width:140px; } .svd-key { font-weight:700; color:#243b64; word-break:break-word; } .svd-help { color:#94a3b8; font-size:12px; margin-top:5px; } .svd-live-preview { margin-top:7px; color:#94a3b8; font-size:11px; } .svd-live-preview strong { color:#ee4b27; } .svd-field-live { display:flex; align-items:center; gap:6px; margin-top:8px; color:#ee4b27; font-size:12px; font-weight:700; } .svd-field-live i { font-size:15px; }
+  .svd-icon-tools { display:flex; gap:7px; align-items:center; } .svd-icon-tools .svd-icon-input { flex:1; min-width:150px; }
+  .svd-icon-trigger { width:42px; height:42px; border:1px solid #dbe3ee; border-radius:10px; background:#fff; color:#ee4b27; font-size:19px; cursor:pointer; }
+  .svd-picker { position:fixed; z-index:5000; width:min(520px,calc(100vw - 32px)); max-height:460px; overflow:auto; background:#fff; border:1px solid #dbe3ee; border-radius:14px; box-shadow:0 18px 50px rgba(15,23,42,.2); padding:14px; }
+  .svd-picker-head { display:flex; gap:8px; margin-bottom:12px; } .svd-picker-head input,.svd-picker-head select { flex:1; border:1px solid #dbe3ee; border-radius:8px; padding:9px; }
+  .svd-icon-grid { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:7px; } .svd-icon-option { min-height:62px; border:1px solid #e8edf4; background:#f8fafc; border-radius:9px; cursor:pointer; color:#334155; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; font-size:11px; } .svd-icon-option i { font-size:19px; color:#ee4b27; } .svd-icon-option:hover { border-color:#ee4b27; background:#fff7f3; }
+  .svd-actions { display:flex; justify-content:flex-end; padding:18px 24px; border-top:1px solid #e8edf4; } .svd-save { border:0; border-radius:10px; padding:12px 22px; background:#ee4b27; color:#fff; font-weight:700; cursor:pointer; }
+  @media (max-width: 1000px) { .svd-grid { grid-template-columns:1fr; } .svd-card { overflow-x:auto; } .svd-head,.svd-body,.svd-actions { min-width:760px; } }
+</style>
+
+<div class="svd-page">
+  <div class="svd-card">
+    <div class="svd-head">
+      <div><h1>Seller Verification Documents</h1><p>Control the onboarding copy and document upload fields shown to retailers.</p></div>
+      <a class="svd-save" href="{% url 'backoffice:seller-verification-document-new' %}" style="text-decoration:none"><i class="ph ph-plus"></i> Add new field</a>
+      <i class="ph ph-files" style="font-size:34px;color:#ee4b27"></i>
+    </div>
+    <form method="post">
+      {% csrf_token %}
+      <div class="svd-body">
+        <h2 style="margin:0 0 18px;font-size:18px">Section settings</h2>
+        <div class="svd-grid">
+          <div class="svd-field"><label for="id_section_title">Section title</label>{{ page_form.section_title }}{{ page_form.section_title.errors }}</div>
+          <div class="svd-field"><label>Visibility</label><div class="svd-check">{{ page_form.is_visible }}<label for="id_is_visible">Show this section on retailer forms</label></div></div>
+          <div class="svd-field" style="grid-column:1/-1"><label for="id_section_description">Section description</label>{{ page_form.section_description }}{{ page_form.section_description.errors }}</div>
+        </div>
+      </div>
+
+      <div class="svd-body" style="padding-top:0">
+        <h2 style="margin:0 0 6px;font-size:18px">Upload fields</h2>
+        <p style="margin:0 0 16px;color:#718096">Titles and descriptions below are stored in the database and rendered in the retailer registration form.</p>
+        {{ document_formset.management_form }}
+        <div class="svd-card" style="box-shadow:none;margin:0;border-radius:12px">
+          <table class="svd-table"><thead><tr><th>Field</th><th>Title</th><th>Description</th><th>Icon</th><th>Order</th><th>Show</th><th>Required</th></tr></thead><tbody>
+          {% for item in document_formset %}
+            {{ item.id }}
+            <tr>
+              <td><div class="svd-key">{{ item.instance.field_name }}</div><div class="svd-help">Database field key</div><div class="svd-field-live"><i class="{{ item.instance.icon_class }}"></i> <span>{{ item.instance.title }}</span></div></td>
+              <td class="svd-row">{{ item.title }}{{ item.title.errors }}<div class="svd-live-preview">Form preview: <strong>{{ item.instance.title }}</strong></div></td>
+              <td class="svd-row">{{ item.description }}{{ item.description.errors }}</td>
+              <td class="svd-row"><div class="svd-icon-tools">{{ item.icon_class }}<button type="button" class="svd-icon-trigger" title="Choose Font Awesome icon"><i class="{{ item.instance.icon_class }}"></i></button></div><div class="svd-help svd-icon-live">{{ item.instance.icon_class }}</div></td>
+              <td class="svd-row">{{ item.sort_order }}</td>
+              <td><div class="svd-check">{{ item.is_visible }}</div></td>
+              <td><div class="svd-check">{{ item.is_required }}</div></td>
+            </tr>
+          {% empty %}<tr><td colspan="7">No document fields have been configured.</td></tr>{% endfor %}
+          </tbody></table>
+        </div>
+      </div>
+      <div id="svd-icon-picker" class="svd-picker" hidden>
+        <div class="svd-picker-head"><input id="svd-icon-search" type="search" placeholder="Search Font Awesome icons..."><select id="svd-icon-category"><option value="all">All categories</option></select></div>
+        <div id="svd-icon-grid" class="svd-icon-grid"></div>
+      </div>
+      <div class="svd-actions"><button class="svd-save" type="submit"><i class="ph ph-floppy-disk"></i> Save settings</button></div>
+    </form>
+  </div>
+</div>
+<script>
+  document.querySelectorAll('.svd-title-input').forEach(function (input) {
+    input.addEventListener('input', function () {
+      const preview = input.parentElement.querySelector('.svd-live-preview strong');
+      if (preview) preview.textContent = input.value || 'Untitled document';
+      const fieldPreview = input.closest('tr')?.querySelector('.svd-field-live span');
+      if (fieldPreview) fieldPreview.textContent = input.value || 'Untitled document';
+      const fieldIcon = input.closest('tr')?.querySelector('.svd-field-live i');
+      const iconInput = input.closest('tr')?.querySelector('.svd-icon-input');
+      if (fieldIcon && iconInput) fieldIcon.className = iconInput.value.trim() || 'fa-solid fa-file';
+    });
+  });
+
+  // Free Font Awesome catalogue, grouped for quick admin selection. Any
+  // additional Font Awesome class can still be entered manually in the field.
+  const svdIconCatalog = {
+    Documents: ['file','file-lines','file-pdf','file-image','file-invoice','folder','folder-open','clipboard','clipboard-check','certificate','receipt','id-card','address-card','signature','stamp','paperclip'],
+    Business: ['building','building-columns','briefcase','store','shop','storefront','warehouse','industry','factory','landmark','sack-dollar','chart-line','chart-pie','calculator','scale-balanced'],
+    People: ['user','user-check','user-tie','users','people-group','address-book','contact-card','id-badge','person-circle','headset','handshake','person-chalkboard'],
+    Security: ['shield','shield-halved','shield-check','lock','unlock','key','fingerprint','check','circle-check','circle-xmark','triangle-exclamation','ban'],
+    Communication: ['envelope','phone','mobile-screen-button','comment','comments','bell','bullhorn','paper-plane','at','message','share','link','globe'],
+    Media: ['image','images','camera','video','film','play','circle-play','music','microphone','podcast','photo-film'],
+    Commerce: ['cart-shopping','bag-shopping','basket-shopping','credit-card','money-bill','money-check','coins','tag','tags','gift','truck','truck-fast','box','boxes'],
+    Navigation: ['house','magnifying-glass','bars','xmark','plus','minus','check','chevron-up','chevron-down','chevron-left','chevron-right','arrow-left','arrow-right','arrows-rotate','ellipsis','filter','sliders','gear','pen','trash','download','upload','eye','eye-slash'],
+    Devices: ['laptop','desktop','tablet-screen-button','mobile-screen','print','keyboard','computer-mouse','server','database','hard-drive','wifi','bluetooth'],
+    Social: ['facebook','x-twitter','instagram','linkedin','youtube','whatsapp','telegram','pinterest','tiktok','github','discord','reddit'],
+    Regular: ['heart','star','bookmark','clock','calendar','circle','square','smile','face-smile','bell','comment','user','folder','file'],
+  };
+  svdIconCatalog['All Font Awesome'] = (window.svdAllFontAwesomeIcons || []).map((icon) => icon.replace(/^fa-/, ''));
+  const svdPicker = document.getElementById('svd-icon-picker');
+  const svdGrid = document.getElementById('svd-icon-grid');
+  const svdSearch = document.getElementById('svd-icon-search');
+  const svdCategory = document.getElementById('svd-icon-category');
+  let svdActiveInput = null;
+  Object.keys(svdIconCatalog).forEach((category) => svdCategory.insertAdjacentHTML('beforeend', `<option value="${category}">${category}</option>`));
+  const svdIconEntries = () => Object.entries(svdIconCatalog).flatMap(([category, icons]) => icons.map((icon) => ({category, icon})));
+  function renderSvdIcons() {
+    const query = (svdSearch.value || '').toLowerCase().trim();
+    const category = svdCategory.value;
+    const entries = svdIconEntries().filter(({category: group, icon}) => (category === 'all' || group === category) && (!query || icon.includes(query)));
+    svdGrid.innerHTML = entries.map(({category, icon}) => { const family = category === 'Social' ? 'fa-brands' : category === 'Regular' ? 'fa-regular' : 'fa-solid'; return `<button type="button" class="svd-icon-option" data-fa="${family} fa-${icon}"><i class="${family} fa-${icon}"></i><span>${icon}</span></button>`; }).join('') || '<div style="grid-column:1/-1;color:#64748b;padding:18px">No icon found. Enter any Font Awesome class manually.</div>';
+  }
+  function refreshSvdIconPreview(input) {
+    const preview = input.closest('.svd-icon-tools')?.querySelector('.svd-icon-trigger i');
+    if (preview) preview.className = input.value.trim() || 'fa-solid fa-file';
+    const label = input.closest('tr')?.querySelector('.svd-icon-live');
+    if (label) label.textContent = input.value.trim() || 'fa-solid fa-file';
+    const fieldIcon = input.closest('tr')?.querySelector('.svd-field-live i');
+    if (fieldIcon) fieldIcon.className = input.value.trim() || 'fa-solid fa-file';
+  }
+  document.querySelectorAll('.svd-icon-input').forEach((input) => input.addEventListener('input', () => refreshSvdIconPreview(input)));
+  document.querySelectorAll('.svd-icon-trigger').forEach((button) => button.addEventListener('click', () => {
+    svdActiveInput = button.closest('.svd-icon-tools').querySelector('.svd-icon-input');
+    svdPicker.hidden = false;
+    const rect = button.getBoundingClientRect();
+    svdPicker.style.left = `${Math.min(rect.left, window.innerWidth - svdPicker.offsetWidth - 16)}px`;
+    svdPicker.style.top = `${Math.min(rect.bottom + 8, window.innerHeight - 480)}px`;
+    renderSvdIcons();
+    svdSearch.focus();
+  }));
+  svdGrid.addEventListener('click', (event) => {
+    const choice = event.target.closest('[data-fa]');
+    if (!choice || !svdActiveInput) return;
+    svdActiveInput.value = choice.dataset.fa;
+    refreshSvdIconPreview(svdActiveInput);
+    svdPicker.hidden = true;
+  });
+  svdSearch.addEventListener('input', renderSvdIcons); svdCategory.addEventListener('change', renderSvdIcons);
+  document.addEventListener('click', (event) => { if (!svdPicker.hidden && !svdPicker.contains(event.target) && !event.target.closest('.svd-icon-trigger')) svdPicker.hidden = true; });
+</script>
+{% endblock %}

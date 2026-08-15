@@ -3,7 +3,7 @@
 {% load static %}
 
 {% block extra_head %}
-    <link rel="stylesheet" href="{% static 'catalog/product.css' %}?v=20260716comments1">
+    <link rel="stylesheet" href="{% static 'catalog/product.css' %}?v=20260814-option-spacing2">
     <link rel="stylesheet" href="https://cdn.plyr.io/3.7.8/plyr.css" />
     <style>
         :root {
@@ -282,7 +282,7 @@
             color: #fff !important;
             transform: translateY(-2px) !important;
         }
-        .product-info .share-row a.share-email:hover { background: #172033 !important; border-color: #172033 !important; }
+        .product-info .share-row a.share-email:hover { background: #e04420 !important; border-color: #e04420 !important; color: #fff !important; }
         @media (max-width: 860px) {
             .product-info .purchase-row { grid-template-columns: 90px minmax(150px, 190px) minmax(150px, 190px) !important; }
             .product-info .purchase-row .purchase-form { width: auto !important; }
@@ -456,6 +456,41 @@
             .comments-list-item { grid-template-columns: 1fr !important; gap: 8px !important; }
         }
     </style>
+    <style>
+        /* Product-page delivery card: always starts below the price. */
+        .product-info .price-line { display:flex !important; flex-wrap:wrap !important; align-items:center !important; }
+        .product-info .price-line .delivery {
+            display:flex !important;
+            flex:0 0 100% !important;
+            width:100% !important;
+            max-width:560px !important;
+            min-height:58px !important;
+            margin:8px 0 0 !important;
+            box-sizing:border-box !important;
+            align-items:center !important;
+            gap:11px !important;
+            padding:8px 10px !important;
+            border:1px solid #dceaf0 !important;
+            border-radius:14px !important;
+            background:linear-gradient(135deg,#f8fdff 0%,#eef9fc 100%) !important;
+            box-shadow:0 8px 20px rgba(10,165,218,.08) !important;
+            white-space:normal !important;
+        }
+        .product-info .price-line .delivery .delivery-icon { display:grid !important; flex:0 0 36px !important; width:36px !important; height:36px !important; place-items:center !important; border-radius:11px !important; background:#d8f3fb !important; color:#0785ad !important; }
+        .product-info .price-line .delivery .delivery-copy { display:flex !important; flex:1 1 auto !important; min-width:92px !important; flex-direction:column !important; align-items:flex-start !important; gap:2px !important; }
+        .product-info .price-line .delivery .delivery-copy .delivery-label { color:#6c7b84 !important; font-size:10px !important; font-weight:700 !important; text-transform:uppercase !important; text-decoration:none !important; }
+        .product-info .price-line .delivery .delivery-copy strong { color:#1f3440 !important; font-size:14px !important; font-weight:800 !important; text-decoration:none !important; }
+        .product-info .price-line .delivery .delivery-location-trigger { flex:0 0 auto !important; max-width:132px !important; min-height:35px !important; margin:0 !important; padding:0 9px !important; border:1px solid #b9dce7 !important; border-radius:10px !important; background:#fff !important; color:#08799b !important; font-size:11px !important; font-weight:800 !important; }
+        @media(max-width:700px) { .product-info .price-line .delivery { flex-basis:100% !important; width:100% !important; max-width:none !important; } }
+        .product-info .delivery-row { display:block !important; width:100% !important; margin:10px 0 18px !important; }
+        .product-info .delivery-row .delivery { display:flex !important; width:fit-content !important; max-width:100% !important; min-height:54px !important; box-sizing:border-box !important; align-items:center !important; gap:9px !important; margin:0 !important; padding:7px 9px !important; border:1px solid #f2c2b3 !important; border-radius:14px !important; background:linear-gradient(135deg,#fffaf8 0%,#fff0eb 100%) !important; box-shadow:0 8px 20px rgba(224,68,32,.10) !important; white-space:normal !important; }
+        .product-info .delivery-row .delivery .delivery-icon { display:grid !important; flex:0 0 36px !important; width:36px !important; height:36px !important; place-items:center !important; border-radius:11px !important; background:#ffe0d6 !important; color:#e04420 !important; }
+        .product-info .delivery-row .delivery .delivery-copy { display:flex !important; flex:1 1 auto !important; min-width:92px !important; flex-direction:column !important; align-items:flex-start !important; gap:2px !important; }
+        .product-info .delivery-row .delivery .delivery-copy .delivery-label { color:#6c7b84 !important; font-size:10px !important; font-weight:700 !important; text-transform:uppercase !important; text-decoration:none !important; }
+        .product-info .delivery-row .delivery .delivery-copy strong { color:#1f3440 !important; font-size:14px !important; font-weight:800 !important; text-decoration:none !important; }
+        .product-info .delivery-row .delivery .delivery-location-trigger { flex:0 0 auto !important; max-width:132px !important; min-height:35px !important; margin:0 !important; padding:0 9px !important; border:1px solid #efb09e !important; border-radius:10px !important; background:#fff !important; color:#c63d20 !important; font-size:11px !important; font-weight:800 !important; }
+        @media(max-width:700px) { .product-info .delivery-row .delivery { width:100% !important; max-width:none !important; } }
+    </style>
 {% endblock %}
 
 {% block content %}
@@ -492,7 +527,7 @@
                                         data-pane-id="image-{{ forloop.counter0 }}"
                                         data-color="{{ image.color|default:''|escape }}">
                                     {% if image.file %}
-                                        <img src="{{ image.file.url }}" alt="{{ image.alt_text|default:object.name }}">
+                                        <img src="{{ image.display_url }}" alt="{{ image.alt_text|default:object.name }}">
                                     {% else %}
                                         <span class="mini-phone gray"></span>
                                     {% endif %}
@@ -505,36 +540,36 @@
                         {% endif %}
                     {% endwith %}
 
+                    {% with video_poster=image_items|first %}
                     {% for item in video_items %}
                         <button type="button" class="thumb" data-style="video" data-target-id="video-{{ forloop.counter0 }}" data-pane-id="video-{{ forloop.counter0 }}"
                                 style="background: #111827; border-color: #374151; overflow: hidden; position: relative;">
                             {% if item.file %}
-                                <video src="{{ item.file.url }}" style="width:100%; height:100%; object-fit:cover; opacity:0.7;" muted preload="metadata"></video>
+                                <video src="{{ item.display_url }}"{% if video_poster %} poster="{{ video_poster.display_url }}"{% endif %} style="width:100%; height:100%; object-fit:cover; opacity:0.7;" muted preload="metadata"></video>
                                 <span class="thumb-badge" style="background: rgba(0,0,0,0.4); font-size:22px;"><i class="fa-solid fa-play" style="font-size:16px;"></i></span>
                             {% elif item.external_url %}
-                                <span style="width:100%; height:100%; display:grid; place-items:center; background: linear-gradient(160deg,#1e293b,#0f172a);">
-                                    {% if 'youtube' in item.external_url or 'youtu.be' in item.external_url %}
-                                        <i class="fa-brands fa-youtube" style="font-size:28px; color:#ff0000;"></i>
-                                    {% elif 'vimeo' in item.external_url %}
-                                        <i class="fa-brands fa-vimeo-v" style="font-size:28px; color:#e04420;"></i>
-                                    {% else %}
+                                {% if item.video_thumbnail_url %}
+                                    <img src="{{ item.video_thumbnail_url }}" alt="{{ item.title|default:'Video preview' }}" style="width:100%; height:100%; object-fit:cover; opacity:0.82; display:block;">
+                                {% else %}
+                                    <span style="width:100%; height:100%; display:grid; place-items:center; background: linear-gradient(160deg,#1e293b,#0f172a);">
                                         <i class="fa-solid fa-play" style="font-size:20px; color:#fff;"></i>
-                                    {% endif %}
-                                </span>
-                                <span class="thumb-badge" style="background: rgba(0,0,0,0.25); font-size:11px; font-weight:700; letter-spacing:0.5px;">VIDEO</span>
+                                    </span>
+                                {% endif %}
+                                <span class="thumb-badge" style="background: rgba(0,0,0,0.55); font-size:16px;"><i class="fa-solid fa-play"></i></span>
                             {% else %}
                                 <span class="mini-phone dark"></span>
                                 <span class="thumb-badge"><i class="fa-solid fa-play"></i></span>
                             {% endif %}
                         </button>
                     {% endfor %}
+                    {% endwith %}
 
-                    {% for item in spin_items %}
+                    {% if spin_items %}
                         <button type="button" class="thumb" data-style="spin" data-target-id="spin-view" data-pane-id="spin-view">
                             <span class="mini-phone sunset"></span>
-                            <span class="thumb-badge">360</span>
+                            <span class="thumb-badge">360°</span>
                         </button>
-                    {% endfor %}
+                    {% endif %}
                 </div>
             </div>
             <button type="button" class="thumb-arrow thumb-down" aria-label="Scroll thumbnails down">
@@ -548,7 +583,7 @@
             {% if image_items %}
                 {% for image in image_items %}
                     <div class="media-pane{% if forloop.first %} is-active{% endif %}" data-media-pane data-media-id="image-{{ forloop.counter0 }}" data-media-type="image">
-                        <img src="{{ image.file.url }}" alt="{{ image.alt_text|default:object.name }}" class="product-detail-hero-image" data-zoom-image style="max-width: 90%; max-height: 480px; object-fit: contain;">
+                        <img src="{{ image.display_url }}" alt="{{ image.alt_text|default:object.name }}" class="product-detail-hero-image" data-zoom-image style="max-width: 90%; max-height: 480px; object-fit: contain;">
                     </div>
                 {% endfor %}
             {% endif %}
@@ -562,7 +597,7 @@
                     {% elif item.external_url %}
                         <div class="plyr__video-embed plyr-video-player">
                             <iframe
-                                src="{{ item.embed_url }}?origin={{ request.scheme }}://{{ request.get_host }}&amp;iv_load_policy=3&amp;modestbranding=1&amp;playsinline=1&amp;showinfo=0&amp;rel=0&amp;enablejsapi=1"
+                                src="{{ item.embed_url }}?origin={{ request.scheme }}://{{ request.get_host }}&amp;iv_load_policy=3&amp;modestbranding=1&amp;playsinline=1&amp;showinfo=0&amp;rel=0&amp;enablejsapi=1&amp;autoplay=0"
                                 allowfullscreen
                                 allowtransparency
                                 allow="autoplay"
@@ -575,7 +610,7 @@
             {% if spin_items %}
                 <div class="media-pane media-360{% if not image_items and not video_items %} is-active{% endif %}" data-media-pane data-media-id="spin-view" data-media-type="image_360">
                     {% for item in spin_items %}
-                        <img src="{{ item.file.url }}" alt="Product 360 view" data-spin-frame="{% if forloop.first %}0{% else %}{{ forloop.counter0 }}{% endif %}"{% if not forloop.first %} hidden{% endif %}>
+                        <img src="{{ item.display_url }}" alt="Product 360 view" data-spin-frame="{{ forloop.counter0 }}"{% if not forloop.first %} hidden{% endif %}>
                     {% endfor %}
                     <div class="rotate-hint">
                         <i class="fa-solid fa-rotate"></i>
@@ -598,7 +633,7 @@
             <div class="zoom-result" id="zoomResult" aria-hidden="true" style="pointer-events: none;">
                 <div class="zoom-clone-wrap" id="zoomCloneWrap" style="position: relative; width: 100%; height: 100%;">
                     {% with first_image=image_items|first %}
-                        <img src="{% if first_image and first_image.file %}{{ first_image.file.url }}{% endif %}" alt="{{ object.name }}" class="zoom-image" style="position: absolute; pointer-events: none; max-width: none;">
+                        <img src="{% if first_image %}{{ first_image.display_url }}{% endif %}" alt="{{ object.name }}" class="zoom-image" style="position: absolute; pointer-events: none; max-width: none;">
                     {% endwith %}
                 </div>
             </div>
@@ -630,6 +665,7 @@
 
         {% if variant_option_groups %}
             {% for group in variant_option_groups %}
+                {% if group.name|lower != "variant" %}
                 <div class="option-block">
                     <div class="option-title">
                         {% if "color" in group.name|lower %}
@@ -645,10 +681,12 @@
                     <div class="storage-options">
                         {% for item in group.items %}
                             <button type="button"
-                                    class="storage{% if item.is_selected %} active{% endif %}{% if item.is_color %} is-color{% endif %}"
+                                    class="storage{% if item.is_selected %} active{% endif %}{% if item.is_color %} is-color{% endif %}{% if not item.variant.available_qty %} out-of-stock{% endif %}"
                                     data-variant-chip
                                     data-value="{{ item.label }}"
                                     data-sku="{{ item.variant.sku|default:'' }}"
+                                    data-stock-state="{% if item.variant.available_qty %}in{% else %}out{% endif %}"
+                                    aria-disabled="{% if item.variant.available_qty %}false{% else %}true{% endif %}"
                                     {% if item.is_color %}style="--swatch: {{ item.swatch_hex|default:'#d1d5db' }};"{% endif %}>
                                 {% if item.is_color %}
                                     <span class="color-swatch"></span>
@@ -659,16 +697,16 @@
                         {% endfor %}
                     </div>
                 </div>
+                {% endif %}
             {% endfor %}
         {% endif %}
 
-        <div class="sale-title">{{ sale_countdown.message|default:product_page_settings.sale_countdown }}</div>
-        <div class="countdown" data-countdown data-countdown-end="{{ sale_countdown.ends_at|date:'c' }}">
-            <div><strong data-countdown-days>0</strong><span>DAYS</span></div>
-            <div><strong data-countdown-hours>00</strong><span>HRS</span></div>
-            <div><strong data-countdown-minutes>00</strong><span>MIN</span></div>
-            <div><strong data-countdown-seconds>00</strong><span>SEC</span></div>
-        </div>
+        {% if product_page_settings.show_sale_countdown != "0" and sale_countdown.enabled and sale_countdown.ends_at %}
+            <div class="quick-sale-countdown" data-sale-countdown data-sale-countdown-end="{{ sale_countdown.ends_at|date:'c' }}">
+                <span>{{ sale_countdown.message|default:"Hurry up! Sale ends in:" }}</span>
+                <strong data-sale-countdown-timer></strong>
+            </div>
+        {% endif %}
 
         <div class="price-line">
             <span class="old-price" id="displayComparePrice" style="{% if not display_compare_price %}display: none;{% endif %}">
@@ -682,7 +720,21 @@
             {% else %}
                 <span class="save-badge" id="displayDiscountBadge" style="display: none;"></span>
             {% endif %}
-            <span class="delivery">{{ delivery_window_label }}</span>
+        </div>
+
+        <div class="delivery-row">
+            <span class="delivery" aria-label="Estimated delivery">
+                <span class="delivery-icon" aria-hidden="true"><i class="fa-solid fa-truck-fast"></i></span>
+                <span class="delivery-copy">
+                    <span class="delivery-label">Estimated delivery</span>
+                    <strong>{{ delivery_window_label }}</strong>
+                </span>
+                <button type="button" class="delivery-location-trigger" onclick="document.getElementById('locationModal').style.display='flex'" aria-label="Change delivery location">
+                    <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                    <span id="product-delivery-location-label">{% if selected_delivery_location.label %}{{ selected_delivery_location.label }}{% elif selected_delivery_location.pincode %}{{ selected_delivery_location.pincode }}{% else %}Set location{% endif %}</span>
+                    <i class="fa-solid fa-chevron-right delivery-location-arrow" aria-hidden="true"></i>
+                </button>
+            </span>
         </div>
 
         <script id="product-variants-json" type="application/json">
@@ -691,8 +743,8 @@
                     {
                         "id": "{{ variant.id }}",
                         "sku": "{{ variant.sku }}",
-                        "price": "{{ variant.discount_price|default:variant.price }}",
-                        "compare_price": "{% if variant.discount_price %}{{ variant.price }}{% else %}{% endif %}",
+                        "price": "{{ variant.effective_sale_price|default:variant.discount_price|default:variant.price }}",
+                        "compare_price": "{{ variant.effective_compare_price|default:'' }}",
                         "stock": {{ variant.available_qty|default:0 }},
                         "attributes": {
                             {% for av in variant.attribute_values.all %}
@@ -731,8 +783,7 @@
                 {% csrf_token %}
                 {% with pid=object.id|stringformat:"s" %}
                 <button type="submit" class="link-button {% if pid in wishlist %}selected{% endif %}" style="border:none; background:none; cursor:pointer;">
-                    <i class="{% if pid in wishlist %}fa-solid in-wishlist{% else %}fa-regular{% endif %} fa-heart" {% if pid in wishlist %}style="color: #ef4444;"{% endif %}></i> Add to Wishlist
-                    {{ product_page_settings.add_wishlist }}</button>
+                    <i class="{% if pid in wishlist %}fa-solid in-wishlist{% else %}fa-regular{% endif %} fa-heart" {% if pid in wishlist %}style="color: #ef4444;"{% endif %}></i> {{ product_page_settings.add_wishlist }}</button>
                 {% endwith %}
             </form>
             <form method="post" action="{% url 'storefront:compare-add' product_id=object.id %}" class="ajax-compare-form" style="display:inline-block;">
@@ -948,27 +999,31 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="{% static 'catalog/product.js' %}?v=20260716comments1"></script>
+<script src="{% static 'catalog/product.js' %}?v=20260813-live-countdown2"></script>
 <script src="https://cdn.plyr.io/3.7.8/plyr.js"></script>
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        document.querySelectorAll('[data-countdown]').forEach((countdown) => {
-            const end = new Date(countdown.dataset.countdownEnd).getTime();
-            if (!end || Number.isNaN(end)) return;
+        document.querySelectorAll('[data-sale-countdown]').forEach((countdown) => {
+            const end = new Date(countdown.dataset.saleCountdownEnd).getTime();
+            const timerTarget = countdown.querySelector('[data-sale-countdown-timer]');
+            if (!end || Number.isNaN(end) || !timerTarget) {
+                countdown.style.display = 'none';
+                return;
+            }
             const update = () => {
-                const remaining = Math.max(0, end - Date.now());
-                const totalSeconds = Math.floor(remaining / 1000);
+                const totalSeconds = Math.max(0, Math.floor((end - Date.now()) / 1000));
                 const days = Math.floor(totalSeconds / 86400);
                 const hours = Math.floor((totalSeconds % 86400) / 3600);
                 const minutes = Math.floor((totalSeconds % 3600) / 60);
                 const seconds = totalSeconds % 60;
-                countdown.querySelector('[data-countdown-days]').textContent = days;
-                countdown.querySelector('[data-countdown-hours]').textContent = String(hours).padStart(2, '0');
-                countdown.querySelector('[data-countdown-minutes]').textContent = String(minutes).padStart(2, '0');
-                countdown.querySelector('[data-countdown-seconds]').textContent = String(seconds).padStart(2, '0');
+                timerTarget.textContent = `${days}d ${String(hours).padStart(2, '0')}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`;
+                countdown.style.display = totalSeconds > 0 ? 'inline-flex' : 'none';
+                return totalSeconds;
             };
             update();
-            setInterval(update, 1000);
+            const interval = setInterval(() => {
+                if (!update()) clearInterval(interval);
+            }, 1000);
         });
     });
     document.addEventListener('DOMContentLoaded', () => {

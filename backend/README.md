@@ -209,7 +209,6 @@ Inventory API routes:
 - `GET/POST /api/v1/inventory/delivery-locations/`
 - `GET/POST /api/v1/inventory/category-delivery-rules/`
 - `GET/POST /api/v1/inventory/product-delivery-rules/`
-- `GET/POST /api/v1/inventory/delivery-holidays/`
 - `GET /api/v1/inventory/stock-items/`
 - `GET /api/v1/inventory/ledger/`
 - `POST /api/v1/inventory/adjustments/`
@@ -224,7 +223,6 @@ Inventory UI routes:
 - `/retailer/inventory/delivery-locations/new/`
 - `/retailer/inventory/category-delivery/new/`
 - `/retailer/inventory/product-delivery/new/`
-- `/retailer/inventory/holidays/new/`
 - `/retailer/inventory/adjustments/new/`
 - `/retailer/inventory/offline-sales/new/`
 
@@ -238,7 +236,6 @@ Inventory rules enforced:
 - low stock alerts are raised from item thresholds
 - pincode/location ETA supports manual postal code entry, browser geolocation, and saved customer default address fallback
 - delivery ETA precedence is product rule -> category rule -> delivery location rule -> warehouse defaults -> store default
-- delivery holidays shift the final estimated delivery date forward
 
 ## Marketplace frontend
 

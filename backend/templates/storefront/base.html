@@ -6,7 +6,606 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ page_title|default:"Nuboxed Marketplace" }}</title>
-    <link rel="stylesheet" href="{% static 'storefront/storefront.css' %}?v=20260722-header-sticky2">
+    {% if global_brand_settings and global_brand_settings.favicon %}
+    <link rel="icon" href="{{ global_brand_settings.favicon.url }}">
+    <link rel="shortcut icon" href="{{ global_brand_settings.favicon.url }}">
+    {% endif %}
+    <link rel="stylesheet" href="{% static 'storefront/storefront.css' %}?v=20260814-countdown3">
+    <style>
+        /* Keep tablet/mobile navigation in one compact row. */
+        .site-header .main-nav-close { display: none; }
+        /* The drawer logo belongs only inside the opened mobile/tablet drawer.
+           Never let it occupy the desktop navigation row. */
+        .site-header .drawer-menu-brand { display: none !important; }
+        @media (max-width: 1400px) {
+            .site-header .header-shell {
+                grid-template-columns: minmax(170px, 28%) minmax(0, 1fr) !important;
+            }
+            .site-header .header-search {
+                justify-self: stretch !important;
+                width: auto !important;
+                max-width: none !important;
+            }
+            .site-header .search-shell {
+                width: 100% !important;
+                max-width: none !important;
+            }
+        }
+        @media (max-width: 1080px) {
+            .site-header .header-shell {
+                grid-template-columns: minmax(150px, 28%) minmax(0, 1fr) !important;
+                grid-template-rows: auto !important;
+                width: 100% !important;
+                align-items: center !important;
+                gap: 10px !important;
+                padding: 10px 14px !important;
+                box-sizing: border-box !important;
+            }
+            .site-header .header-search {
+                grid-column: 2 !important;
+                grid-row: 1 !important;
+                width: 100% !important;
+                min-width: 0 !important;
+                box-sizing: border-box !important;
+            }
+            .site-header .search-shell { width: 100% !important; max-width: none !important; box-sizing: border-box !important; }
+            .site-header .site-logo-image {
+                height: 42px !important;
+                max-width: 100% !important;
+            }
+            .site-header .nav-shell {
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: flex-start !important;
+                width: 100% !important;
+                min-height: 58px !important;
+                height: auto !important;
+                max-height: none !important;
+                padding: 0 14px !important;
+                gap: 10px !important;
+                overflow: visible !important;
+                z-index: 10001 !important;
+            }
+            .site-header .mobile-nav-toggle { order: 1; flex: 0 0 auto; margin: 0 !important; }
+            .site-header .mobile-nav-toggle {
+                background: #000 !important;
+                color: #fff !important;
+                border: 1px solid rgba(255,255,255,.45) !important;
+            }
+            .site-header .main-nav { order: 2; }
+            .site-header .header-actions {
+                order: 3;
+                display: flex !important;
+                flex: 0 0 auto;
+                align-items: center !important;
+                margin-left: auto !important;
+                min-width: 0 !important;
+                height: auto !important;
+            }
+            .site-header .header-actions .header-support.icon-stack {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                flex-direction: column !important;
+                min-width: 34px !important;
+                padding: 4px !important;
+                color: #fff !important;
+            }
+            .site-header .header-actions .header-support.icon-stack > svg {
+                display: block !important;
+                width: 24px !important;
+                height: 24px !important;
+                color: #fff !important;
+            }
+            .site-header .header-actions .header-support.icon-stack span {
+                display: none !important;
+            }
+            .site-header .header-actions .nav-dropdown {
+                display: block !important;
+                flex: 0 0 auto;
+            }
+            .site-header .header-actions .nav-dropdown { position: relative; }
+            .site-header .amazon-account-dropdown {
+                display: none !important;
+                position: absolute !important;
+                top: calc(100% + 6px) !important;
+                right: 48px !important;
+                left: auto !important;
+                width: min(260px, calc(100vw - 24px)) !important;
+                max-height: min(520px, calc(100vh - 90px));
+                overflow-y: auto;
+                z-index: 1300 !important;
+            }
+            .site-header .header-actions .nav-dropdown:hover > .amazon-account-dropdown,
+            .site-header .header-actions .nav-dropdown:focus-within > .amazon-account-dropdown {
+                display: block !important;
+            }
+
+            /* Use the same popup drawer on tablets and phones. */
+            .site-header .main-nav.open {
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: auto !important;
+                width: min(330px, 86vw) !important;
+                height: 100vh !important;
+                max-height: none !important;
+                margin: 0 !important;
+                padding: 64px 12px 18px !important;
+                border: 0 !important;
+                border-right: 1px solid #e5e7eb !important;
+                border-radius: 0 18px 18px 0 !important;
+                background: #fff !important;
+                box-shadow: 0 24px 70px rgba(15,23,42,.28) !important;
+                overflow-y: auto !important;
+                z-index: 10002 !important;
+            }
+            .site-header .main-nav.open::before {
+                content: "";
+                position: fixed;
+                inset: 0;
+                z-index: -1;
+                background: rgba(15,23,42,.42);
+            }
+            .site-header .main-nav.open > a,
+            .site-header .main-nav.open > .nav-dropdown > a.nav-button {
+                min-height: 48px !important;
+                padding: 12px 14px !important;
+                border-bottom: 1px solid #f1f5f9 !important;
+                color: #1f2937 !important;
+                font-weight: 700 !important;
+            }
+            .site-header .main-nav.open .nav-dropdown > a.nav-button i { color: #e04420; }
+            .site-header .main-nav-close {
+                display: flex !important;
+                position: absolute;
+                top: 12px;
+                right: 12px;
+                align-items: center;
+                justify-content: center;
+                width: 36px;
+                height: 36px;
+                border: 1px solid #e5e7eb;
+                border-radius: 50%;
+                background: #fff;
+                color: #111827;
+                font-size: 22px;
+                line-height: 1;
+                cursor: pointer;
+            }
+            .site-header .main-nav.open {
+                isolation: isolate;
+                background: #111827 !important;
+                border-right-color: #374151 !important;
+                box-shadow: 12px 0 40px rgba(0,0,0,.35) !important;
+            }
+            .site-header .main-nav.open::before {
+                background: rgba(2,6,23,.72) !important;
+                pointer-events: none !important;
+            }
+            .site-header .main-nav.open > a,
+            .site-header .main-nav.open > .nav-dropdown > a.nav-button {
+                color: #f8fafc !important;
+                border-bottom-color: rgba(255,255,255,.16) !important;
+            }
+            .site-header .main-nav.open .nav-dropdown > a.nav-button i { color: #fb5a32 !important; }
+            .site-header .main-nav.open .main-nav-close {
+                background: #fff !important;
+                color: #111827 !important;
+                border-color: #d1d5db !important;
+            }
+        }
+        @media (max-width: 640px) {
+            .site-header .header-shell {
+                grid-template-columns: minmax(128px, 40%) minmax(0, 1fr) !important;
+                grid-template-rows: auto !important;
+                gap: 8px !important;
+                padding: 8px 12px !important;
+                box-sizing: border-box !important;
+            }
+            .site-header .header-search {
+                grid-column: 2 !important;
+                grid-row: 1 !important;
+            }
+            .site-header .location-picker-btn { display: none !important; }
+            .site-header .site-logo-image { height: 36px !important; max-width: 100% !important; }
+            .site-header .search-shell { height: 44px !important; }
+            .site-header .search-shell button { width: 48px !important; height: 44px !important; }
+            .site-header .header-search { min-width: 0 !important; width: 100% !important; }
+            .site-header .nav-shell { min-height: 54px !important; padding-inline: 10px !important; }
+            .site-header .mobile-nav-toggle {
+                position: relative !important;
+                left: auto !important;
+                top: auto !important;
+                transform: none !important;
+                z-index: 2;
+                margin-right: auto !important;
+            }
+            .site-header .header-actions { gap: 7px !important; }
+            .site-header .header-actions .header-support.icon-stack {
+                min-width: 28px !important;
+                padding: 3px !important;
+            }
+            .site-header .header-actions .header-support.icon-stack > svg {
+                width: 22px !important;
+                height: 22px !important;
+            }
+            .site-header .main-nav.open {
+                position: fixed !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: auto !important;
+                width: min(330px, 86vw) !important;
+                height: 100vh !important;
+                max-height: none !important;
+                margin: 0 !important;
+                padding: 64px 12px 18px !important;
+                border: 0 !important;
+                border-right: 1px solid #e5e7eb !important;
+                border-radius: 0 18px 18px 0 !important;
+                background: #fff !important;
+                box-shadow: 0 24px 70px rgba(15,23,42,.28) !important;
+                overflow-y: auto !important;
+                z-index: 10002 !important;
+            }
+            .site-header .main-nav.open::before {
+                content: "";
+                position: fixed;
+                inset: 0;
+                z-index: -1;
+                background: rgba(15,23,42,.42);
+            }
+            .site-header .main-nav.open > a,
+            .site-header .main-nav.open > .nav-dropdown > a.nav-button {
+                min-height: 48px !important;
+                padding: 12px 14px !important;
+                border-bottom: 1px solid #f1f5f9 !important;
+                color: #1f2937 !important;
+                font-weight: 700 !important;
+            }
+            .site-header .main-nav.open .nav-dropdown > a.nav-button i { color: #e04420; }
+            .site-header .main-nav-close {
+                display: flex !important;
+                position: absolute;
+                top: 12px;
+                right: 12px;
+                align-items: center;
+                justify-content: center;
+                width: 36px;
+                height: 36px;
+                border: 1px solid #e5e7eb;
+                border-radius: 50%;
+                background: #fff;
+                color: #111827;
+                font-size: 22px;
+                line-height: 1;
+                cursor: pointer;
+            }
+        }
+        @media (max-width: 640px) {
+            .site-header .main-nav.open {
+                isolation: isolate;
+                background: #111827 !important;
+                border-right-color: #374151 !important;
+                box-shadow: 12px 0 40px rgba(0,0,0,.35) !important;
+            }
+            .site-header .main-nav.open::before { background: rgba(2,6,23,.72) !important; pointer-events: none !important; }
+            .site-header .main-nav.open > a,
+            .site-header .main-nav.open > .nav-dropdown > a.nav-button {
+                color: #f8fafc !important;
+                border-bottom-color: rgba(255,255,255,.16) !important;
+            }
+            .site-header .main-nav.open .nav-dropdown > a.nav-button i { color: #fb5a32 !important; }
+            .site-header .main-nav.open > .nav-dropdown.drawer-submenu-open > .mega-menu-wrapper,
+            .site-header .main-nav.open > .nav-dropdown.drawer-submenu-open > .dropdown-panel {
+                display: grid !important;
+                position: static !important;
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: none !important;
+                max-height: 48vh !important;
+                margin: 0 0 8px !important;
+                padding: 10px !important;
+                overflow-y: auto !important;
+                opacity: 1 !important;
+                visibility: visible !important;
+                transform: none !important;
+                pointer-events: auto !important;
+                border: 1px solid rgba(255,255,255,.14) !important;
+                border-radius: 10px !important;
+                background: #1f2937 !important;
+                box-shadow: none !important;
+                grid-template-columns: 1fr !important;
+            }
+            .site-header .main-nav.open > .nav-dropdown.drawer-submenu-open .mega-menu-column {
+                min-width: 0 !important;
+                width: 100% !important;
+            }
+            .site-header .main-nav.open > .nav-dropdown.drawer-submenu-open .mega-menu-column h4 {
+                color: #fb5a32 !important;
+                border-bottom-color: rgba(255,255,255,.14) !important;
+            }
+            .site-header .main-nav.open > .nav-dropdown.drawer-submenu-open .mega-menu-list,
+            .site-header .main-nav.open > .nav-dropdown.drawer-submenu-open .mega-menu-column > .mega-menu-list {
+                display: grid !important;
+                grid-template-columns: 1fr !important;
+                gap: 2px !important;
+            }
+            .site-header .main-nav.open > .nav-dropdown.drawer-submenu-open .mega-menu-list a,
+            .site-header .main-nav.open > .nav-dropdown.drawer-submenu-open .mega-menu-list span {
+                display: block !important;
+                padding: 9px 8px !important;
+                color: #f8fafc !important;
+                font-size: 14px !important;
+            }
+            .site-header .main-nav.open > .nav-dropdown.drawer-submenu-open .mega-menu-list a:hover {
+                color: #fb5a32 !important;
+                background: rgba(255,255,255,.07) !important;
+            }
+        }
+        @media (max-width: 1080px) {
+            .site-header .header-shell {
+                grid-template-columns: minmax(170px, 28%) minmax(0, 1fr) !important;
+            }
+            .site-header .header-search {
+                justify-self: stretch !important;
+                width: auto !important;
+                max-width: none !important;
+            }
+            .site-header .search-shell {
+                justify-self: stretch !important;
+                width: 100% !important;
+                max-width: none !important;
+            }
+            /* Keep equal breathing room around the logo and search field. */
+            .site-header .header-shell {
+                padding-left: 24px !important;
+                padding-right: 24px !important;
+            }
+            .site-header .header-search {
+                width: auto !important;
+                min-width: 0 !important;
+                max-width: none !important;
+            }
+            .site-header .search-shell {
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: none !important;
+                margin: 0 !important;
+            }
+            .site-header .main-nav.open .drawer-menu-brand {
+                display: flex !important;
+                position: absolute;
+                top: 14px;
+                left: 20px;
+                align-items: center;
+                width: min(210px, 58%);
+                min-height: 42px;
+                height: 42px;
+                margin: 0;
+                padding: 0;
+                border: 0;
+            }
+            .site-header .main-nav.open .drawer-menu-brand img {
+                display: block;
+                width: auto;
+                max-width: 100%;
+                height: 36px;
+                object-fit: contain;
+            }
+            .site-header .main-nav.open {
+                padding-top: 78px !important;
+                background: #111827 !important;
+                border-right-color: #374151 !important;
+            }
+            .site-header .main-nav.open::before { background: rgba(2,6,23,.72) !important; pointer-events: none !important; }
+            .site-header .main-nav.open > a,
+            .site-header .main-nav.open > .nav-dropdown > a.nav-button {
+                color: #f8fafc !important;
+                border-bottom-color: rgba(255,255,255,.16) !important;
+            }
+            .site-header .main-nav.open .nav-dropdown > a.nav-button i { color: #fb5a32 !important; }
+            .site-header .main-nav.open .main-nav-close {
+                display: grid !important;
+                place-items: center !important;
+                padding: 0 !important;
+                text-align: center !important;
+                line-height: 1 !important;
+                font-family: Arial, sans-serif !important;
+            }
+            .site-header .main-nav.open .main-nav-close .drawer-close-icon {
+                display: block;
+                line-height: 1;
+                transform: translateY(-1px);
+            }
+        }
+        @media (max-width: 640px) {
+            .site-header .header-shell {
+                padding-left: 16px !important;
+                padding-right: 16px !important;
+            }
+        }
+        /* Final tablet safeguard: some tablet browsers report a scaled wide viewport. */
+        @media (min-width: 721px) and (max-width: 2400px) {
+            .site-header .header-shell {
+                position: relative !important;
+                width: 100% !important;
+                max-width: none !important;
+                margin: 0 !important;
+            }
+            .site-header .header-search {
+                position: absolute !important;
+                top: 24px !important;
+                right: 48px !important;
+                width: min(650px, 60vw) !important;
+                max-width: none !important;
+                min-width: 0 !important;
+            }
+            .site-header .search-shell {
+                width: 100% !important;
+                max-width: none !important;
+            }
+        }
+        @media (max-width: 1800px) and (min-width: 1081px) {
+            /* Tablet-width layouts use the full available header width. */
+            .site-header .header-shell {
+                position: relative !important;
+                width: 100% !important;
+                max-width: none !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+                grid-template-columns: minmax(190px, 28%) minmax(0, 1fr) !important;
+                padding-left: 48px !important;
+                padding-right: 48px !important;
+            }
+            .site-header .header-search {
+                position: absolute !important;
+                top: 24px !important;
+                right: 48px !important;
+                justify-self: auto !important;
+                width: min(650px, 60vw) !important;
+                min-width: 0 !important;
+            }
+            .site-header .search-shell {
+                width: 100% !important;
+                max-width: none !important;
+            }
+        }
+        .mobile-location-picker { display: none; }
+        @media (max-width: 1080px) {
+            .site-header .location-picker-btn { display: none !important; }
+            .site-header .mobile-location-picker {
+                display: inline-flex !important;
+                order: 2 !important;
+                flex: 0 1 auto !important;
+                align-items: center !important;
+                gap: 6px !important;
+                min-width: 0 !important;
+                max-width: 138px !important;
+                margin: 0 !important;
+                padding: 5px 8px !important;
+                border: 1px solid rgba(255,255,255,.28) !important;
+                border-radius: 8px !important;
+                background: rgba(255,255,255,.08) !important;
+                color: #fff !important;
+                cursor: pointer !important;
+                text-align: left !important;
+            }
+            .site-header .mobile-location-picker > i {
+                flex: 0 0 auto;
+                color: #fb5a32 !important;
+                font-size: 15px !important;
+            }
+            .site-header .mobile-location-picker-copy {
+                display: flex;
+                min-width: 0;
+                flex-direction: column;
+                line-height: 1.05;
+            }
+            .site-header .mobile-location-picker-copy small {
+                color: rgba(255,255,255,.68) !important;
+                font-size: 9px !important;
+                white-space: nowrap;
+            }
+            .site-header .mobile-location-picker-copy strong {
+                max-width: 100px;
+                overflow: hidden;
+                color: #fff !important;
+                font-size: 11px !important;
+                font-weight: 700 !important;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+            .site-header .main-nav { order: 4 !important; }
+        }
+        @media (min-width: 721px) and (max-width: 2400px) {
+            .site-header .header-shell { position: relative !important; width: 100% !important; max-width: none !important; margin: 0 !important; }
+            .site-header .header-search { position: absolute !important; top: 24px !important; right: 48px !important; width: min(650px, 60vw) !important; max-width: none !important; min-width: 0 !important; }
+            .site-header .search-shell { width: 100% !important; max-width: none !important; }
+        }
+        @media (min-width: 600px) and (max-width: 2400px) {
+            .site-header .header-shell {
+                position: relative !important;
+                min-height: 100px !important;
+            }
+            .site-header .header-search {
+                position: absolute !important;
+                top: 24px !important;
+                right: 48px !important;
+                grid-column: auto !important;
+                grid-row: auto !important;
+                width: min(650px, 60vw) !important;
+                max-width: none !important;
+            }
+        }
+        .site-header .header-actions .account-nav-dropdown.account-menu-open > .amazon-account-dropdown {
+            display: block !important;
+        }
+        @media (max-width: 1080px) {
+            .site-header .header-actions .account-nav-dropdown.account-menu-open > .amazon-account-dropdown {
+                position: fixed !important;
+                top: 132px !important;
+                right: 12px !important;
+                left: auto !important;
+                width: min(360px, calc(100vw - 24px)) !important;
+                max-width: calc(100vw - 24px) !important;
+                max-height: calc(100vh - 148px) !important;
+                overflow-y: auto !important;
+                border-radius: 10px !important;
+                z-index: 12000 !important;
+            }
+        }
+        @media (max-width: 640px) {
+            .site-header .header-actions .account-nav-dropdown.account-menu-open > .amazon-account-dropdown {
+                top: 104px !important;
+                right: 10px !important;
+                width: min(340px, calc(100vw - 20px)) !important;
+                max-width: calc(100vw - 20px) !important;
+                max-height: calc(100vh - 116px) !important;
+            }
+        }
+        @media (max-width: 2400px) {
+            /* Touch/tablet browsers must use the explicit click state, not hover. */
+            .site-header .header-actions .account-nav-dropdown > .amazon-account-dropdown {
+                display: none !important;
+                position: fixed !important;
+                top: 132px !important;
+                right: 12px !important;
+                left: auto !important;
+                width: min(360px, calc(100vw - 24px)) !important;
+                max-width: calc(100vw - 24px) !important;
+                max-height: calc(100vh - 148px) !important;
+                overflow-y: auto !important;
+                z-index: 12000 !important;
+            }
+            .site-header .header-actions .account-nav-dropdown.account-menu-open > .amazon-account-dropdown {
+                display: block !important;
+            }
+        }
+        @media (max-width: 640px) {
+            .site-header .header-actions .account-nav-dropdown.account-menu-open > .amazon-account-dropdown {
+                top: 104px !important;
+                right: 10px !important;
+                width: min(340px, calc(100vw - 20px)) !important;
+                max-width: calc(100vw - 20px) !important;
+                max-height: calc(100vh - 116px) !important;
+            }
+        }
+        @media (min-width: 1081px) {
+            .site-header.global-nav-active .fixed-menu-logo {
+                width: 160px !important;
+                min-height: 64px !important;
+                height: 64px !important;
+                padding: 8px 10px !important;
+            }
+            .site-header.global-nav-active .fixed-menu-logo img {
+                width: 130px !important;
+                height: 42px !important;
+                object-fit: contain !important;
+            }
+        }
+    </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     {% if global_mega_menu_settings %}
     <link href="https://fonts.googleapis.com/css2?family={{ global_mega_menu_settings.font_family|urlencode }}:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -14,24 +613,24 @@
         .mega-menu-wrapper {
             font-family: '{{ global_mega_menu_settings.font_family }}', sans-serif !important;
             background-color: {{ global_mega_menu_settings.background_color }} !important;
-            border-top: 3px solid {{ global_mega_menu_settings.hover_color }} !important;
+            border-top: 3px solid #e04420 !important;
         }
         .mega-menu-list > li > a {
             color: {{ global_mega_menu_settings.text_color }} !important;
             font-size: {{ global_mega_menu_settings.font_size_menu }}px !important;
         }
         .mega-menu-list > li > a:hover {
-            color: {{ global_mega_menu_settings.hover_color }} !important;
+            color: #e04420 !important;
         }
         .mega-menu-column h4 {
             color: {{ global_mega_menu_settings.heading_color }} !important;
             font-size: {{ global_mega_menu_settings.font_size_heading }}px !important;
         }
         .mega-promo a.btn {
-            background-color: {{ global_mega_menu_settings.hover_color }} !important;
+            background-color: #e04420 !important;
         }
         .mega-promo span {
-            color: {{ global_mega_menu_settings.hover_color }} !important;
+            color: #e04420 !important;
         }
     </style>
     {% endif %}
@@ -70,7 +669,22 @@
             </a>
         </div>
         <div class="nav-shell">
+            <a href="{% url 'storefront:home' %}" class="fixed-menu-logo" hidden aria-hidden="true" style="display:none!important" aria-label="{{ global_brand_settings.brand_name|default:'Nuboxed' }}">
+                {% if global_brand_settings.fixed_menu_logo %}
+                    <img src="{{ global_brand_settings.fixed_menu_logo.url }}" alt="{{ global_brand_settings.brand_name|default:'Nuboxed' }}">
+                {% elif global_site_logo and global_site_logo.logo_image %}
+                    <img src="{{ global_site_logo.logo_image.url }}" alt="{{ global_site_logo.alt_text|default:'Nuboxed' }}">
+                {% else %}
+                    <img src="{% static 'storefront/images/logo.webp' %}" alt="Nuboxed">
+                {% endif %}
+            </a>
             <nav class="main-nav" id="main-nav">
+                {% if global_brand_settings and global_brand_settings.drawer_menu_logo %}
+                <div class="drawer-menu-brand">
+                    <img src="{{ global_brand_settings.drawer_menu_logo.url }}" alt="{{ global_brand_settings.brand_name|default:'Nuboxed' }}">
+                </div>
+                {% endif %}
+                <button type="button" class="main-nav-close" data-close-nav aria-label="Close menu"><span class="drawer-close-icon" aria-hidden="true">&times;</span></button>
                 <a href="{% url 'storefront:home' %}">Home</a>
                 {% for menu_item in global_menu_items %}
                     {% if menu_item.title|lower == "store" or menu_item.title|lower == "stores" %}
@@ -85,6 +699,7 @@
                                     {% empty %}
                                         <li><span>No stores yet</span></li>
                                     {% endfor %}
+                                    {% if nav_store_more_links %}<li class="stores-more"><a href="{% url 'storefront:stores' %}">More stores <i class="fa-solid fa-chevron-right"></i></a><ul class="stores-more-list">{% for store in nav_store_more_links %}<li><a href="{% url 'storefront:store-detail' slug=store.slug %}">{{ store.name }}</a></li>{% endfor %}</ul></li>{% endif %}
                                     </ul>
                                 </div>
                                 <div class="mega-menu-column mega-promo">
@@ -92,6 +707,7 @@
                                     <h3>{{ global_mega_menu_settings.promo_title|default:"Visit Our Stores" }}</h3>
                                     <p>{{ global_mega_menu_settings.promo_description|default:"Find the best deals at a store near you." }}</p>
                                     <a href="{% url 'storefront:stores' %}" class="btn">{{ global_mega_menu_settings.promo_button_text|default:"VIEW ALL" }}</a>
+                                    {% if nav_delivery_location.pincode or nav_delivery_location.latitude %}<button type="button" class="store-menu-location-button" data-store-other-location data-stores-url="{% url 'storefront:stores-other-location' %}"><i class="fa-solid fa-earth-americas"></i> View stores in other locations</button>{% else %}<button type="button" class="store-menu-location-button" data-store-set-location><i class="fa-solid fa-location-dot"></i> Show stores near my PIN</button>{% endif %}
                                 </div>
                             </div>
                         </div>
@@ -164,6 +780,7 @@
                                 {% empty %}
                                     <li><span>No stores yet</span></li>
                                 {% endfor %}
+                                {% if nav_store_more_links %}<li class="stores-more"><a href="{% url 'storefront:stores' %}">More stores <i class="fa-solid fa-chevron-right"></i></a><ul class="stores-more-list">{% for store in nav_store_more_links %}<li><a href="{% url 'storefront:store-detail' slug=store.slug %}">{{ store.name }}</a></li>{% endfor %}</ul></li>{% endif %}
                                 </ul>
                             </div>
                             <div class="mega-menu-column mega-promo">
@@ -171,6 +788,7 @@
                                 <h3>{{ global_mega_menu_settings.promo_title|default:"Visit Our Stores" }}</h3>
                                 <p>{{ global_mega_menu_settings.promo_description|default:"Find the best deals at a store near you." }}</p>
                                 <a href="{% url 'storefront:stores' %}" class="btn">{{ global_mega_menu_settings.promo_button_text|default:"VIEW ALL" }}</a>
+                                {% if nav_delivery_location.pincode or nav_delivery_location.latitude %}<button type="button" class="store-menu-location-button" data-store-other-location data-stores-url="{% url 'storefront:stores-other-location' %}"><i class="fa-solid fa-earth-americas"></i> View stores in other locations</button>{% else %}<button type="button" class="store-menu-location-button" data-store-set-location><i class="fa-solid fa-location-dot"></i> Show stores near my PIN</button>{% endif %}
                             </div>
                         </div>
                     </div>
@@ -205,7 +823,7 @@
                             {% endfor %}
                         </div>
                     </div>
-                    <a href="{% url 'storefront:products' %}">Top Deals</a>
+                    <a href="{% url 'storefront:top-deals' %}">Top Deals</a>
                     <a href="{% url 'storefront:contact' %}">Contact</a>
                 {% endfor %}
             </nav>
@@ -214,8 +832,8 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 2px;"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg>
                     <span style="color: #fff;">Returns & Orders</span>
                     </a>
-                    <div class="nav-dropdown">
-                    <a href="{% if user.is_authenticated %}{% url 'storefront:customer-dashboard' %}{% else %}{% url 'storefront:login' %}{% endif %}" class="header-support icon-stack" style="color: #fff;">
+                    <div class="nav-dropdown account-nav-dropdown">
+                    <a href="{% if user.is_authenticated %}{% url 'storefront:customer-dashboard' %}{% else %}{% url 'storefront:login' %}{% endif %}" class="header-support icon-stack" data-account-toggle aria-expanded="false" style="color: #fff;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 2px;"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                         <span style="color: #fff;">Account <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline; margin-left: 2px;"><polyline points="6 9 12 15 18 9"></polyline></svg></span>
                     </a>
@@ -227,7 +845,7 @@
                             </div>
                         {% else %}
                             <div class="dropdown-signin-header account-welcome" style="background:#fff; color:#17212b;">
-                                <strong style="display:block; color:#17212b; font-size:15px; font-weight:700;">Hello, {{ user.get_full_name|default:user.email }}</strong>
+                                <strong style="display:block; color:#17212b; font-size:15px; font-weight:700;">Hello, {{ user.get_full_name|default:user.username|default:user.email }}</strong>
                                 <small style="display:block; color:#64748b; font-size:12px; margin-top:3px;">Manage your account</small>
                             </div>
                         {% endif %}
@@ -276,6 +894,13 @@
                 </a>
             </div>
             <button class="mobile-nav-toggle" type="button" data-toggle-nav><i class="fa-solid fa-bars"></i> Menu</button>
+            <button type="button" class="mobile-location-picker" onclick="document.getElementById('locationModal').style.display='flex'" aria-label="Choose delivery location">
+                <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                <span class="mobile-location-picker-copy">
+                    <small>Delivering to</small>
+                    <strong id="mobile-location-label">Set location</strong>
+                </span>
+            </button>
         </div>
     </header>
 
@@ -324,7 +949,7 @@
             {% endfor %}
         </div>
         <div class="cart-drawer-footer">
-            <div><span>{{ nav_cart_count }} items</span><strong>${{ nav_cart_total|default:"0.00" }}</strong></div>
+            <div><span>{{ nav_cart_count }} items</span><strong>{{ nav_cart_total|format_currency:nav_cart_currency_code }}</strong></div>
             <a href="{% url 'storefront:cart' %}" class="primary-link">View Cart</a>
             <a href="{% url 'storefront:checkout' %}" class="button-compact ghost">Checkout</a>
         </div>
@@ -379,6 +1004,7 @@
                                     {% empty %}
                                         <li><span>No stores yet</span></li>
                                     {% endfor %}
+                                    {% if nav_store_more_links %}<li class="stores-more"><a href="{% url 'storefront:stores' %}">More stores <i class="fa-solid fa-chevron-right"></i></a><ul class="stores-more-list">{% for store in nav_store_more_links %}<li><a href="{% url 'storefront:store-detail' slug=store.slug %}">{{ store.name }}</a></li>{% endfor %}</ul></li>{% endif %}
                                     </ul>
                                 </div>
                                 <div class="mega-menu-column mega-promo">
@@ -386,6 +1012,7 @@
                                     <h3>{{ global_mega_menu_settings.promo_title|default:"Visit Our Stores" }}</h3>
                                     <p>{{ global_mega_menu_settings.promo_description|default:"Find the best deals at a store near you." }}</p>
                                     <a href="{% url 'storefront:stores' %}" class="btn">{{ global_mega_menu_settings.promo_button_text|default:"VIEW ALL" }}</a>
+                                    {% if nav_delivery_location.pincode or nav_delivery_location.latitude %}<button type="button" class="store-menu-location-button" data-store-other-location data-stores-url="{% url 'storefront:stores-other-location' %}"><i class="fa-solid fa-earth-americas"></i> View stores in other locations</button>{% else %}<button type="button" class="store-menu-location-button" data-store-set-location><i class="fa-solid fa-location-dot"></i> Show stores near my PIN</button>{% endif %}
                                 </div>
                             </div>
                         </div>
@@ -451,6 +1078,7 @@
                                 {% empty %}
                                     <li><span>No stores yet</span></li>
                                 {% endfor %}
+                                {% if nav_store_more_links %}<li class="stores-more"><a href="{% url 'storefront:stores' %}">More stores <i class="fa-solid fa-chevron-right"></i></a><ul class="stores-more-list">{% for store in nav_store_more_links %}<li><a href="{% url 'storefront:store-detail' slug=store.slug %}">{{ store.name }}</a></li>{% endfor %}</ul></li>{% endif %}
                                 </ul>
                             </div>
                             <div class="mega-menu-column mega-promo">
@@ -458,6 +1086,7 @@
                                 <h3>{{ global_mega_menu_settings.promo_title|default:"Visit Our Stores" }}</h3>
                                 <p>{{ global_mega_menu_settings.promo_description|default:"Find the best deals at a store near you." }}</p>
                                 <a href="{% url 'storefront:stores' %}" class="btn">{{ global_mega_menu_settings.promo_button_text|default:"VIEW ALL" }}</a>
+                                {% if nav_delivery_location.pincode or nav_delivery_location.latitude %}<button type="button" class="store-menu-location-button" data-store-other-location data-stores-url="{% url 'storefront:stores-other-location' %}"><i class="fa-solid fa-earth-americas"></i> View stores in other locations</button>{% else %}<button type="button" class="store-menu-location-button" data-store-set-location><i class="fa-solid fa-location-dot"></i> Show stores near my PIN</button>{% endif %}
                             </div>
                         </div>
                     </div>
@@ -492,7 +1121,7 @@
                             {% endfor %}
                         </div>
                     </div>
-                    <a href="{% url 'storefront:products' %}">Top Deals</a>
+                    <a href="{% url 'storefront:top-deals' %}">Top Deals</a>
                     <a href="{% url 'storefront:contact' %}">Contact</a>
                 {% endfor %}
             </div>
@@ -510,35 +1139,168 @@
     <footer class="n9-footer{% if request.resolver_match.url_name == 'store-detail' %} store-detail-footer{% endif %}" id="footer"><div class="n9-footer-inner n9-footer-top"><div><h3>{{ global_brand_settings.footer_top_title|default:'Good products. Better prices. A simpler way to shop.' }}</h3><p>{{ global_brand_settings.footer_top_subtitle|default:'Get product launches, members-only offers and shopping updates delivered to your inbox.' }}</p></div><form class="n9-footer-subscribe" data-n9-footer-subscribe><input type="email" aria-label="Email address" placeholder="Enter your email address" required><button type="submit">Subscribe</button></form></div><div class="n9-footer-inner n9-footer-grid"><div class="n9-footer-brand"><h4>{{ global_brand_settings.brand_name|default:'Nuboxed' }}</h4><p>{{ global_brand_settings.footer_description|default:'A modern ecommerce destination for curated products and everyday essentials.' }}</p>{% if global_social_links %}<div class="n9-footer-social" aria-label="Social media links">{% for social_link in global_social_links %}<a href="{{ social_link.url }}" target="_blank" rel="noopener noreferrer" aria-label="{{ social_link.platform }}"><i class="{{ social_link.icon_class }}" aria-hidden="true"></i></a>{% endfor %}</div>{% endif %}</div><div class="n9-footer-col"><h4>Shop</h4><a href="{% url 'storefront:products' %}">All Products</a><a href="{% url 'storefront:products' %}">Best Sellers</a><a href="#n8-products">Trending Now</a><a href="{% url 'storefront:stores' %}">Our Stores</a><a href="{% url 'storefront:contact' %}">Contact Us</a></div><div class="n9-footer-col"><h4>Customer Care</h4><a href="{% url 'storefront:contact' %}">Help Center</a><a href="{% url 'storefront:customer-dashboard' %}">Track Order</a><a href="{% url 'storefront:contact' %}">Shipping &amp; Delivery</a><a href="{% url 'storefront:customer-dashboard' %}">Returns &amp; Refunds</a><a href="{% url 'storefront:contact' %}">Contact Support</a></div><div class="n9-footer-col"><h4>Company</h4><a href="{% url 'storefront:home' %}">About Nuboxed</a><a href="{% url 'storefront:stores' %}">Our Stores</a><a href="{% url 'storefront:contact' %}">Contact Us</a><a href="{% url 'storefront:products' %}">Top Deals</a></div><div class="n9-footer-col"><h4>Legal</h4><a href="{% url 'storefront:contact' %}">Privacy Policy</a><a href="{% url 'storefront:contact' %}">Terms &amp; Conditions</a><a href="{% url 'storefront:contact' %}">Cookie Policy</a><a href="{% url 'storefront:contact' %}">Accessibility</a></div></div><div class="n9-footer-inner n9-footer-trust"><div class="n9-footer-trust-item"><i class="fa-solid fa-lock"></i><div><strong>Secure checkout</strong><small>Protected payments</small></div></div><div class="n9-footer-trust-item"><i class="fa-solid fa-truck-fast"></i><div><strong>Fast delivery</strong><small>Reliable order updates</small></div></div><div class="n9-footer-trust-item"><i class="fa-solid fa-rotate-left"></i><div><strong>Easy returns</strong><small>Simple return process</small></div></div><div class="n9-footer-trust-item"><i class="fa-solid fa-headset"></i><div><strong>Customer support</strong><small>Here when you need us</small></div></div></div><div class="n9-footer-inner n9-footer-bottom"><span>© 2026 {{ global_brand_settings.brand_name|default:'Nuboxed' }}. All rights reserved.</span><div class="n9-payment-row" aria-label="Accepted payment methods"><span class="n9-payment">VISA</span><span class="n9-payment">Mastercard</span><span class="n9-payment">RuPay</span><span class="n9-payment">UPI</span><span class="n9-payment">COD</span></div></div></footer><script>document.querySelector('[data-n9-footer-subscribe]')?.addEventListener('submit',function(event){event.preventDefault();const button=event.currentTarget.querySelector('button');button.textContent='Subscribed ✓';event.currentTarget.reset();});</script>
     <style>
       /* Keep footer content aligned with the header's logo and location edges. */
+      .n9-footer{height:auto!important;min-height:0!important}
       .n9-footer .n9-footer-inner{width:calc(100% - clamp(30px,4vw,60px));max-width:none}
+      .n9-footer-bottom{height:auto!important;min-height:0!important;margin:0!important;justify-content:flex-start!important;align-content:flex-start!important}
+      .n9-payment-row{height:auto!important;min-height:0!important;margin:0!important;align-content:flex-start!important}
       @media(max-width:640px){.n9-footer .n9-footer-inner{width:calc(100% - 30px)}}
-      .n9-footer.store-detail-footer{margin-top:70px}
+      .n9-footer.store-detail-footer{margin-top:70px}.n9-footer-bottom>span{flex:1 1 280px;min-width:220px;white-space:nowrap;overflow:visible;text-overflow:clip}.n9-payment-row{flex:0 1 auto;white-space:nowrap}
+      @media(min-width:641px){.n9-footer-bottom>span{padding-left:24px!important}.n9-payment-row{margin-left:auto!important;margin-right:0!important;transform:translateX(clamp(18px,2vw,34px));justify-content:flex-end!important}}
+      @media(max-width:640px){.n9-footer-bottom{justify-content:flex-start!important;align-items:center!important;gap:12px!important}.n9-footer-bottom>span{order:2;flex:0 0 auto!important;width:100%;min-width:0;font-size:12px;text-align:center!important}.n9-payment-row{order:1;width:100%;white-space:normal;margin-right:0!important;transform:none!important;justify-content:center!important}}
+      .store-menu-location-button{display:inline-flex;align-items:center;justify-content:center;gap:7px;width:max-content;min-width:190px;max-width:100%;min-height:38px;height:38px;box-sizing:border-box;flex:0 0 auto;margin-top:12px;padding:9px 18px!important;border:1px solid rgba(224,68,32,.45);border-radius:8px;background:#fff;color:#e04420;font-family:inherit;font-size:11px;font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;transition:background .2s,color .2s,transform .2s,width .28s ease}.store-menu-location-button i{flex:0 0 auto}.store-menu-location-button:hover{background:#e04420;color:#fff;transform:translateY(-1px)}.store-menu-location-button[aria-busy="true"]{opacity:.65;cursor:wait}
+      @media(max-width:1024px){.store-menu-location-button{font-size:11px;min-width:190px;min-height:38px;padding-inline:18px!important;gap:6px}}
+      @media(max-width:640px){.site-header .mega-dropdown-sm .mega-menu-wrapper.sm{width:calc(100vw - 16px)!important;min-width:0!important;max-width:calc(100vw - 16px)!important;grid-template-columns:1fr!important}.site-header .mega-dropdown-sm .mega-menu-wrapper.sm .mega-promo{width:100%;box-sizing:border-box;padding:24px 18px}.store-menu-location-button{font-size:10px;min-width:180px;min-height:38px;padding-inline:16px!important;gap:5px;letter-spacing:-.1px}}
     </style>
-    <script src="{% static 'storefront/storefront.js' %}?v=20260722-product-settings1"></script>
+    <script src="{% static 'storefront/storefront.js' %}?v=20260814-countdown2"></script>
     {% block extra_scripts %}{% endblock %}
+
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        document.addEventListener("click", function(event) {
+            const button = event.target.closest("[data-store-set-location]");
+            if (!button) return;
+            event.preventDefault();
+            const locationModal = document.getElementById("locationModal");
+            if (locationModal) locationModal.style.display = "flex";
+        });
+        window.updateStoreMenuLocationState = function(hasLocation) {
+            const refreshMenuStores = fetch("{% url 'storefront:stores-other-location' %}" + (hasLocation ? "?mode=nearby" : ""), {headers: {"Accept": "application/json", "X-Requested-With": "XMLHttpRequest"}, credentials: "same-origin"})
+                .then(response => response.ok ? response.json() : Promise.reject(new Error("Store menu refresh failed")))
+                .then(payload => {
+                    if (!payload.ok) return;
+                    document.querySelectorAll(".mega-menu-wrapper").forEach(function(wrapper) {
+                        const list = wrapper.querySelector(".mega-menu-list");
+                        if (!list) return;
+                        list.innerHTML = payload.stores.length
+                            ? payload.stores.slice(0, 6).map(store => '<li><a href="/stores/' + encodeURIComponent(store.slug) + '/">' + store.name + '</a></li>').join("")
+                            : '<li><span>No stores available for this location</span></li>';
+                    });
+                }).catch(() => {});
+            document.querySelectorAll(".store-menu-location-button").forEach(function(button) {
+                const replacement = document.createElement("button");
+                replacement.type = "button";
+                replacement.className = "store-menu-location-button";
+                if (hasLocation) {
+                    replacement.dataset.storeOtherLocation = "";
+                    replacement.dataset.storesUrl = "{% url 'storefront:stores-other-location' %}";
+                    replacement.innerHTML = '<i class="fa-solid fa-earth-americas"></i> View stores in other locations';
+                } else {
+                    replacement.dataset.storeSetLocation = "";
+                    replacement.innerHTML = '<i class="fa-solid fa-location-dot"></i> Show stores near my PIN';
+                }
+                button.replaceWith(replacement);
+            });
+            return refreshMenuStores;
+        };
+        document.querySelectorAll(".n9-footer a").forEach(function(link) {
+            if (link.textContent.trim().toLowerCase() === "top deals") {
+                link.href = "{% url 'storefront:top-deals' %}";
+            }
+        });
+        function setStoreButtonLabel(button, markup) {
+            const currentWidth = button.getBoundingClientRect().width;
+            const parentWidth = button.parentElement?.getBoundingClientRect().width || currentWidth;
+            button.style.width = currentWidth + "px";
+            button.innerHTML = markup;
+            button.style.width = "max-content";
+            const naturalWidth = button.getBoundingClientRect().width;
+            const targetWidth = Math.min(Math.max(naturalWidth, 180), parentWidth);
+            button.style.width = currentWidth + "px";
+            requestAnimationFrame(() => { button.style.width = targetWidth + "px"; });
+        }
+        document.addEventListener("click", async function(event) {
+                const button = event.target.closest("[data-store-other-location]");
+                if (!button) return;
+                event.preventDefault();
+                const wrapper = button.closest(".mega-menu-wrapper");
+                const list = wrapper?.querySelector(".mega-menu-list");
+                if (!list) return;
+                if (button.dataset.loaded === "1") {
+                    list.innerHTML = button.dataset.nearbyHtml || list.innerHTML;
+                    button.dataset.loaded = "0";
+                    setStoreButtonLabel(button, '<i class="fa-solid fa-earth-americas"></i> View stores in other locations');
+                    return;
+                }
+                button.setAttribute("aria-busy", "true");
+                setStoreButtonLabel(button, '<i class="fa-solid fa-spinner fa-spin"></i> Loading stores...');
+                try {
+                    const response = await fetch(button.dataset.storesUrl, {headers: {"Accept": "application/json", "X-Requested-With": "XMLHttpRequest"}, credentials: "same-origin"});
+                    if (!response.ok) throw new Error("Could not load stores");
+                    const payload = await response.json();
+                    if (!payload.ok) throw new Error(payload.message || "Could not load stores");
+                    button.dataset.nearbyHtml = list.innerHTML;
+                    list.innerHTML = payload.stores.length
+                        ? payload.stores.map(store => '<li><a href="/stores/' + encodeURIComponent(store.slug) + '/">' + store.name + '</a></li>').join("")
+                        : '<li><span>No stores available</span></li>';
+                    button.dataset.loaded = "1";
+                    setStoreButtonLabel(button, '<i class="fa-solid fa-location-dot"></i> Show stores near my PIN');
+                } catch (error) {
+                    setStoreButtonLabel(button, '<i class="fa-solid fa-earth-americas"></i> View stores in other locations');
+                    window.alert("Could not load stores right now. Please try again.");
+                } finally {
+                    button.removeAttribute("aria-busy");
+                }
+        });
+    });
+    </script>
 
     {% if request.resolver_match.url_name != 'store-detail' %}
     <style>
         .site-header[data-global-site-header]{position:relative;top:auto;z-index:auto}
+        .site-header[data-global-site-header] .fixed-menu-logo{display:none!important}
+        .site-header[data-global-site-header].global-nav-active .fixed-menu-logo{display:inline-flex!important}
         .site-header[data-global-site-header].global-nav-active{padding-bottom:var(--global-nav-height,58px)}
-        .site-header[data-global-site-header].global-nav-active .nav-shell{position:fixed;top:0;left:0;right:0;width:100%;max-width:none;margin:0;padding-left:clamp(15px,calc((100vw - 1630px)/2),80px);padding-right:clamp(15px,calc((100vw - 1630px)/2),80px);z-index:70;background:var(--global-nav-background,transparent);box-shadow:0 8px 22px rgb(15 23 42 / .12)}
+        .site-header[data-global-site-header].global-nav-active .nav-shell{position:fixed;top:0;left:0;right:0;width:100%;max-width:none;margin:0;padding-left:48px;padding-right:48px;z-index:70;background:var(--global-nav-background,transparent);box-shadow:0 8px 22px rgb(15 23 42 / .12)}
+        @media (min-width:1801px){.site-header[data-global-site-header].global-nav-active .nav-shell{padding-left:max(16px,calc((100vw - 1360px)/2));padding-right:max(16px,calc((100vw - 1360px)/2))}}
+        @media (min-width:1081px){
+            .site-header[data-global-site-header].global-nav-active .fixed-menu-logo{width:160px!important;min-height:64px!important;height:64px!important;padding:8px 10px!important}
+            .site-header[data-global-site-header].global-nav-active .fixed-menu-logo img{width:130px!important;height:42px!important;object-fit:contain!important}
+        }
+        @media (max-width:1080px){.site-header[data-global-site-header].global-nav-active .fixed-menu-logo{display:none!important}}
+        /* Keep the desktop delivery-location control visible beside the search.
+           Tablet/phone layouts use the location control in the navigation row. */
+        @media (min-width:1081px){
+            .site-header .header-shell{position:relative!important}
+            .site-header .location-picker-btn{display:flex!important;position:absolute!important;right:48px;top:50%;transform:translateY(-50%);margin-left:0!important;z-index:2}
+            .site-header .header-search{right:250px!important;width:min(650px,calc(100% - 500px))!important}
+        }
+        @media (max-width:1080px){
+            .site-header .mobile-nav-toggle{display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:9px!important;width:auto!important;min-width:max-content!important;white-space:nowrap!important;font-size:16px!important;line-height:1!important}
+            .site-header .mobile-nav-toggle i{display:inline-block!important;font-size:20px!important;line-height:1!important}
+        }
     </style>
     <script>
     document.addEventListener('DOMContentLoaded', function () {
         const header = document.querySelector('[data-global-site-header]');
         const nav = header?.querySelector('.nav-shell');
         if (!header || !nav) return;
+        const fixedLogo = nav.querySelector('.fixed-menu-logo');
+        header.classList.remove('global-nav-active');
         let navThreshold = nav.getBoundingClientRect().top + window.scrollY;
         const navStyle = window.getComputedStyle(nav);
         const headerStyle = window.getComputedStyle(header);
         const normalBackground = navStyle.backgroundColor === 'rgba(0, 0, 0, 0)' ? headerStyle.backgroundColor : navStyle.backgroundColor;
         header.style.setProperty('--global-nav-background', normalBackground);
         const updateGlobalNav = function () {
-            const shouldStick = window.scrollY >= navThreshold;
+            const desktopScrollThreshold = window.innerWidth > 1080 ? 300 : navThreshold;
+            const shouldStick = window.scrollY >= Math.max(navThreshold, desktopScrollThreshold);
+            const showFixedLogo = shouldStick && window.innerWidth > 1080;
             if (shouldStick && !header.classList.contains('global-nav-active')) {
                 header.style.setProperty('--global-nav-height', nav.offsetHeight + 'px');
             }
             header.classList.toggle('global-nav-active', shouldStick);
+            if (fixedLogo) {
+                fixedLogo.hidden = !showFixedLogo;
+                fixedLogo.style.setProperty('display', showFixedLogo ? 'inline-flex' : 'none', 'important');
+                fixedLogo.setAttribute('aria-hidden', showFixedLogo ? 'false' : 'true');
+                if (showFixedLogo) {
+                    fixedLogo.style.setProperty('width', '160px', 'important');
+                    fixedLogo.style.setProperty('height', '64px', 'important');
+                    const fixedLogoImage = fixedLogo.querySelector('img');
+                    fixedLogoImage?.style.setProperty('width', '130px', 'important');
+                    fixedLogoImage?.style.setProperty('height', '42px', 'important');
+                }
+            }
         };
         updateGlobalNav();
         window.addEventListener('scroll', updateGlobalNav, {passive:true});
@@ -863,13 +1625,23 @@ document.addEventListener('DOMContentLoaded', function () {
     if (copyright && config.copyright) copyright.textContent = config.copyright;
     if (copyright) copyright.style.textAlign = config.copyright_align || 'left';
     const paymentRow = footer.querySelector('.n9-payment-row');
-    if (paymentRow && (config.payment_images || []).length) {
+        if (paymentRow && config.show_payment_images === false) paymentRow.style.display = 'none';
+        if (paymentRow && config.show_payment_images !== false && (config.payment_images || []).length) {
         paymentRow.innerHTML = '';
-        config.payment_images.forEach(function (src) { const image = document.createElement('img'); image.src = src; image.alt = 'Payment method'; image.style.width = (config.payment_width || 54) + 'px'; image.style.height = (config.payment_height || 32) + 'px'; image.style.objectFit = config.payment_fit || 'contain'; paymentRow.appendChild(image); });
+            const image = document.createElement('img'); image.src = config.payment_images[0]; image.alt = 'Payment method'; image.style.width = (config.payment_width || 54) + 'px'; image.style.height = (config.payment_height || 32) + 'px'; image.style.objectFit = config.payment_fit || 'contain'; paymentRow.appendChild(image);
     }
 });
 </script>
 
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const config=JSON.parse(document.getElementById('global-footer-settings')?.textContent || '{}');
+    const dimension=function(value,unit){return unit === 'auto' ? 'auto' : (value || 0)+unit;};
+    const width=dimension(config.payment_width || 54,config.payment_width_unit || 'px');
+    const height=dimension(config.payment_height || 32,config.payment_height_unit || 'px');
+    document.querySelectorAll('.n9-payment-row img').forEach(function(image){image.style.width=width;image.style.height=height;});
+});
+</script>
 </body>
 
 
@@ -901,13 +1673,109 @@ document.addEventListener('DOMContentLoaded', function () {
 </div>
 
 <script>
+    function updateProductDeliveryLocation(city, pin) {
+        const target = document.getElementById('product-delivery-location-label');
+        const cleanCity = (city || '').trim();
+        const cleanPin = (pin || '').trim();
+        const label = [cleanCity, cleanPin].filter(Boolean).join(' ') || 'Set location';
+        if (target) target.innerText = label;
+        const quickTarget = document.getElementById('quick-delivery-location-label');
+        if (quickTarget) quickTarget.innerText = label;
+        const mobileTarget = document.getElementById('mobile-location-label');
+        if (mobileTarget) mobileTarget.innerText = label;
+    }
+
     function clearLocation() {
         document.getElementById('loc-pin').innerText = "";
         document.getElementById('loc-city').innerText = "";
+        updateProductDeliveryLocation('', '');
         document.getElementById('pincode-input').value = "";
-        fetch(`/set-location/?clear=true`).then(() => {
-            document.getElementById('locationModal').style.display = 'none';
-        });
+        fetch(`/set-location/?clear=true`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(response => {
+                if (!response.ok) throw new Error('Location clear failed');
+                return response.json();
+            })
+            .then(() => {
+                window.updateStoreMenuLocationState?.(false);
+                document.getElementById('locationModal').style.display = 'none';
+                refreshStoresAfterLocationClear();
+            })
+            .catch(() => {
+                window.updateStoreMenuLocationState?.(false);
+                document.getElementById('locationModal').style.display = 'none';
+            });
+    }
+
+    function refreshStoresAfterLocationClear() {
+        // The Stores page uses the same server-side location/filter logic as
+        // the normal page render. Re-fetch it after every location change so
+        // the store grid updates without a full page reload.
+        const directory = document.querySelector('.store-directory-shell');
+        if (!directory) return;
+        const grid = directory.querySelector('.store-grid');
+        if (!grid) return;
+        grid.setAttribute('aria-busy', 'true');
+        grid.style.opacity = '0.55';
+        const refreshUrl = window.location.pathname + window.location.search;
+        fetch(refreshUrl, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' },
+            credentials: 'same-origin',
+        })
+            .then(response => {
+                if (!response.ok) throw new Error('Store refresh failed');
+                return response.text();
+            })
+            .then(html => {
+                const parsed = new DOMParser().parseFromString(html, 'text/html');
+                const nextGrid = parsed.querySelector('.store-directory-shell .store-grid');
+                if (!nextGrid) return;
+                grid.replaceWith(nextGrid);
+
+                const currentCta = document.querySelector('.store-location-cta');
+                const nextCta = parsed.querySelector('.store-location-cta');
+                if (currentCta && nextCta) currentCta.replaceWith(nextCta);
+                else if (currentCta && !nextCta) currentCta.remove();
+                else if (!currentCta && nextCta) directory.insertAdjacentHTML('afterend', nextCta.outerHTML);
+            })
+            .catch(() => {
+                // Keep the current cards visible if the background refresh is
+                // interrupted; the cleared session still remains authoritative.
+            })
+            .finally(() => {
+                const activeGrid = directory.querySelector('.store-grid');
+                activeGrid?.removeAttribute('aria-busy');
+                if (activeGrid) activeGrid.style.opacity = '';
+            });
+    }
+
+    function refreshLocationDependentContent() {
+        // Re-render only location-sensitive fragments after the session has
+        // been updated. This keeps the current page in sync without a full
+        // browser refresh or losing modal/navigation state.
+        const currentGrids = Array.from(document.querySelectorAll('.product-grid'));
+        const currentCounts = Array.from(document.querySelectorAll('.product-count'));
+        if (!currentGrids.length && !currentCounts.length) return Promise.resolve();
+        return fetch(window.location.href, {
+            cache: 'no-store',
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' },
+        })
+            .then(response => response.ok ? response.text() : Promise.reject(new Error('Location content refresh failed')))
+            .then(html => {
+                const parsed = new DOMParser().parseFromString(html, 'text/html');
+                const nextGrids = Array.from(parsed.querySelectorAll('.product-grid'));
+                const nextCounts = Array.from(parsed.querySelectorAll('.product-count'));
+                currentGrids.forEach((grid, index) => {
+                    if (nextGrids[index]) grid.replaceWith(nextGrids[index].cloneNode(true));
+                });
+                currentCounts.forEach((count, index) => {
+                    if (nextCounts[index]) count.replaceWith(nextCounts[index].cloneNode(true));
+                });
+            })
+            .catch(() => {
+                // The saved session remains authoritative if a background
+                // fragment refresh is interrupted.
+            });
     }
 
     function applyPincode() {
@@ -918,75 +1786,85 @@ document.addEventListener('DOMContentLoaded', function () {
             fetch(`https://api.postalpincode.in/pincode/${pin}`)
                 .then(res => res.json())
                 .then(data => {
+                    let city = '';
                     if (data && data[0].Status === "Success") {
-                        const city = data[0].PostOffice[0].Name || data[0].PostOffice[0].District;
+                        city = data[0].PostOffice[0].Name || data[0].PostOffice[0].District;
                         document.getElementById('loc-city').innerText = city + " ";
                     } else {
                         document.getElementById('loc-city').innerText = "";
                     }
+                    updateProductDeliveryLocation(city, pin);
                     document.getElementById('locationModal').style.display = 'none';
                 })
                 .catch(() => {
                     document.getElementById('loc-city').innerText = "";
+                    updateProductDeliveryLocation('', pin);
                     document.getElementById('locationModal').style.display = 'none';
                 });
             
-            // Send to server to save session (if needed)
-            fetch(`/set-location/?pincode=${pin}`);
+            // Save first, then refresh the visible store list using the new location.
+            fetch(`/set-location/?pincode=${encodeURIComponent(pin)}`, { credentials: 'same-origin' })
+                .then(async response => {
+                    if (!response.ok) throw new Error('Location save failed');
+                    const menuRefresh = window.updateStoreMenuLocationState?.(true);
+                    await Promise.resolve(menuRefresh);
+                    await Promise.all([refreshStoresAfterLocationClear(), refreshLocationDependentContent()]);
+                })
+                .catch(() => {});
         } else {
             alert('Please enter a valid pincode');
         }
     }
     function useLiveLocation() {
-        if ("geolocation" in navigator) {
-            document.getElementById('loc-pin').innerText = "Locating...";
-            document.getElementById('loc-city').innerText = "";
-            navigator.geolocation.getCurrentPosition(function(position) {
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
-                fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data && data.address && data.address.postcode) {
-                            const pincode = data.address.postcode;
-                            document.getElementById('loc-pin').innerText = pincode;
-                            
-                            // Fetch proper local name using postalpincode API
-                            document.getElementById('loc-city').innerText = "Loading... ";
-                            fetch(`https://api.postalpincode.in/pincode/${pincode}`)
-                                .then(res => res.json())
-                                .then(pindata => {
-                                    if (pindata && pindata[0].Status === "Success") {
-                                        const city = pindata[0].PostOffice[0].Name || pindata[0].PostOffice[0].District;
-                                        document.getElementById('loc-city').innerText = city ? city + " " : "";
-                                    } else {
-                                        document.getElementById('loc-city').innerText = "";
-                                    }
-                                })
-                                .catch(() => {
-                                    document.getElementById('loc-city').innerText = "";
-                                });
-                                
-                            document.getElementById('locationModal').style.display = 'none';
-                            
-                            // Send to server to save session
-                            fetch(`/set-location/?pincode=${pincode}&latitude=${lat}&longitude=${lon}`);
-                        } else {
-                            document.getElementById('loc-pin').innerText = "Not found";
-                            alert("Could not determine pincode from location.");
-                        }
-                    })
-                    .catch(error => {
-                        document.getElementById('loc-pin').innerText = "Error";
-                        alert("Failed to fetch location data.");
-                    });
-            }, function(error) {
-                document.getElementById('loc-pin').innerText = "";
-                alert('Please allow location access or enter pincode manually.');
-            });
-        } else {
-            alert("Geolocation is not supported by your browser.");
+        const pinLabel = document.getElementById('loc-pin');
+        const cityLabel = document.getElementById('loc-city');
+        if (!window.isSecureContext && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            alert('Current location requires HTTPS on the live server. Please open the secure HTTPS URL or enter your pincode manually.');
+            return;
         }
+        if (!navigator.geolocation) {
+            alert('Geolocation is not supported by this browser. Please enter your pincode manually.');
+            return;
+        }
+        pinLabel.innerText = 'Locating...';
+        cityLabel.innerText = '';
+        navigator.geolocation.getCurrentPosition(async function(position) {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            try {
+                // Use the same-origin Django proxy in production. Direct
+                // browser calls to Nominatim were blocked intermittently by
+                // CORS and provider rate limits on the Amazon deployment.
+                const lookup = await fetch(`/set-location/?reverse=1&latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}`, {
+                    credentials: 'same-origin',
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+                });
+                const data = await lookup.json();
+                if (!lookup.ok || data.status !== 'success') throw new Error(data.message || 'Reverse lookup failed');
+                const pincode = (data.pincode || '').trim();
+                const city = (data.city || '').trim();
+                if (!pincode) throw new Error('No pincode was returned for this location.');
+                pinLabel.innerText = pincode;
+                cityLabel.innerText = city ? `${city} ` : '';
+                updateProductDeliveryLocation(city, pincode);
+                const saved = await fetch(`/set-location/?pincode=${encodeURIComponent(pincode)}&latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lon)}`, { credentials: 'same-origin' });
+                if (!saved.ok) throw new Error('Location save failed');
+                const menuRefresh = window.updateStoreMenuLocationState?.(true);
+                await Promise.resolve(menuRefresh);
+                document.getElementById('locationModal').style.display = 'none';
+                await Promise.all([refreshStoresAfterLocationClear(), refreshLocationDependentContent()]);
+            } catch (error) {
+                pinLabel.innerText = '';
+                cityLabel.innerText = '';
+                alert(error.message || 'Location lookup failed. Please enter your pincode manually.');
+            }
+        }, function(error) {
+            pinLabel.innerText = '';
+            const message = error && error.code === 1
+                ? 'Location permission was denied. Please allow location access or enter your pincode manually.'
+                : 'Could not detect your location. Please try again or enter your pincode manually.';
+            alert(message);
+        }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 300000 });
     }
 
     document.addEventListener("DOMContentLoaded", function() {
@@ -1000,6 +1878,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         const city = data[0].PostOffice[0].Name || data[0].PostOffice[0].District;
                         if(city) {
                             document.getElementById('loc-city').innerText = city + " ";
+                            updateProductDeliveryLocation(city, savedPin);
                         }
                     }
                 })

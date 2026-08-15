@@ -97,30 +97,36 @@
     const trafficSeries = JSON.parse(document.getElementById("bo-traffic-series").textContent);
 
     const perfEl = document.getElementById("bo-performance-chart");
+    const isDark = document.body.classList.contains("dark-mode");
+    const chartText = isDark ? "#94A3B8" : "#64748B";
+    const chartGrid = isDark ? "#243041" : "#E2E8F0";
     if (perfEl && window.ApexCharts) {
         new ApexCharts(perfEl, {
-            chart: { type: "area", height: 320, toolbar: { show: false }, zoom: { enabled: false } },
+            chart: { type: "area", height: 320, toolbar: { show: false }, zoom: { enabled: false }, foreColor: chartText },
             series: [{ name: "Performance", data: perfSeries }],
-            xaxis: { categories: labels, axisBorder: { show: false }, axisTicks: { show: false } },
+            xaxis: { categories: labels, axisBorder: { show: false }, axisTicks: { show: false }, labels: { style: { colors: chartText } } },
+            yaxis: { labels: { style: { colors: chartText } } },
             stroke: { curve: "smooth", width: 3 },
             fill: { type: "gradient", gradient: { opacityFrom: 0.35, opacityTo: 0.02 } },
             colors: ["#e04420"],
             dataLabels: { enabled: false },
-            grid: { borderColor: "#E2E8F0", strokeDashArray: 5 },
+            grid: { borderColor: chartGrid, strokeDashArray: 5 },
             legend: { show: false },
+            theme: { mode: isDark ? "dark" : "light" },
         }).render();
     }
 
     const trafficEl = document.getElementById("bo-traffic-chart");
     if (trafficEl && window.ApexCharts) {
         new ApexCharts(trafficEl, {
-            chart: { type: "donut", height: 320 },
+            chart: { type: "donut", height: 320, foreColor: chartText },
             series: trafficSeries,
             labels: ["Retailers", "Stores", "Products"],
             colors: ["#e04420", "#22C55E", "#F59E0B"],
-            legend: { position: "bottom" },
+            legend: { position: "bottom", labels: { colors: chartText } },
             dataLabels: { enabled: false },
             stroke: { width: 0 },
+            theme: { mode: isDark ? "dark" : "light" },
         }).render();
     }
 })();

@@ -9,7 +9,7 @@ from apps.catalog.forms import ProductAttributeForm, ProductForm
 from apps.catalog.models import Category, Product, ProductAttribute
 from apps.cms.models import HomePageSettings, HomeReviewCard, HomeTrustCard, Page, Slider
 from apps.retailers.forms import StoreForm
-from apps.retailers.models import Retailer
+from apps.retailers.models import Retailer, SellerVerificationDocumentSetting, SellerVerificationPageSetting, RetailerRegistrationFieldSetting
 from apps.retailers.services import unique_slug
 from apps.rbac.constants import ROLE_RETAILER_OWNER
 from apps.rbac.constants import DEFAULT_PERMISSIONS
@@ -22,6 +22,152 @@ from apps.users.models import User
 from apps.shipments.models import CourierPartner
 from apps.inventory.models import Warehouse
 from apps.settings_app.models import BrandSettings
+
+MASKED_SECRET_VALUE = "••••••••••••"
+
+
+class SellerVerificationPageSettingForm(forms.ModelForm):
+    class Meta:
+        model = SellerVerificationPageSetting
+        fields = ("section_title", "section_description", "is_visible")
+        widgets = {
+            "section_title": forms.TextInput(attrs={"class": "bo-input"}),
+            "section_description": forms.Textarea(attrs={"class": "bo-input", "rows": 3}),
+        }
+
+
+class SellerVerificationDocumentSettingForm(forms.ModelForm):
+    class Meta:
+        model = SellerVerificationDocumentSetting
+        fields = ("title", "description", "icon_class", "sort_order", "is_visible", "is_required")
+        widgets = {
+            "title": forms.TextInput(attrs={"class": "bo-input svd-title-input"}),
+            "description": forms.TextInput(attrs={"class": "bo-input"}),
+            "icon_class": forms.TextInput(attrs={"class": "bo-input svd-icon-input", "placeholder": "fa-solid fa-file"}),
+            "sort_order": forms.NumberInput(attrs={"class": "bo-input", "min": 0}),
+        }
+
+
+class SellerVerificationDocumentCreateForm(forms.ModelForm):
+    class Meta:
+        model = SellerVerificationDocumentSetting
+        fields = ("field_name", "title", "description", "icon_class", "sort_order", "is_visible", "is_required")
+        widgets = {
+            "field_name": forms.TextInput(attrs={"class": "bo-input", "placeholder": "trade_license"}),
+            "title": forms.TextInput(attrs={"class": "bo-input"}),
+            "description": forms.TextInput(attrs={"class": "bo-input"}),
+            "icon_class": forms.TextInput(attrs={"class": "bo-input", "placeholder": "fa-solid fa-file"}),
+            "sort_order": forms.NumberInput(attrs={"class": "bo-input", "min": 0}),
+        }
+
+    def clean_field_name(self):
+        value = self.cleaned_data["field_name"].strip().lower().replace("-", "_")
+        import re
+        if not re.match(r"^[a-z][a-z0-9_]*$", value):
+            raise forms.ValidationError("Use lowercase letters, numbers and underscores only.")
+        return value
+
+class RetailerRegistrationFieldForm(forms.ModelForm):
+    class Meta:
+        model = RetailerRegistrationFieldSetting
+        fields = ("field_name", "title", "placeholder", "field_type", "choices_text", "sort_order", "is_visible", "is_required")
+        widgets = {field: forms.TextInput(attrs={"class": "bo-input"}) for field in ("field_name", "title", "placeholder")}
+        widgets["choices_text"] = forms.Textarea(attrs={"class": "bo-input rrf-choices-editor", "rows": 5, "placeholder": "Option 1\nOption 2\nOption 3"})
+        widgets.update({"sort_order": forms.NumberInput(attrs={"class": "bo-input", "min": 0}), "field_type": forms.Select(attrs={"class": "bo-input"})})
+
+    def clean_field_name(self):
+        value = self.cleaned_data["field_name"].strip().lower().replace("-", "_")
+        import re
+        if not re.match(r"^[a-z][a-z0-9_]*$", value):
+            raise forms.ValidationError("Use lowercase letters, numbers and underscores only.")
+        return value
+
+    def clean_choices_text(self):
+        """Store select options consistently so the retailer form can render them."""
+        value = (self.cleaned_data.get("choices_text") or "").replace("\r\n", "\n")
+        if self.cleaned_data.get("field_type") == RetailerRegistrationFieldSetting.FIELD_SELECT:
+            raw_options = value.splitlines() if "\n" in value else value.split(",")
+            options = []
+            seen = set()
+            for option in raw_options:
+                option = option.strip()
+                if option and option.casefold() not in seen:
+                    options.append(option)
+                    seen.add(option.casefold())
+            if not options:
+                raise forms.ValidationError("Add at least one option for a Select field.")
+            return "\n".join(options)
+        return ""
+
+
+class AmazonConnectionForm(forms.Form):
+    ENVIRONMENT_CHOICES = (("sandbox", "Sandbox · safe testing"), ("production", "Production · live Amazon data"))
+    REGION_CHOICES = (("eu", "Europe"), ("na", "North America"), ("fe", "Far East"))
+    REGION_MODE_CHOICES = (("single", "Single region"), ("multiple", "Multiple regions"))
+    MARKETPLACE_MODE_CHOICES = (("single", "Single marketplace"), ("multiple", "Multiple marketplaces"))
+    MARKETPLACES = {
+        "A28R8C7NBKEWEA": ("Ireland · IE", "eu"), "A1RKKUPIHCS9HS": ("Spain · ES", "eu"), "A1F83G8C2ARO7P": ("United Kingdom · UK", "eu"),
+        "A13V1IB3VIYZZH": ("France · FR", "eu"), "AMEN7PMS3EDWL": ("Belgium · BE", "eu"), "A1805IZSGTT6HS": ("Netherlands · NL", "eu"),
+        "A1PA6795UKMFR9": ("Germany · DE", "eu"), "A1PA6795UKM": ("Germany · DE · legacy saved value", "eu"), "APJ6JRA9NG5V4": ("Italy · IT", "eu"),
+        "A2NODRKZP88ZB9": ("Sweden · SE", "eu"), "AE08WJ6YKNBMC": ("South Africa · ZA", "eu"), "A1C3SOZRARQ6R3": ("Poland · PL", "eu"),
+        "ARBP9OOSHTCHU": ("Egypt · EG", "eu"), "A33AVAJ2PDY3EV": ("Turkey · TR", "eu"), "A17E79C6D8DWNP": ("Saudi Arabia · SA", "eu"),
+        "A2VIGQ35RCS4UG": ("United Arab Emirates · AE", "eu"), "A21TJRUUN4KGV": ("India · IN", "eu"),
+        "A2EUQ1WTGCTBG2": ("Canada · CA", "na"), "ATVPDKIKX0DER": ("United States · US", "na"), "A1AM78C64UM0Y8": ("Mexico · MX", "na"), "A2Q3Y263D00KWC": ("Brazil · BR", "na"),
+        "A19VAU5U5O7RUS": ("Singapore · SG", "fe"), "A39IBJ37TRP1C6": ("Australia · AU", "fe"), "A1VC38T7YXB528": ("Japan · JP", "fe"),
+    }
+    MARKETPLACE_CHOICES = tuple((marketplace_id, label) for marketplace_id, (label, _region) in MARKETPLACES.items())
+    environment = forms.ChoiceField(label="Connection mode", choices=ENVIRONMENT_CHOICES, initial="sandbox")
+    region_mode = forms.ChoiceField(label="Region setup", choices=REGION_MODE_CHOICES, initial="single")
+    region = forms.ChoiceField(label="Amazon region", choices=REGION_CHOICES, initial="eu")
+    regions = forms.MultipleChoiceField(label="Enabled Amazon regions", choices=REGION_CHOICES, required=False, widget=forms.CheckboxSelectMultiple, help_text="Select more than one region when Multiple regions is enabled.")
+    application_name = forms.CharField(label="Application Name", max_length=255)
+    application_id = forms.CharField(label="Application ID", max_length=255)
+    client_identifier = forms.CharField(label="Client Identifier", max_length=255)
+    client_secret = forms.CharField(label="Client Secret", max_length=255, required=False, widget=forms.PasswordInput(render_value=True), help_text="Masked saved value. Replace only when rotating the secret.")
+    sandbox_refresh_token = forms.CharField(label="Sandbox Refresh Token", max_length=1000, required=False, widget=forms.PasswordInput(render_value=True), help_text="Used only in Sandbox mode.")
+    live_refresh_token = forms.CharField(label="Production Refresh Token", max_length=1000, required=False, widget=forms.PasswordInput(render_value=True), help_text="Separate Amazon authorization required for live mode.")
+    endpoint = forms.URLField(label="SP-API endpoint", initial="https://sandbox.sellingpartnerapi-eu.amazon.com", widget=forms.URLInput(attrs={"readonly": "readonly", "class": "amazon-endpoint-field"}))
+    seller_id = forms.CharField(label="Seller ID", max_length=80, required=False, help_text="Required for Listings, inventory and orders. Not included in the supplied DOCX.")
+    marketplace_id = forms.ChoiceField(label="Marketplace / country", choices=MARKETPLACE_CHOICES, initial="A1PA6795UKMFR9", required=False, help_text="Marketplace ID selects the Amazon country where products and orders are managed.")
+    marketplace_mode = forms.ChoiceField(label="Marketplace setup", choices=MARKETPLACE_MODE_CHOICES, initial="single")
+    marketplace_ids = forms.MultipleChoiceField(label="Enabled marketplaces / countries", choices=MARKETPLACE_CHOICES, required=False, widget=forms.CheckboxSelectMultiple, help_text="Select multiple countries when Multiple marketplaces is enabled.")
+    auto_sync = forms.BooleanField(required=False, initial=True, label="Enable automatic sync")
+
+    def clean(self):
+        cleaned = super().clean()
+        marketplace_id = cleaned.get("marketplace_id")
+        region = cleaned.get("region")
+        expected_region = self.MARKETPLACES.get(marketplace_id, (None, None))[1]
+        if marketplace_id and region and expected_region and region != expected_region:
+            self.add_error("marketplace_id", "Select a marketplace from the selected Amazon region.")
+            self.add_error("region", "This region does not host the selected marketplace.")
+        region_mode = cleaned.get("region_mode")
+        regions = list(cleaned.get("regions") or [])
+        if region_mode == "single":
+            cleaned["regions"] = [region] if region else regions[:1]
+        elif region_mode == "multiple" and len(regions) < 2:
+            self.add_error("regions", "Select at least two Amazon regions for multiple-region setup.")
+        if region_mode == "multiple" and regions and region not in regions:
+            cleaned["region"] = regions[0]
+        marketplace_mode = cleaned.get("marketplace_mode")
+        marketplace_ids = list(cleaned.get("marketplace_ids") or [])
+        if marketplace_mode == "single":
+            cleaned["marketplace_ids"] = [marketplace_id] if marketplace_id else marketplace_ids[:1]
+        elif marketplace_mode == "multiple" and len(marketplace_ids) < 2:
+            self.add_error("marketplace_ids", "Select at least two marketplaces for multiple-marketplace setup.")
+        selected_regions = set(cleaned.get("regions") or [cleaned.get("region")])
+        incompatible = [value for value in marketplace_ids if self.MARKETPLACES.get(value, (None, None))[1] not in selected_regions]
+        if incompatible:
+            self.add_error("marketplace_ids", "Every selected marketplace must belong to one of the enabled regions.")
+        if marketplace_mode == "multiple" and marketplace_ids and marketplace_id not in marketplace_ids:
+            cleaned["marketplace_id"] = marketplace_ids[0]
+        return cleaned
+
+
+class AmazonRetailerMenuSettingsForm(forms.Form):
+    show_retailer_menu = forms.BooleanField(required=False, label="Show Amazon menu in retailer panel")
+    show_retailer_orders = forms.BooleanField(required=False, label="Show Amazon Orders in retailer panel")
+
 
 
 class BackofficeBrandSettingsForm(forms.ModelForm):
@@ -331,6 +477,45 @@ class BackofficeLoginForm(AuthenticationForm):
                 "Wrong admin details.",
                 code="invalid_login",
             )
+
+
+class SuperAdminSecurityForm(forms.Form):
+    email = forms.EmailField(label="Super Admin email", widget=forms.EmailInput(attrs={"autocomplete": "email", "class": "bo-input"}))
+    new_password = forms.CharField(label="New password", required=False, strip=False, widget=forms.PasswordInput(attrs={"autocomplete": "new-password", "class": "bo-input"}), help_text="Leave blank if you only want to change the email address.")
+    confirm_password = forms.CharField(label="Confirm new password", required=False, strip=False, widget=forms.PasswordInput(attrs={"autocomplete": "new-password", "class": "bo-input"}))
+
+    def __init__(self, *args, user=None, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+        if user:
+            self.fields["email"].initial = user.email
+
+    def clean_email(self):
+        email = self.cleaned_data["email"].strip().lower()
+        duplicate = User.objects.filter(email__iexact=email)
+        if self.user:
+            duplicate = duplicate.exclude(pk=self.user.pk)
+        if duplicate.exists():
+            raise forms.ValidationError("That email address is already in use.")
+        return email
+
+    def clean(self):
+        cleaned = super().clean()
+        new_password = cleaned.get("new_password", "")
+        confirm_password = cleaned.get("confirm_password", "")
+        if new_password or confirm_password:
+            if not new_password:
+                self.add_error("new_password", "Enter a new password.")
+            if new_password != confirm_password:
+                self.add_error("confirm_password", "The new passwords do not match.")
+            if new_password:
+                try:
+                    validate_password(new_password, self.user)
+                except ValidationError as exc:
+                    self.add_error("new_password", exc)
+        if self.user and not self.errors and cleaned.get("email", "").casefold() == self.user.email.casefold() and not new_password:
+            self.add_error(None, "Change the email address or enter a new password.")
+        return cleaned
 
 
 class BackofficePermissionForm(forms.ModelForm):
@@ -714,6 +899,7 @@ class BackofficeProductForm(ProductForm):
         fields = [
             "retailer", "store", "category", "brand",
             "name", "model_name",
+            "barcode",
             "short_description", "description",
             "price", "discount_price", "sale_title", "sale_ends_at", "sale_override_enabled", "tax_rate",
             "product_type",

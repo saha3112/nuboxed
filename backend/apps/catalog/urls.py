@@ -6,6 +6,7 @@ from .views import (
     RetailerCatalogDashboardView,
     RetailerProductCreateView,
     RetailerProductEditView,
+    RetailerProductBulkActionView,
     RetailerProductVariantCreateView,
     RetailerProductVariantEditView,
     MediaLibraryListView,
@@ -23,6 +24,7 @@ app_name = "catalog"
 
 urlpatterns = [
     path("retailer/catalog/products/", RetailerCatalogDashboardView.as_view(), name="retailer-products"),
+    path("retailer/catalog/products/bulk-action/", RetailerProductBulkActionView.as_view(), name="retailer-products-bulk-action"),
     path("retailer/catalog/reviews/", RetailerProductReviewListView.as_view(), name="retailer-reviews"),
     path("retailer/catalog/reviews/<uuid:pk>/<str:action>/", RetailerProductReviewStatusView.as_view(), name="retailer-review-action"),
     path("retailer/catalog/variants/", RetailerProductVariantListView.as_view(), name="retailer-variants"),
@@ -39,4 +41,3 @@ urlpatterns = [
     path("api/products/<uuid:product_id>/generate-variants/", RetailerProductVariantGenerateView.as_view(), name="api-generate-variants"),
     path("api/products/<uuid:product_id>/merge-product/", RetailerProductMergeView.as_view(), name="api-merge-product"),
 ]
-

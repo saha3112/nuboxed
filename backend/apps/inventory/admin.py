@@ -2,7 +2,6 @@ from django.contrib import admin
 
 from .models import (
     CategoryDeliveryRule,
-    DeliveryHoliday,
     DeliveryLocation,
     LowStockAlert,
     OfflineSale,
@@ -73,10 +72,3 @@ class ProductDeliveryRuleAdmin(admin.ModelAdmin):
     list_display = ("product", "retailer", "warehouse", "delivery_days", "is_active")
     list_filter = ("retailer", "warehouse")
     search_fields = ("product__name", "product__sku")
-
-
-@admin.register(DeliveryHoliday)
-class DeliveryHolidayAdmin(admin.ModelAdmin):
-    list_display = ("name", "retailer", "store", "warehouse", "holiday_date", "is_active")
-    list_filter = ("retailer", "holiday_date")
-    search_fields = ("name",)

@@ -1,0 +1,14 @@
+{% extends "backoffice/base.html" %}
+{% block content %}
+<style>
+.amazon-menu-page{max-width:900px;margin:0 auto;padding:8px 0 56px}.amazon-menu-hero,.amazon-menu-card{border:1px solid #e2e8f0;border-radius:18px;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.06)}.amazon-menu-hero{padding:28px 32px;margin-bottom:22px;background:linear-gradient(115deg,#fff7f3,#f7f9ff);border-color:#fed7cc}.amazon-menu-hero h1{margin:0 0 8px;color:#172033;font-size:30px}.amazon-menu-hero p,.amazon-menu-card p{margin:0;color:#64748b}.amazon-menu-card{padding:30px 32px}.amazon-menu-card h2{margin:0 0 8px;color:#172033}.amazon-menu-form{display:grid;gap:16px;margin-top:24px}.amazon-menu-option{display:flex;align-items:center;gap:12px;padding:17px 18px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc}.amazon-menu-option input{width:18px;height:18px;accent-color:#ea4826}.amazon-menu-option strong{display:block;color:#172033}.amazon-menu-option small{display:block;margin-top:3px;color:#64748b}.amazon-menu-actions{display:flex;justify-content:flex-end;margin-top:8px}.amazon-menu-submit{border:0;border-radius:10px;padding:12px 18px;background:#ea4826;color:#fff;font-weight:700;cursor:pointer}.amazon-menu-submit:hover{background:#cf3518}@media(max-width:700px){.amazon-menu-hero,.amazon-menu-card{padding:22px}}
+</style>
+<div class="amazon-menu-page">
+<section class="amazon-menu-hero"><h1>Retailer Menu Visibility</h1><p>Control which Amazon pages appear in the retailer panel. These settings are independent from Amazon API credentials and connection testing.</p></section>
+<section class="amazon-menu-card"><h2>Retailer Amazon access</h2><p>Turn menu items on only after the related Amazon integration is ready.</p>
+<form method="post" class="amazon-menu-form">{% csrf_token %}
+<label class="amazon-menu-option"><input type="checkbox" name="show_retailer_menu" {% if form.show_retailer_menu.value %}checked{% endif %}><span><strong>Show Amazon menu in retailer panel</strong><small>Shows the Amazon SP-API section in the retailer sidebar.</small></span></label>
+<label class="amazon-menu-option"><input type="checkbox" name="show_retailer_orders" {% if form.show_retailer_orders.value %}checked{% endif %}><span><strong>Show Amazon Orders in retailer panel</strong><small>Shows Amazon Order Tracking and allows the retailer page.</small></span></label>
+<div class="amazon-menu-actions"><button class="amazon-menu-submit" type="submit"><i class="ph ph-floppy-disk"></i> Save visibility settings</button></div>
+</form></section></div>
+{% endblock %}

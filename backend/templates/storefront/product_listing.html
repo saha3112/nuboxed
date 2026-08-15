@@ -48,8 +48,11 @@
         {% for id in selected_category_ids %}<input type="hidden" name="category_id" value="{{ id }}">{% endfor %}
         {% for id in selected_brand_ids %}<input type="hidden" name="brand_id" value="{{ id }}">{% endfor %}
         {% for id in selected_color_ids %}<input type="hidden" name="color_id" value="{{ id }}">{% endfor %}
+        {% for value in selected_storage_values %}<input type="hidden" name="storage" value="{{ value }}">{% endfor %}
+        {% for value in selected_ram_values %}<input type="hidden" name="ram" value="{{ value }}">{% endfor %}
         <input type="hidden" name="min_price" value="{{ min_price }}">
         <input type="hidden" name="max_price" value="{{ max_price }}">
+        {% if deals_only %}<input type="hidden" name="deals" value="1">{% endif %}
         <select id="sortSelect" name="sort" onchange="this.form.submit()">
           <option value="relevance" {% if sort_by == "relevance" %}selected{% endif %}>Relevance</option>
           <option value="price_asc" {% if sort_by == "price_asc" %}selected{% endif %}>Price, low to high</option>
@@ -61,7 +64,7 @@
 
     <section class="product-grid" id="products">
       {% for product in products %}
-        {% include "storefront/partials/product_card.html" with product=product listing_card=True store_page=store_page %}
+        {% include "storefront/partials/product_card.html" with product=product listing_card=True store_page=store_page hide_store_name=True %}
       {% empty %}
         <p>No products matched your filters.</p>
       {% endfor %}

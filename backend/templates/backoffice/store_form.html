@@ -193,6 +193,12 @@
                             {{ form.name.errors }}
                         </div>
                         <div class="ra-field" style="grid-column: 1 / -1;">
+                            <label class="ra-label">{{ form.slug.label }}</label>
+                            {{ form.slug }}
+                            {% if form.slug.help_text %}<div class="ra-help-text">{{ form.slug.help_text }}</div>{% endif %}
+                            {{ form.slug.errors }}
+                        </div>
+                        <div class="ra-field" style="grid-column: 1 / -1;">
                             <label class="ra-label">{{ form.description.label }}</label>
                             {{ form.description }}
                             {{ form.description.errors }}

@@ -152,6 +152,14 @@ class StockReservation(BaseModel):
 class OfflineSale(BaseModel):
     warehouse = models.ForeignKey(Warehouse, related_name="offline_sales", on_delete=models.CASCADE)
     store = models.ForeignKey("stores.Store", related_name="offline_sales", on_delete=models.CASCADE)
+    delivery_location = models.ForeignKey(
+        "inventory.DeliveryLocation",
+        related_name="offline_sales",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+    )
+    selected_pincode = models.CharField(max_length=32, blank=True)
     product = models.ForeignKey("catalog.Product", related_name="offline_sales", on_delete=models.CASCADE)
     variant = models.ForeignKey(
         "catalog.ProductVariant",
@@ -229,8 +237,9 @@ class DeliveryLocation(BaseModel):
         on_delete=models.CASCADE,
     )
     name = models.CharField(max_length=255)
-    postal_code = models.CharField(max_length=32, blank=True)
-    postal_code_prefix = models.CharField(max_length=16, blank=True)
+    postal_code = models.CharField(max_length=255, blank=True)
+    postal_code_prefix = models.CharField(max_length=255, blank=True)
+    pin_details = models.JSONField(default=dict, blank=True)
     city = models.CharField(max_length=120, blank=True)
     state = models.CharField(max_length=120, blank=True)
     country_code = models.CharField(max_length=2, default="DE")
@@ -305,30 +314,3 @@ class ProductDeliveryRule(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.product} / {self.delivery_days} days"
-
-
-class DeliveryHoliday(BaseModel):
-    retailer = models.ForeignKey("retailers.Retailer", related_name="delivery_holidays", on_delete=models.CASCADE)
-    store = models.ForeignKey(
-        "stores.Store",
-        related_name="delivery_holidays",
-        null=True,
-        blank=True,
-        on_delete=models.CASCADE,
-    )
-    warehouse = models.ForeignKey(
-        Warehouse,
-        related_name="delivery_holidays",
-        null=True,
-        blank=True,
-        on_delete=models.CASCADE,
-    )
-    name = models.CharField(max_length=255)
-    holiday_date = models.DateField()
-
-    class Meta:
-        ordering = ("holiday_date", "name")
-        unique_together = ("retailer", "store", "warehouse", "holiday_date", "name")
-
-    def __str__(self) -> str:
-        return f"{self.name} / {self.holiday_date}"

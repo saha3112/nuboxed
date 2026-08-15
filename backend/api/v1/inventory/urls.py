@@ -3,7 +3,6 @@ from django.urls import path
 from .views import (
     CategoryDeliveryRuleListCreateView,
     DeliveryEstimateView,
-    DeliveryHolidayListCreateView,
     DeliveryLocationListCreateView,
     LowStockAlertListView,
     OfflineSaleListCreateView,
@@ -19,7 +18,6 @@ urlpatterns = [
     path("delivery-locations/", DeliveryLocationListCreateView.as_view(), name="inventory-delivery-locations"),
     path("category-delivery-rules/", CategoryDeliveryRuleListCreateView.as_view(), name="inventory-category-delivery-rules"),
     path("product-delivery-rules/", ProductDeliveryRuleListCreateView.as_view(), name="inventory-product-delivery-rules"),
-    path("delivery-holidays/", DeliveryHolidayListCreateView.as_view(), name="inventory-delivery-holidays"),
     path("stock-items/", StockItemListView.as_view(), name="inventory-stock-items"),
     path("ledger/", StockLedgerListView.as_view(), name="inventory-ledger"),
     path("adjustments/", StockAdjustmentCreateView.as_view(), name="inventory-adjustments"),

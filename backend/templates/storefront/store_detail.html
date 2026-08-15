@@ -146,7 +146,9 @@
 <section class="section-shell store-menu-shell" data-store-menu-shell>
     <div class="store-menu-bar">
         <a href="#top" class="store-menu-identity">
-            {% if store.logo %}
+            {% if global_brand_settings.fixed_menu_logo %}
+                <img src="{{ global_brand_settings.fixed_menu_logo.url }}" alt="{{ store.name }}">
+            {% elif store.logo %}
                 <img src="{{ store.logo.url }}" alt="{{ store.name }}">
             {% else %}
                 <span class="store-menu-logo-fallback">{{ store.name|first|upper }}</span>
@@ -328,7 +330,7 @@
     {% endfor %}
 </section>
 {% endif %}
-<section class="section-shell">
+<section class="section-shell store-products-shell">
     {% if store_category_groups %}
         {% for group in store_category_groups %}
             <div class="store-category-block" id="{{ group.id }}">

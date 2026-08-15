@@ -288,6 +288,126 @@
         padding-inline: 20px;
     }
 
+    /* Product records contain variant and marketplace data that can be very
+       long. Keep the grid readable and make the long mapping expandable. */
+    .products-data-table {
+        min-width: 1180px;
+        table-layout: fixed;
+    }
+    .products-data-table th,
+    .products-data-table td {
+        vertical-align: top;
+    }
+    .products-data-table th:nth-child(2) { width: 150px; }
+    .products-data-table th:nth-child(3) { width: 145px; }
+    .products-data-table th:nth-child(4),
+    .products-data-table th:nth-child(5) { width: 120px; }
+    .products-data-table th:nth-child(6) { width: 340px; }
+    .products-data-table th:nth-child(7) { width: 120px; }
+    .products-data-table th:nth-child(8) { width: 105px; }
+    .products-data-table th:nth-child(n+9) { width: 100px; }
+    .products-data-table th:last-child,
+    .products-data-table td.actions-cell {
+        position: sticky;
+        right: 0;
+        z-index: 4;
+        width: 220px;
+        min-width: 220px;
+        box-shadow: none;
+    }
+    .products-data-table thead th:last-child {
+        z-index: 6;
+        background: var(--surface-soft, #f8fafc) !important;
+    }
+    .products-data-table tbody td.actions-cell {
+        background: var(--surface, #fff) !important;
+    }
+    .products-data-table td.actions-cell {
+        padding: 14px 12px !important;
+        box-sizing: border-box;
+        white-space: nowrap !important;
+    }
+    .products-data-table td.actions-cell .ghost-button,
+    .products-data-table td.actions-cell .primary-button {
+        padding: 7px 10px !important;
+        font-size: 12px !important;
+    }
+    .products-data-table td.actions-cell .inline-form {
+        display: inline-block;
+        margin: 0;
+    }
+    .product-variant-cell {
+        min-width: 0;
+        color: var(--text-main);
+    }
+    .product-variant-preview {
+        display: -webkit-box;
+        overflow: hidden;
+        max-height: 66px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 3;
+    }
+    .product-variant-cell details {
+        margin-top: 8px;
+    }
+    .product-variant-cell summary {
+        width: fit-content;
+        color: #e04420;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+    .product-variant-full {
+        max-height: 220px;
+        overflow: auto;
+        margin-top: 8px;
+        padding: 9px 10px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface-soft);
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+    }
+    .product-record-title {
+        display: block;
+        color: var(--text-main);
+        font-weight: 750;
+        line-height: 1.3;
+    }
+    .product-record-meta {
+        display: block;
+        margin-top: 4px;
+        color: var(--muted);
+        font-size: 11px;
+    }
+    .product-boolean-state {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        white-space: nowrap;
+        font-weight: 600;
+    }
+    .product-boolean-state input[type="checkbox"] {
+        width: 17px;
+        height: 17px;
+        margin: 0;
+        accent-color: #e04420;
+    }
+    @media (max-width: 900px) {
+        .products-data-table {
+            min-width: 1040px;
+        }
+        .products-data-table th:nth-child(6) {
+            width: 270px;
+        }
+    }
+
     body.dark-mode .module-toolbar {
         background: #111827;
         border-color: #243041;
@@ -418,14 +538,14 @@
         <span class="status-pill neutral">{{ module_config.group }}</span>
     </div>
     <div class="table-wrap" data-module-key="{{ module_key }}">
-        <table class="data-table" style="border-collapse:separate; border-spacing:0 10px;">
+        <table class="data-table {% if module_key == 'products' %}products-data-table{% endif %}" style="border-collapse:separate; border-spacing:0 10px;">
             <thead>
                 <tr>
                     <th style="width: 40px;">
                         <input type="checkbox" id="select-all" onchange="toggleSelectAll(this)" style="width: 18px; height: 18px; cursor: pointer;">
                     </th>
                     {% for column in columns %}
-                        <th>{{ column|titlecase_slug }}</th>
+                        <th>{% if column == 'amazon_asin' %}Amazon ASIN{% elif column == 'amazon_seller_sku' %}Amazon Seller SKU{% elif column == 'variant_skus' %}Variant SKU / Amazon mapping{% else %}{{ column|titlecase_slug }}{% endif %}</th>
                     {% endfor %}
                     <th>Actions</th>
                 </tr>
@@ -446,6 +566,24 @@
                                         </div>
                                     {% elif module_key == 'attributes' and column == 'name' %}
                                         <a class="text-action" href="{% url 'backoffice:attribute-options' pk=item.pk %}">{{ value }}</a>
+                                    {% elif module_key == 'products' and column == 'variant_skus' %}
+                                        <div class="product-variant-cell">
+                                            <div class="product-variant-preview">{{ value|default:'No variant mappings' }}</div>
+                                            {% if value and value != '—' %}
+                                                <details>
+                                                    <summary>View all mappings</summary>
+                                                    <div class="product-variant-full">{{ value }}</div>
+                                                </details>
+                                            {% endif %}
+                                        </div>
+                                    {% elif module_key == 'products' and column == 'name' %}
+                                        <span class="product-record-title">{{ value }}</span>
+                                        <span class="product-record-meta">Product record</span>
+                                    {% elif module_key == 'products' and column == 'is_featured' or module_key == 'products' and column == 'is_active' %}
+                                        <label class="product-boolean-state">
+                                            <input type="checkbox" disabled {% if value == True or value == 1 or value == 'True' or value == 'true' %}checked{% endif %}>
+                                            <span>{% if value == True or value == 1 or value == 'True' or value == 'true' %}True{% else %}False{% endif %}</span>
+                                        </label>
                                     {% elif column == status_field or column == 'is_active' %}
                                         <span class="status-pill {% if value == True or value == 'active' or value == 'live' %}success{% elif value == False or value == 'draft' %}warning{% else %}neutral{% endif %}">
                                             {{ value }}
@@ -456,8 +594,11 @@
                                 </td>
                             {% endwith %}
                         {% endfor %}
-                        <td class="actions-cell" style="background:#fff; white-space:nowrap; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <td class="actions-cell">
                             {% if item|is_deleted_record and supports_trash %}
+                                <a class="ghost-button" href="{% url 'backoffice:module-edit' module=module_key pk=item.pk %}" style="padding: 6px 12px; font-size: 13px;">
+                                    ✏️ Edit
+                                </a>
                                 <button class="ghost-button" onclick="restoreItem('{{ item.pk }}')" style="padding: 6px 12px; font-size: 13px; color: #22c55e; border-color: #22c55e; background: rgba(34, 197, 94, 0.05);">
                                     ✓ Restore
                                 </button>

@@ -1,0 +1,15 @@
+.git
+.gitignore
+.DS_Store
+.env
+backend/.env
+*.sqlite3
+*.log
+__pycache__/
+*.py[cod]
+.venv/
+.venv312/
+media/
+staticfiles/
+Archive.zip
+node_modules/

@@ -15,6 +15,8 @@ urlpatterns = [
     path("api/v1/", include("api.v1.urls")),
 ]
 
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+# The cPanel Passenger deployment does not always have an Apache alias for
+# these directories. Keep the fallback enabled in production as well so a
+# missing hosting-level alias cannot render the admin as unstyled HTML.
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

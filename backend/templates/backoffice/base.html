@@ -5,6 +5,10 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ page_title|default:"Nuboxed Super Admin" }}</title>
+    {% if global_brand_settings and global_brand_settings.favicon %}
+    <link rel="icon" href="{{ global_brand_settings.favicon.url }}">
+    <link rel="shortcut icon" href="{{ global_brand_settings.favicon.url }}">
+    {% endif %}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -93,6 +97,33 @@
                         <span>Dashboard</span>
                     </span>
                 </a>
+                <a class="bo-nav-link bo-nav-link-main {% if request.resolver_match.url_name == 'footer-settings' %}active{% endif %}" href="{% url 'backoffice:footer-settings' %}"><span class="bo-nav-link-left"><i class="ph ph-layout"></i><span>Footer Settings</span></span></a>
+                <a class="bo-nav-link bo-nav-link-main {% if request.resolver_match.url_name == 'seller-verification-documents' %}active{% endif %}" href="{% url 'backoffice:seller-verification-documents' %}"><span class="bo-nav-link-left"><i class="ph ph-files"></i><span>Seller Verification Documents</span></span></a>
+                <a class="bo-nav-link bo-nav-link-main {% if request.resolver_match.url_name == 'retailer-registration-fields' or request.resolver_match.url_name == 'retailer-registration-field-new' %}active{% endif %}" href="{% url 'backoffice:retailer-registration-fields' %}"><span class="bo-nav-link-left"><i class="ph ph-textbox"></i><span>Retailer Registration Fields</span></span></a>
+                <section class="bo-nav-group bo-nav-group-amazon">
+                    <button class="bo-nav-toggle" type="button" @click="toggleGroup('Amazon SP-API')" :class="activeGroup === 'Amazon SP-API' ? 'active' : ''" aria-label="Toggle Amazon SP-API menu">
+                        <span class="bo-nav-link-left">
+                            <i class="ph ph-amazon-logo"></i>
+                            <span>Amazon SP-API</span>
+                        </span>
+                        <span style="margin-left:auto;font-size:10px;color:#f59e0b;font-weight:800;margin-right:10px">SYNC</span>
+                        <i class="ph ph-caret-down bo-nav-arrow" :class="activeGroup === 'Amazon SP-API' ? 'is-open' : ''"></i>
+                    </button>
+                    <div class="bo-subnav" x-show="activeGroup === 'Amazon SP-API'" x-transition>
+                        <a class="bo-nav-link bo-subnav-link {% if request.resolver_match.url_name == 'amazon-integration' %}active{% endif %}" href="{% url 'backoffice:amazon-integration' %}">
+                            <span class="bo-nav-link-left"><i class="ph ph-plugs-connected"></i><span>Connection & Health</span></span>
+                        </a>
+                        <a class="bo-nav-link bo-subnav-link {% if request.resolver_match.url_name == 'amazon-orders' %}active{% endif %}" href="{% url 'backoffice:amazon-orders' %}">
+                            <span class="bo-nav-link-left"><i class="ph ph-receipt"></i><span>Order Tracking</span></span>
+                        </a>
+                        <a class="bo-nav-link bo-subnav-link {% if request.resolver_match.url_name == 'amazon-retailer-menu-settings' %}active{% endif %}" href="{% url 'backoffice:amazon-retailer-menu-settings' %}">
+                            <span class="bo-nav-link-left"><i class="ph ph-eye"></i><span>Retailer Menu Visibility</span></span>
+                        </a>
+                        <a class="bo-nav-link bo-subnav-link {% if request.resolver_match.url_name == 'amazon-catalog' %}active{% endif %}" href="{% url 'backoffice:amazon-catalog' %}">
+                            <span class="bo-nav-link-left"><i class="ph ph-package"></i><span>Amazon Catalog</span></span>
+                        </a>
+                    </div>
+                </section>
                 {% for group_name, modules in sidebar_groups.items %}
                     {% if group_name == "Catalog" %}
                         <!-- Catalog Group -->
@@ -153,20 +184,24 @@
                                 {% else %}
                                 <i class="ph ph-stack"></i>
                                 {% endif %}
-                                <span>{{ group_name }}</span>
+                                <span>{% if group_name == "Page Settings" %}Pages{% else %}{{ group_name }}{% endif %}</span>
                             </span>
                             <i class="ph ph-caret-down bo-nav-arrow" :class="activeGroup === '{{ group_name|escapejs }}' ? 'is-open' : ''"></i>
                         </button>
                         <div class="bo-subnav" x-show="activeGroup === '{{ group_name|escapejs }}'" x-transition>
                             {% if group_name == "Commerce" %}
+                            <a class="bo-nav-link bo-subnav-link {% if request.resolver_match.url_name == 'store-preview' %}active{% endif %}" href="{% url 'backoffice:store-preview' %}"><span class="bo-nav-link-left"><i class="ph ph-eye"></i><span>Store Preview</span></span></a>
                             <a class="bo-nav-link bo-subnav-link" href="{% url 'backoffice:orders' %}"><span class="bo-nav-link-left"><i class="ph ph-receipt"></i><span>Orders</span></span></a>
                             <a class="bo-nav-link bo-subnav-link" href="{% url 'backoffice:order-workflow-settings' %}"><span class="bo-nav-link-left"><i class="ph ph-gear"></i><span>Order Workflow Settings</span></span></a>
                             {% elif group_name == "Platform" %}
                             <a class="bo-nav-link bo-subnav-link" href="{% url 'backoffice:invoice-design' %}"><span class="bo-nav-link-left"><i class="ph ph-file-text"></i><span>Invoice Design (Admin only)</span></span></a>
                             <a class="bo-nav-link bo-subnav-link" href="{% url 'backoffice:email-templates' %}"><span class="bo-nav-link-left"><i class="ph ph-envelope"></i><span>Email Templates</span></span></a>
+                            <a class="bo-nav-link bo-subnav-link {% if request.resolver_match.url_name == 'captcha-settings' %}active{% endif %}" href="{% url 'backoffice:captcha-settings' %}"><span class="bo-nav-link-left"><i class="ph ph-shield-check"></i><span>Captcha Settings</span></span></a>
+                            <a class="bo-nav-link bo-subnav-link {% if request.resolver_match.url_name == 'seller-verification-documents' %}active{% endif %}" href="{% url 'backoffice:seller-verification-documents' %}"><span class="bo-nav-link-left"><i class="ph ph-files"></i><span>Seller Verification Documents</span></span></a>
                             {% elif group_name == "Page Settings" %}
+                            <a class="bo-nav-link bo-subnav-link {% if request.resolver_match.url_name == 'pages' or request.resolver_match.url_name == 'page-new' or request.resolver_match.url_name == 'page-edit' %}active{% endif %}" href="{% url 'backoffice:pages' %}"><span class="bo-nav-link-left"><i class="ph ph-files"></i><span>All Pages</span></span></a>
+                            <a class="bo-nav-link bo-subnav-link" href="{% url 'backoffice:page-new' %}"><span class="bo-nav-link-left"><i class="ph ph-plus-circle"></i><span>Add New Page</span></span></a>
                             <a class="bo-nav-link bo-subnav-link {% if request.resolver_match.url_name == 'homepage-settings' %}active{% endif %}" href="{% url 'backoffice:homepage-settings' %}"><span class="bo-nav-link-left"><i class="ph ph-house"></i><span>Homepage Settings</span></span></a>
-                            <a class="bo-nav-link bo-subnav-link {% if request.resolver_match.url_name == 'footer-settings' %}active{% endif %}" href="{% url 'backoffice:footer-settings' %}"><span class="bo-nav-link-left"><i class="ph ph-layout"></i><span>Footer Settings</span></span></a>
                             <a class="bo-nav-link bo-subnav-link {% if request.resolver_match.url_name == 'contact-settings' %}active{% endif %}" href="{% url 'backoffice:contact-settings' %}"><span class="bo-nav-link-left"><i class="ph ph-chats-circle"></i><span>Contact Page Settings</span></span></a>
                             <a class="bo-nav-link bo-subnav-link {% if request.resolver_match.url_name == 'product-page-settings' %}active{% endif %}" href="{% url 'backoffice:product-page-settings' %}"><span class="bo-nav-link-left"><i class="ph ph-shopping-bag-open"></i><span>Product Page Settings</span></span></a>
                             {% elif group_name == "Storefront Content" %}
@@ -180,6 +215,9 @@
                                     {% endfor %}
                                 </div>
                             </div>
+                            {% endif %}
+                            {% if group_name == "Operations" %}
+                            <a class="bo-nav-link bo-subnav-link {% if request.resolver_match.url_name == 'offline-sales' %}active{% endif %}" href="{% url 'backoffice:offline-sales' %}"><span class="bo-nav-link-left"><i class="ph ph-storefront"></i><span>Offline Sales Tracking</span></span></a>
                             {% endif %}
                             {% for module_key, module in modules %}
                                 <a class="bo-nav-link bo-subnav-link {% if module_key == module_key_active %}active{% endif %}" href="{% if module.custom_url %}{% url module.custom_url %}{% else %}{% url 'backoffice:module-list' module=module_key %}{% endif %}">
@@ -339,7 +377,7 @@
                         <button class="bo-profile-btn" type="button" @click="open = !open">
                             <span class="bo-profile-avatar">{{ request.user.email|first|upper }}</span>
                             <span class="bo-profile-meta">
-                                <strong>{{ request.user.get_full_name|default:request.user.email }}</strong>
+                                <strong>{{ request.user.get_full_name|default:request.user.username|default:request.user.email }}</strong>
                                 <small>Super Admin</small>
                             </span>
                             <i class="ph ph-caret-down"></i>
@@ -347,6 +385,7 @@
                         <div class="bo-dropdown" x-show="open" x-transition @click.outside="open = false" style="display:none;">
                             <a href="{% url 'backoffice:dashboard' %}"><i class="ph ph-gauge"></i> Dashboard</a>
                             <a href="{% url 'backoffice:module-list' module='users' %}"><i class="ph ph-users"></i> Users</a>
+                            <a href="{% url 'backoffice:security' %}"><i class="ph ph-shield-check"></i> Security Settings</a>
                             <div class="bo-dropdown-divider"></div>
                             <a href="{% url 'backoffice:logout' %}" class="bo-dropdown-danger"><i class="ph ph-sign-out"></i> Sign Out</a>
                         </div>
@@ -460,9 +499,10 @@
         if (copyright && config.copyright) copyright.textContent = config.copyright;
         if (copyright) copyright.style.textAlign = config.copyright_align || 'left';
         const paymentRow = footer.querySelector('.n9-payment-row');
-        if (paymentRow && Array.isArray(config.payment_images) && config.payment_images.length) {
+        if (paymentRow && config.show_payment_images === false) paymentRow.style.display = 'none';
+        if (paymentRow && config.show_payment_images !== false && Array.isArray(config.payment_images) && config.payment_images.length) {
             paymentRow.innerHTML = '';
-            config.payment_images.forEach(function (src) { const image = document.createElement('img'); image.className = 'n9-payment-image'; image.src = src; image.alt = 'Payment method'; image.style.width = (config.payment_width || 54) + 'px'; image.style.height = (config.payment_height || 32) + 'px'; image.style.objectFit = config.payment_fit || 'contain'; paymentRow.appendChild(image); });
+            const image = document.createElement('img'); image.className = 'n9-payment-image'; image.src = config.payment_images[0]; image.alt = 'Payment method'; image.style.width = (config.payment_width || 54) + 'px'; image.style.height = (config.payment_height || 32) + 'px'; image.style.objectFit = config.payment_fit || 'contain'; paymentRow.appendChild(image);
         }
     });
     </script>

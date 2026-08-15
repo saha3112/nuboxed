@@ -1,18 +1,41 @@
 {% extends "retailer/base.html" %}
 
 {% block content %}
-<div class="ra-card" style="max-width: 800px;">
+<style>
+    .delivery-location-save{width:auto!important;min-width:0!important;max-width:max-content!important;padding:10px 16px!important;display:inline-flex!important;flex:0 0 auto!important;justify-content:center;white-space:nowrap}
+    .delivery-location-page{width:100%!important;max-width:none!important;margin:0!important;background:transparent!important;border:0!important;box-shadow:none!important}
+    .delivery-location-page>.ra-card-header{margin-bottom:18px;border:1px solid var(--border);border-radius:14px;background:var(--surface);box-shadow:var(--shadow)}
+    .delivery-location-page>.ra-card-body{padding:0!important;background:transparent!important}
+    .delivery-location-shell{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(300px,.45fr);gap:18px;align-items:start}
+    .delivery-location-shell .delivery-location-form{min-width:0;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;box-shadow:var(--shadow)}
+    .delivery-pin-summary{position:sticky;top:20px;border:1px solid var(--border);border-radius:12px;background:var(--surface-soft);padding:14px;min-height:190px}
+    .delivery-pin-summary h3{margin:0 0 4px;color:var(--text-main);font-size:15px}
+    .delivery-pin-summary p{margin:0 0 10px;color:var(--text-muted);font-size:11px;line-height:1.4}
+    .delivery-pin-summary-empty{display:grid;place-items:center;min-height:105px;text-align:center;color:var(--text-muted);font-size:12px;border:1px dashed var(--border);border-radius:9px;padding:10px}
+    .delivery-pin-result{padding:8px 9px;border:1px solid var(--border);border-radius:8px;background:var(--surface);font-size:11px;line-height:1.35}
+    .delivery-pin-result-head{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:3px}
+    .delivery-pin-result-head strong{font-size:12px;color:var(--text-main)}
+    .delivery-pin-result-place{color:var(--text-muted);display:block;white-space:normal}
+    .delivery-pin-result-coordinates{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:6px}
+    .delivery-pin-result-coordinates span{padding:5px 6px;border-radius:6px;background:var(--surface-soft);color:var(--text-muted);font-size:10px}
+    .delivery-pin-result-coordinates b{display:block;color:var(--text-main);font-size:11px;margin-top:1px}
+    @media(max-width:1024px){.delivery-location-shell{grid-template-columns:1fr}.delivery-pin-summary{position:static}}
+    @media(max-width:900px){.delivery-location-save{width:auto!important;max-width:max-content!important}}
+    @media(max-width:560px){.delivery-location-save{width:auto!important;max-width:100%!important;padding-inline:14px!important}}
+</style>
+<div class="ra-card delivery-location-page">
     <div class="ra-card-header">
         <span class="ra-card-title">{{ page_title }}</span>
     </div>
     <div class="ra-card-body">
-        <form method="post" enctype="multipart/form-data" class="ra-form">
+        <div class="delivery-location-shell">
+        <form method="post" enctype="multipart/form-data" class="ra-form delivery-location-form">
             {% csrf_token %}
             {% if is_multi_delivery_location %}
             {{ delivery_country_meta|json_script:"delivery-country-meta" }}
             {{ delivery_country_defaults|json_script:"delivery-country-defaults" }}
             {{ formset.management_form }}
-            <p style="color:var(--text-muted);font-size:13px;margin:0 0 16px;">Add multiple delivery locations in one submission. Use “Add another location” for more rows.</p>
+            <p style="color:var(--text-muted);font-size:13px;margin:0 0 16px;">Each card is one delivery location. Add multiple exact PIN codes in the same card using commas or new lines; they will share the same store, delivery days, handling time and coverage rules.</p>
             <div id="delivery-location-rows">
                 {% for location_form in formset %}
                 <div class="ra-card" data-location-row style="margin-bottom:16px;border:1px solid var(--border);">
@@ -23,6 +46,8 @@
                             <div class="ra-field">
                                 <label class="ra-label">{{ field.label }}</label>
                                 {{ field }}
+                                {% if field.name == "name" %}<small style="display:block;color:var(--text-muted);font-size:12px;margin-top:5px;">The proper area name will be suggested after entering the PIN code(s).</small>{% endif %}
+                                {% if field.name == "postal_code" %}<small style="display:block;color:var(--text-muted);font-size:12px;margin-top:5px;">Multiple PINs in this card are saved as one coverage group.</small><button type="button" class="ra-btn ra-btn-outline ra-btn-sm" data-lookup-pincodes style="margin-top:8px;"><i class="ph ph-magnifying-glass"></i> Get PIN details</button><span data-pincode-status style="display:block;color:var(--text-muted);font-size:12px;margin-top:5px;"></span>{% endif %}
                                 {% if field.errors %}<div class="ra-field-error">{{ field.errors.as_text }}</div>{% endif %}
                             </div>
                             {% endfor %}
@@ -35,23 +60,23 @@
                 </div>
                 {% endfor %}
             </div>
-            <button type="button" class="ra-btn ra-btn-outline ra-btn-sm" id="add-delivery-location-row"><i class="ph ph-plus"></i> Add another location</button>
-            <template id="empty-delivery-location-form">
-                <div class="ra-card" data-location-row style="margin-bottom:16px;border:1px solid var(--border);">
-                    <div class="ra-card-header"><span class="ra-card-title">Location __number__</span></div>
-                    <div class="ra-card-body"><div class="ra-form-grid">
-                        {% for field in formset.empty_form %}
-                        <div class="ra-field"><label class="ra-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="ra-field-error">{{ field.errors.as_text }}</div>{% endif %}</div>
-                        {% endfor %}
-                    </div><div style="display:flex;align-items:center;gap:10px;margin-top:12px;"><button type="button" class="ra-btn ra-btn-outline ra-btn-sm" data-geocode-location><i class="ph ph-crosshair"></i> Find coordinates automatically</button><span data-geocode-status style="font-size:12px;color:var(--text-muted);"></span></div></div>
-                </div>
-            </template>
             {% else %}
-            <div class="ra-form-grid">
+            <div id="delivery-location-rows" class="ra-form-grid" data-location-row>
                 {% for field in form %}
                 <div class="ra-field">
                     <label class="ra-label">{{ field.label }}</label>
-                    {{ field }}
+                    {% if is_offline_sale and field.name == "sold_at" %}
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <input type="date" class="ra-input offline-date-input" data-sold-date aria-label="Sold date">
+<div class="offline-time-picker" data-time-picker><i class="ph ph-clock offline-time-icon" aria-hidden="true"></i><input type="text" class="ra-input" data-sold-time-display placeholder="Select time" readonly aria-label="Sold time"><input type="hidden" data-sold-time><div class="offline-time-popover" data-time-popover hidden><div class="offline-time-title"><span>Select sale time</span><button type="button" data-time-close>×</button></div><div class="offline-time-controls"><select data-time-hour aria-label="Hour"><option>01</option><option>02</option><option>03</option><option>04</option><option>05</option><option>06</option><option>07</option><option>08</option><option>09</option><option>10</option><option>11</option><option>12</option></select><b>:</b><select data-time-minute aria-label="Minute"><option>00</option><option>05</option><option>10</option><option>15</option><option>20</option><option>25</option><option>30</option><option>35</option><option>40</option><option>45</option><option>50</option><option>55</option></select><select data-time-period aria-label="AM or PM"><option>AM</option><option>PM</option></select></div><button type="button" class="ra-btn ra-btn-primary ra-btn-sm" data-time-apply>Set time</button></div></div>
+                    </div>
+                    <div style="display:none">{{ field }}</div>
+                    {% elif is_offline_sale and field.name == "store" %}
+                    <div class="ra-input" style="display:flex;align-items:center;min-height:42px;background:var(--surface-soft);font-weight:600;">{% with selected_store=form.store.field.queryset.first %}{{ selected_store.name|default:"No active store" }}{% endwith %}</div>
+                    <div style="display:none">{{ field }}</div>
+                    {% else %}{{ field }}{% endif %}
+                    {% if field.name == "name" %}<small style="display:block;color:var(--text-muted);font-size:12px;margin-top:5px;">The proper area name will be suggested after entering the PIN code(s).</small>{% endif %}
+                    {% if field.name == "postal_code" %}<small style="display:block;color:var(--text-muted);font-size:12px;margin-top:5px;">Multiple PINs in this card are saved as one coverage group.</small><button type="button" class="ra-btn ra-btn-outline ra-btn-sm" data-lookup-pincodes style="margin-top:8px;"><i class="ph ph-magnifying-glass"></i> Get PIN details</button><span data-pincode-status style="display:block;color:var(--text-muted);font-size:12px;margin-top:5px;"></span>{% endif %}
                     {% if field.errors %}
                     <div class="ra-field-error">{{ field.errors.as_text }}</div>
                     {% endif %}
@@ -59,24 +84,36 @@
                 {% endfor %}
             </div>
             {% endif %}
-            <button type="submit" class="ra-btn ra-btn-primary" style="margin-top: 8px;">
+            <button type="submit" class="ra-btn ra-btn-primary delivery-location-save" style="margin-top: 8px;">
                 <i class="ph ph-floppy-disk"></i> {% if is_multi_delivery_location %}Save locations{% else %}Save{% endif %}
             </button>
         </form>
+        {% if is_offline_sale %}
+        <aside class="delivery-pin-summary offline-pin-summary" data-offline-pin-summary>
+            <h3><i class="ph ph-map-pin"></i> PIN coverage details</h3>
+            <p>Select a saved Delivery Location to view its exact PINs, areas and coordinates.</p>
+            <div class="delivery-pin-summary-empty" data-offline-pin-empty>No delivery location selected.</div>
+            <div data-offline-pin-results style="display:grid;gap:7px;"></div>
+        </aside>
+        {% else %}<aside class="delivery-pin-summary" data-pincode-summary>
+            <h3><i class="ph ph-map-pin"></i> PIN coverage details</h3>
+            <p>Each PIN’s area, city, state and coordinates appear separately.</p>
+            <div class="delivery-pin-summary-empty" data-pincode-summary-empty>No PIN details loaded yet.</div>
+            <div data-pincode-results style="display:grid;gap:7px;"></div>
+        </aside>{% endif %}
+        </div>
     </div>
 </div>
-{% if is_multi_delivery_location %}
+{% if is_multi_delivery_location or is_delivery_location %}
 <script>
 (() => {
-    const total = document.getElementById("id_locations-TOTAL_FORMS");
     const rows = document.getElementById("delivery-location-rows");
-    const template = document.getElementById("empty-delivery-location-form");
-    const add = document.getElementById("add-delivery-location-row");
-    if (!total || !rows || !template || !add) return;
+    if (!rows) return;
     const countryMeta = JSON.parse(document.getElementById("delivery-country-meta")?.textContent || "{}");
     const countryDefaults = JSON.parse(document.getElementById("delivery-country-defaults")?.textContent || "{}");
+    const pinLookupUrl = "{% url 'inventory:delivery-postal-lookup' %}";
 
-    const findField = (row, suffix) => row.querySelector(`[name$="-${suffix}"]`);
+    const findField = (row, suffix) => row.querySelector(`[name$="-${suffix}"], [name="${suffix}"]`);
     const setVisible = (field, visible) => {
         const wrapper = field?.closest(".ra-field");
         if (wrapper) wrapper.style.display = visible ? "" : "none";
@@ -118,6 +155,77 @@
             if (status) status.textContent = "Could not find coordinates. You can enter them manually.";
         }
     };
+    const lookupPincodes = async (row) => {
+        const country = findField(row, "country_code");
+        const postal = findField(row, "postal_code");
+        const name = findField(row, "name");
+        const city = findField(row, "city");
+        const state = findField(row, "state");
+        const latitude = findField(row, "latitude");
+        const longitude = findField(row, "longitude");
+        const status = row.querySelector("[data-pincode-status]");
+        const summary = document.querySelector("[data-pincode-summary]");
+        const details = summary?.querySelector("[data-pincode-results]");
+        const summaryEmpty = summary?.querySelector("[data-pincode-summary-empty]");
+        row._lookupSequence = (row._lookupSequence || 0) + 1;
+        const sequence = row._lookupSequence;
+        const codes = (postal?.value || "").split(/[,;\n]+/).map((value) => value.trim()).filter(Boolean);
+        if (!codes.length) { if (status) status.textContent = "Enter at least one PIN code first."; return; }
+        if (codes.some((code) => code.length < 3)) { if (status) status.textContent = "Complete the PIN code before looking up its details."; return; }
+        if (status) status.textContent = "Finding PIN details…";
+        const lookupButton = row.querySelector("[data-lookup-pincodes]");
+        if (lookupButton) { lookupButton.disabled = true; lookupButton.innerHTML = '<i class="ph ph-spinner"></i> Looking up…'; }
+        try {
+            const response = await fetch(`${pinLookupUrl}?country=${encodeURIComponent(country?.value || "")}&pincodes=${encodeURIComponent(codes.join(","))}`, {headers: {"Accept": "application/json", "X-Requested-With": "XMLHttpRequest"}});
+            const contentType = response.headers.get("content-type") || "";
+            if (!contentType.includes("application/json")) throw new Error(response.status === 302 ? "Your retailer session expired. Please sign in again." : `Lookup failed with HTTP ${response.status}.`);
+            const payload = await response.json();
+            if (sequence !== row._lookupSequence) return;
+            if (!payload.ok || !payload.results?.length) { if (status) status.textContent = payload.message || "PIN details not found. You can enter the fields manually."; return; }
+            const results = payload.results;
+            const pinDetails = findField(row, "pin_details");
+            if (pinDetails) {
+                const detailMap = {};
+                results.forEach((item) => { detailMap[item.pincode] = { post_offices: item.post_offices || [], area_name: item.area_name || "", city: item.city || "", state: item.state || "", latitude: item.latitude || "", longitude: item.longitude || "" }; });
+                pinDetails.value = JSON.stringify(detailMap);
+            }
+            if (details) {
+                details.innerHTML = results.map((item) => {
+                    const areas = (item.post_offices || []).join(", ") || item.area_name || item.city || "Area not available";
+                    const place = [item.city, item.state].filter(Boolean).join(", ");
+                    const lat = item.latitude || "—";
+                    const lon = item.longitude || "—";
+                    return '<div class="delivery-pin-result"><div class="delivery-pin-result-head"><strong>' + item.pincode + '</strong></div><span class="delivery-pin-result-place">' + areas + (place ? ' · ' + place : '') + '</span><div class="delivery-pin-result-coordinates"><span>Latitude<b>' + lat + '</b></span><span>Longitude<b>' + lon + '</b></span></div></div>';
+                }).join("");
+            }
+            if (summaryEmpty) summaryEmpty.style.display = "none";
+            const unique = (key) => [...new Set(results.map((item) => (item[key] || "").trim()).filter(Boolean))];
+            const cities = unique("city");
+            const states = unique("state");
+            const areas = results.flatMap((item) => (item.post_offices || []).map((area) => area.trim())).filter(Boolean).filter((area, index, values) => values.indexOf(area) === index).slice(0, 6);
+            if (name) {
+                const areaName = areas.length ? areas.join(" & ") : cities.join(" / ");
+                if (areaName) { name.value = areaName; name.dataset.auto = "1"; }
+            }
+            if (city && cities.length) { city.value = cities.join(" / "); city.dataset.auto = "1"; }
+            if (state && states.length) { state.value = states.join(" / "); state.dataset.auto = "1"; }
+            const coordinates = results.map((item) => [Number(item.latitude), Number(item.longitude)]).filter(([lat, lon]) => Number.isFinite(lat) && Number.isFinite(lon));
+            if (coordinates.length) {
+                const groupedLatitude = (coordinates.reduce((sum, point) => sum + point[0], 0) / coordinates.length).toFixed(6);
+                const groupedLongitude = (coordinates.reduce((sum, point) => sum + point[1], 0) / coordinates.length).toFixed(6);
+                latitude.value = groupedLatitude;
+                longitude.value = groupedLongitude;
+                latitude.dataset.auto = "1";
+                longitude.dataset.auto = "1";
+            }
+            const missing = codes.length - results.length;
+            if (status) status.textContent = `${results.length} of ${codes.length} PIN code(s) joined to this location${missing > 0 ? `; ${missing} not found` : "."}`;
+        } catch (error) {
+            if (status) status.textContent = error.message || "Could not look up PIN details. You can enter the fields manually.";
+        } finally {
+            if (lookupButton) { lookupButton.disabled = false; lookupButton.innerHTML = '<i class="ph ph-magnifying-glass"></i> Get PIN details'; }
+        }
+    };
     const wireRow = (row) => {
         const country = findField(row, "country_code");
         if (!country || row.dataset.wired === "1") return;
@@ -125,18 +233,71 @@
         country.addEventListener("change", () => applyCountry(row, true));
         row.querySelectorAll("input, select").forEach((field) => field.addEventListener("input", () => { field.dataset.touched = "1"; }));
         row.querySelector("[data-geocode-location]")?.addEventListener("click", () => geocode(row));
+        row.querySelector("[data-lookup-pincodes]")?.addEventListener("click", () => lookupPincodes(row));
+        let lookupTimer;
+        findField(row, "postal_code")?.addEventListener("input", () => { clearTimeout(lookupTimer); lookupTimer = setTimeout(() => lookupPincodes(row), 700); });
+        findField(row, "postal_code")?.addEventListener("blur", () => lookupPincodes(row));
         applyCountry(row);
+        // Rebuild the right-side coverage card after an edit page reload.
+        // The saved PIN list is the source of truth, so the details remain
+        // visible even after clicking Save and opening the location again.
+        if ((findField(row, "postal_code")?.value || "").trim()) {
+            setTimeout(() => lookupPincodes(row), 120);
+        }
     };
-    rows.querySelectorAll("[data-location-row]").forEach(wireRow);
-    add.addEventListener("click", () => {
-        const index = Number(total.value);
-        const html = template.innerHTML.replaceAll("__prefix__", index).replace("__number__", index + 1);
-        const wrapper = document.createElement("div");
-        wrapper.innerHTML = html;
-        rows.appendChild(wrapper.firstElementChild);
-        wireRow(rows.lastElementChild);
-        total.value = index + 1;
-    });
+    (rows.matches("[data-location-row]") ? [rows] : [...rows.querySelectorAll("[data-location-row]")]).forEach(wireRow);
+})();
+</script>
+{% endif %}
+{% if is_offline_sale %}
+<style>
+ .offline-sale-form .ra-field:has(select[name$="-brand"]),.offline-sale-form .ra-field:has(select[name$="-product"]),.offline-sale-form .ra-field:has(select[name$="-variant"]){min-width:0}
+ .offline-sale-form select:disabled{opacity:.58;cursor:not-allowed;background:var(--surface-soft)}
+ .offline-sale-note{font-size:12px;color:var(--text-muted);margin-top:5px}
+ .offline-pin-summary{min-height:220px}
+ .offline-time-picker{position:relative}.offline-time-popover{position:absolute;z-index:30;top:calc(100% + 8px);left:0;width:230px;padding:13px;border:1px solid var(--border);border-radius:12px;background:var(--surface);box-shadow:0 14px 35px rgba(15,23,42,.18)}.offline-time-popover[hidden]{display:none}.offline-time-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;font-weight:700;color:var(--text-main);font-size:13px}.offline-time-title button{border:0;background:transparent;font-size:20px;color:var(--text-muted);cursor:pointer}.offline-time-controls{display:grid;grid-template-columns:1fr auto 1fr 1fr;align-items:center;gap:5px;margin-bottom:12px}.offline-time-controls select{width:100%;min-height:38px;border:1px solid var(--border);border-radius:8px;padding:0 6px;background:var(--surface);color:var(--text-main)}.offline-time-popover [data-time-apply]{width:100%;justify-content:center}
+ .offline-date-input,.offline-time-picker [data-sold-time-display]{cursor:pointer}
+ .offline-time-picker{position:relative}.offline-time-icon{position:absolute;z-index:2;right:12px;top:50%;transform:translateY(-50%);font-size:18px;color:var(--text-muted);pointer-events:none}.offline-time-picker [data-sold-time-display]{padding-right:40px}
+</style>
+<script>
+(() => {
+ const form=document.querySelector('form.ra-form'); if(!form) return;
+ form.classList.add('offline-sale-form');
+ const brand=form.querySelector('[name$="-brand"], [name="brand"]');
+ const deviceType=form.querySelector('[name$="-device_type"], [name="device_type"]');
+ const product=form.querySelector('[name$="-product"], [name="product"]');
+ const variant=form.querySelector('[name$="-variant"], [name="variant"]');
+ const soldAt=form.querySelector('[name$="-sold_at"], [name="sold_at"]');
+ const soldDate=form.querySelector('[data-sold-date]');
+ const soldTime=form.querySelector('[data-sold-time]');
+ const soldTimeDisplay=form.querySelector('[data-sold-time-display]');
+ const timePopover=form.querySelector('[data-time-popover]');
+ const timeHour=form.querySelector('[data-time-hour]'); const timeMinute=form.querySelector('[data-time-minute]'); const timePeriod=form.querySelector('[data-time-period]');
+ if(soldAt&&soldDate&&soldTime){const raw=soldAt.value||'';const parts=raw.split('T');if(parts.length===2){soldDate.value=parts[0];soldTime.value=parts[1].slice(0,5);}form.addEventListener('submit',()=>{if(soldDate.value&&soldTime.value)soldAt.value=soldDate.value+'T'+soldTime.value;});}
+ const syncTimeDisplay=()=>{if(!soldTimeDisplay||!soldTime?.value)return;const [h,m]=soldTime.value.split(':').map(Number);const period=h>=12?'PM':'AM';const hour=(h%12)||12;soldTimeDisplay.value=String(hour).padStart(2,'0')+':'+String(m).padStart(2,'0')+' '+period;};
+ soldTimeDisplay?.addEventListener('click',()=>{if(timePopover)timePopover.hidden=false;});
+ soldDate?.addEventListener('click',()=>{try{if(typeof soldDate.showPicker==='function')soldDate.showPicker();}catch(error){}});
+ soldDate?.addEventListener('focus',()=>{try{if(typeof soldDate.showPicker==='function')soldDate.showPicker();}catch(error){}});
+ form.querySelector('[data-time-close]')?.addEventListener('click',()=>timePopover.hidden=true);
+ form.querySelector('[data-time-apply]')?.addEventListener('click',()=>{let h=Number(timeHour.value)%12;if(timePeriod.value==='PM')h+=12;soldTime.value=String(h).padStart(2,'0')+':'+timeMinute.value;syncTimeDisplay();timePopover.hidden=true;});
+ if(soldTime?.value){const [h,m]=soldTime.value.split(':').map(Number);timeHour.value=String((h%12)||12);timeMinute.value=String(m).padStart(2,'0');timePeriod.value=h>=12?'PM':'AM';syncTimeDisplay();}
+ const location=form.querySelector('[name$="-delivery_pincode"], [name="delivery_pincode"]');
+ const pinLookupUrl="{% url 'inventory:delivery-postal-lookup' %}";
+ const pinEmpty=document.querySelector('[data-offline-pin-empty]');
+ const pinResults=document.querySelector('[data-offline-pin-results]');
+ const locations={};
+ {% for choice in form.fields.delivery_pincode.choices %}{% if choice.0 %}{% with parts=choice.0|cut:' ' %}locations["{{ choice.0 }}"]={name:"{{ choice.1|escapejs }}",postal:"{{ choice.1|escapejs }}",city:"",state:"",lat:"",lon:""};{% endwith %}{% endif %}{% endfor %}
+ const showLocation=()=>{const selected=location?.options[location.selectedIndex];if(!selected||!selected.value){if(pinEmpty)pinEmpty.style.display="grid";if(pinResults)pinResults.innerHTML="";return}if(pinEmpty)pinEmpty.style.display="none";if(pinResults){pinResults.innerHTML="";const card=document.createElement("div");card.className="delivery-pin-result";const text=document.createElement("strong");text.textContent=selected.textContent;card.appendChild(text);pinResults.appendChild(card);}};
+ const loadPinWiseLabels=async()=>{if(!location)return;const optionList=[...location.options].filter(option=>option.value);const pins=optionList.map(option=>option.value.split('::').pop()).filter(Boolean);if(!pins.length)return;try{const response=await fetch(pinLookupUrl+'?country=IN&pincodes='+encodeURIComponent(pins.join(',')),{headers:{Accept:'application/json', 'X-Requested-With':'XMLHttpRequest'}});const payload=await response.json();const byPin={};(payload.results||[]).forEach(item=>{const areas=(item.post_offices||[]).join(', ')||item.area_name||item.city||('PIN '+item.pincode);const place=[item.city,item.state].filter(Boolean).join(', ');const coords=[item.latitude&&('Lat: '+item.latitude),item.longitude&&('Long: '+item.longitude)].filter(Boolean).join(' · ');byPin[item.pincode]=item.pincode+' — '+areas+(place?' · '+place:'')+(coords?' · '+coords:'');});optionList.forEach(option=>{const pin=option.value.split('::').pop();if(byPin[pin])option.textContent=byPin[pin];});}catch(error){/* keep the saved Delivery Location label if lookup is unavailable */}};
+ const url="{% url 'inventory:offline-sale-options' %}";
+ const options=(select,items,placeholder)=>{select.innerHTML='';const first=document.createElement('option');first.value='';first.textContent=placeholder;select.appendChild(first);items.forEach(item=>{const option=document.createElement('option');option.value=item.id;option.textContent=item.name+(item.sku?' · '+item.sku:'');select.appendChild(option)});select.disabled=!items.length;};
+ const loadBrands=async()=>{options(brand,[],deviceType.value?'Loading brands…':'Select a device type first');options(product,[],'Select a brand first');options(variant,[],'Select a product first');if(!deviceType.value)return;brand.disabled=true;const r=await fetch(url+'?device_type='+encodeURIComponent(deviceType.value),{headers:{Accept:'application/json'}});const data=await r.json();options(brand,data.brands||[],'Select brand');};
+ const loadProducts=async()=>{options(product,[],brand.value?'Loading products…':'Select a brand first');options(variant,[], 'Select a product first');if(!brand.value||!deviceType.value)return;product.disabled=true;const r=await fetch(url+'?device_type='+encodeURIComponent(deviceType.value)+'&brand_id='+encodeURIComponent(brand.value),{headers:{Accept:'application/json'}});const data=await r.json();options(product,data.products||[],'Select product');};
+ const loadVariants=async()=>{options(variant,[],'Loading variants…');if(!product.value){variant.disabled=true;return}const r=await fetch(url+'?product_id='+encodeURIComponent(product.value),{headers:{Accept:'application/json'}});const data=await r.json();options(variant,data.variants||[],(data.variants||[]).length?'Select variant':'No variant — simple product');};
+ deviceType?.addEventListener('change',loadBrands); brand?.addEventListener('change',loadProducts); product?.addEventListener('change',loadVariants);
+ location?.addEventListener('change',showLocation); showLocation();
+ loadPinWiseLabels();
+ if(deviceType?.value && brand?.value && product?.value) loadVariants(); else if(deviceType?.value && brand?.value) loadProducts(); else if(deviceType?.value) loadBrands(); else { options(brand,[],"Select a device type first"); options(product,[],"Select a brand first"); options(variant,[],"Select a product first"); }
 })();
 </script>
 {% endif %}

@@ -1,13 +1,13 @@
 from datetime import timedelta
 from decimal import Decimal
 from math import atan2, cos, radians, sin, sqrt
+import re
 
 from django.db.models import Q
 from django.utils import timezone
 
 from apps.inventory.models import (
     CategoryDeliveryRule,
-    DeliveryHoliday,
     DeliveryLocation,
     ProductDeliveryRule,
 )
@@ -20,6 +20,17 @@ def normalize_postal_code(value):
     if not value:
         return ""
     return "".join(char for char in str(value).strip().upper() if char.isalnum())
+
+
+def split_postal_codes(value):
+    """Read exact or prefix coverage stored with common separators."""
+    if not value:
+        return []
+    return [
+        normalize_postal_code(item)
+        for item in re.split(r"[,;\n]+", str(value))
+        if normalize_postal_code(item)
+    ]
 
 
 def parse_decimal(value):
@@ -133,12 +144,12 @@ def _match_delivery_location(product, warehouse=None, pincode="", latitude=None,
     latitude = parse_decimal(latitude)
     longitude = parse_decimal(longitude)
     for location in _delivery_locations_queryset(product, warehouse=warehouse):
-        exact_code = normalize_postal_code(location.postal_code)
-        prefix_code = normalize_postal_code(location.postal_code_prefix)
+        exact_codes = split_postal_codes(location.postal_code)
+        prefix_codes = split_postal_codes(location.postal_code_prefix)
         if normalized:
-            if exact_code and exact_code == normalized:
+            if normalized in exact_codes:
                 return location, 3
-            if prefix_code and normalized.startswith(prefix_code):
+            if any(prefix and normalized.startswith(prefix) for prefix in prefix_codes):
                 return location, 2
         if (
             latitude is not None
@@ -194,26 +205,9 @@ def _get_product_rule(product, warehouse=None):
     ).first()
 
 
-def _get_holiday_dates(product, warehouse=None):
-    holidays = DeliveryHoliday.objects.filter(retailer=product.retailer, is_active=True).filter(
-        Q(store=product.store) | Q(store__isnull=True)
-    )
-    if warehouse is not None:
-        holidays = holidays.filter(Q(warehouse=warehouse) | Q(warehouse__isnull=True))
-    return {holiday.holiday_date for holiday in holidays}
-
-
-def _add_delivery_days(start_date, days, holidays):
+def _add_delivery_days(start_date, days):
     current = start_date
-    remaining = max(days, 0)
-    while remaining > 0:
-        current += timedelta(days=1)
-        if current in holidays:
-            continue
-        remaining -= 1
-    while current in holidays:
-        current += timedelta(days=1)
-    return current
+    return current + timedelta(days=max(days, 0))
 
 
 def _pick_candidate_stock_items(product):
@@ -307,8 +301,7 @@ def estimate_product_delivery(product, location_payload=None):
         + (selected_location.handling_time_days if selected_location else 0)
     )
     total_days = transit_days + handling_days
-    holiday_dates = _get_holiday_dates(product, warehouse=selected_warehouse)
-    estimated_date = _add_delivery_days(timezone.localdate(), total_days, holiday_dates)
+    estimated_date = _add_delivery_days(timezone.localdate(), total_days)
     zone_name = selected_location.name if selected_location else "standard delivery area"
     date_label = estimated_date.strftime("%d %b %Y")
     return {

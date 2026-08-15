@@ -25,6 +25,17 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const settingsForm = document.querySelector('.df-box:first-child form');
+    const settingsGrid = settingsForm && settingsForm.querySelector('.df-grid');
+    if (!settingsGrid || settingsForm.querySelector('[name="captcha_enabled"]')) return;
+    const field = document.createElement('div');
+    field.className = 'df-field full';
+    field.innerHTML = '<label style="display:flex;align-items:center;gap:9px;padding:13px 15px;border:1px solid var(--border);border-radius:12px;background:color-mix(in srgb,var(--surface) 82%,#e04420 18%);font-weight:700"><input type="checkbox" name="captcha_enabled" {% if dynamic_form.captcha_enabled %}checked{% endif %} style="width:17px;height:17px;margin:0;accent-color:#e04420"> Show captcha on this form</label><small style="margin-top:5px;color:var(--muted)">Uses the captcha provider configured in Admin → Captcha Settings.</small>';
+    settingsGrid.appendChild(field);
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
     const typeSelect = document.querySelector('.df-box select[name="field_type"]');
     const optionsField = document.querySelector('.df-box textarea[name="options"]')?.closest('.df-field');
     if (!typeSelect || !optionsField) return;

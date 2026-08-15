@@ -1,7 +1,6 @@
 from apps.catalog.models import Brand, Category, Product, ProductAttribute, ProductReview
 from apps.cms.models import FeaturedBanner, HomePageSettings, Slider
 from apps.inventory.models import LowStockAlert, StockItem, Warehouse
-from apps.marketplace.models import MarketplaceConnector
 from apps.payments.models import PaymentGateway
 from apps.rbac.models import Permission, Role, RolePermission, UserRole
 from apps.reports.models import ReportJob
@@ -127,7 +126,7 @@ MODULES = {
     "products": {
         "title": "Products",
         "model": Product,
-        "fields": ["name", "sku", "store", "price", "status", "is_featured", "is_active"],
+        "fields": ["name", "sku", "amazon_asin", "amazon_seller_sku", "variant_skus", "store", "price", "status", "is_featured", "is_active"],
         "search_fields": ["name", "sku", "status", "store__name"],
         "status_field": "status",
         "group": "Catalog",
@@ -320,7 +319,7 @@ MODULES = {
         "title": "Brand Settings",
         "model": BrandSettings,
         "fields": [
-            "brand_name", "brand_tagline", "notification_empty_image",
+            "brand_name", "brand_tagline", "favicon", "drawer_menu_logo", "email_logo", "fixed_menu_logo", "notification_empty_image",
             "footer_description", "footer_top_title", "footer_top_subtitle", "footer_explore_title", "footer_support_title",
             "footer_font_family", "footer_heading_color", "footer_text_color", "footer_link_color",
             "footer_heading_font_size", "footer_text_font_size", "footer_link_font_size",
@@ -367,8 +366,8 @@ MODULES = {
     "sale-countdown": {
         "title": "Sale Countdown",
         "model": SaleCountdownSetting,
-        "fields": ["retailer", "category", "message", "ends_at", "is_active"],
-        "search_fields": ["message", "retailer__display_name", "category__name"],
+        "fields": ["name", "retailer", "category", "message", "ends_at", "is_active"],
+        "search_fields": ["name", "message", "retailer__display_name", "category__name", "product__name"],
         "status_field": "is_active",
         "group": "Platform",
     },

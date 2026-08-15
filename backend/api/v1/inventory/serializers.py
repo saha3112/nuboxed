@@ -8,7 +8,6 @@ from apps.inventory.delivery import (
 )
 from apps.inventory.models import (
     CategoryDeliveryRule,
-    DeliveryHoliday,
     DeliveryLocation,
     LowStockAlert,
     OfflineSale,
@@ -42,12 +41,6 @@ class CategoryDeliveryRuleSerializer(serializers.ModelSerializer):
 class ProductDeliveryRuleSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProductDeliveryRule
-        fields = "__all__"
-
-
-class DeliveryHolidaySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = DeliveryHoliday
         fields = "__all__"
 
 

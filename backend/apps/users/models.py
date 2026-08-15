@@ -86,6 +86,8 @@ class User(AbstractUser, TimeStampedModel):
 
 class UserSecurityCode(BaseModel):
     PURPOSE_EMAIL_VERIFICATION = "email_verification"
+    PURPOSE_EMAIL_CHANGE = "email_change"
+    PURPOSE_PASSWORD_CHANGE = "password_change"
     PURPOSE_PASSWORD_RESET = "password_reset"
     PURPOSE_LOGIN_OTP = "login_otp"
 
@@ -94,6 +96,8 @@ class UserSecurityCode(BaseModel):
 
     PURPOSE_CHOICES = [
         (PURPOSE_EMAIL_VERIFICATION, "Email verification"),
+        (PURPOSE_EMAIL_CHANGE, "Email change verification"),
+        (PURPOSE_PASSWORD_CHANGE, "Password change verification"),
         (PURPOSE_PASSWORD_RESET, "Password reset"),
         (PURPOSE_LOGIN_OTP, "Login OTP"),
     ]

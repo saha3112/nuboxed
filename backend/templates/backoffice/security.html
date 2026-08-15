@@ -1,0 +1,20 @@
+{% extends "backoffice/base.html" %}
+
+{% block content %}
+<style>
+    .security-page{max-width:900px;margin:0 auto;padding:8px 0 56px}.security-hero{padding:28px 32px;border:1px solid #fed7cc;border-radius:20px;background:linear-gradient(115deg,#fff7f3,#f7f9ff);margin-bottom:22px}.security-hero h1{margin:0 0 8px;color:#172033;font-size:30px}.security-hero p{margin:0;color:#64748b}.security-card{padding:30px 32px;border:1px solid #e2e8f0;border-radius:18px;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.06)}.security-card h2{margin:0 0 7px;color:#172033}.security-card .intro{margin:0 0 24px;color:#64748b}.security-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:19px}.security-field{display:grid;gap:7px}.security-field.full{grid-column:1/-1}.security-field label{font-weight:700;color:#334155}.security-field input{width:100%;box-sizing:border-box;padding:12px 13px;border:1px solid #cbd5e1;border-radius:10px;font:inherit;color:#172033}.security-field input:focus{outline:0;border-color:#ea4826;box-shadow:0 0 0 3px rgba(234,72,38,.12)}.security-help{font-size:12px;color:#64748b}.security-errors{margin:0 0 18px;padding:12px 14px;border-radius:10px;background:#fff1f2;color:#be123c}.security-errors ul{margin:0;padding-left:18px}.security-actions{grid-column:1/-1;display:flex;justify-content:flex-end;margin-top:4px}.security-submit{border:0;border-radius:10px;padding:12px 18px;background:#ea4826;color:#fff;font-weight:700;font-size:14px;cursor:pointer}.security-submit:hover{background:#cf3518}@media(max-width:700px){.security-form{grid-template-columns:1fr}.security-field.full,.security-actions{grid-column:auto}.security-card,.security-hero{padding:22px}}
+</style>
+<div class="security-page">
+    <section class="security-hero"><h1>Security Settings</h1><p>Update the email and password used to access the Super Admin panel.</p></section>
+    <section class="security-card">
+        <h2>Super Admin login details</h2><p class="intro">Update the email address or set a new password for the Super Admin account.</p>
+        {% if form.non_field_errors or form.errors %}<div class="security-errors"><strong>Please review the form.</strong>{{ form.non_field_errors }}{% for field in form %}{{ field.errors }}{% endfor %}</div>{% endif %}
+        <form method="post" class="security-form">{% csrf_token %}
+            <div class="security-field full"><label for="id_email">{{ form.email.label }}</label>{{ form.email }}</div>
+            <div class="security-field"><label for="id_new_password">{{ form.new_password.label }}</label>{{ form.new_password }}<span class="security-help">{{ form.new_password.help_text }}</span></div>
+            <div class="security-field"><label for="id_confirm_password">{{ form.confirm_password.label }}</label>{{ form.confirm_password }}</div>
+            <div class="security-actions"><button class="security-submit" type="submit"><i class="ph ph-floppy-disk"></i> Save security settings</button></div>
+        </form>
+    </section>
+</div>
+{% endblock %}

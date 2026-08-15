@@ -10,8 +10,8 @@
     .security-card { padding:26px; margin-bottom:20px; border:1px solid #e1e7ec; border-radius:16px; background:#fff; box-shadow:0 8px 24px rgba(15,23,42,.05); }
     .security-card h2 { margin:0 0 5px; color:#17212b; font-size:21px; }
     .security-card > p { color:#64748b; font-size:14px; margin:0 0 20px; }
-    .security-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-    .security-field { display:grid; gap:6px; }
+    .security-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
+    .security-field { display:grid; align-content:start; gap:6px; min-width:0; }
     .security-field label { color:#334155; font-size:13px; font-weight:650; }
     .security-field input { border:1px solid #d7e0e8; border-radius:9px; padding:11px 12px; font:inherit; width:100%; box-sizing:border-box; -webkit-appearance:none; }
     /* Keep only our custom eye control; hide browser-native password buttons. */
@@ -23,20 +23,59 @@
     .security-field input:focus { outline:2px solid rgba(224,68,32,.18); border-color:#e04420; }
     .security-submit { margin-top:18px; border:0; border-radius:9px; padding:12px 18px; background:#e04420; color:#fff; font-weight:700; cursor:pointer; }
     .security-submit:hover { background:#c83818; }
-    .security-errors { margin:0 0 14px; color:#b42318; font-size:13px; }
+    .security-errors { display:block; min-height:18px; margin:0 0 14px; color:#b42318; font-size:13px; line-height:1.35; }
     .password-field { position:relative; }
     .password-field input { padding-right:42px; }
     /* Cover the browser's native reveal button and keep one consistent toggle. */
     .password-toggle { position:absolute; right:7px; top:25px; z-index:3; display:flex; align-items:center; justify-content:center; width:34px; height:34px; border:0; border-radius:7px; background:#fff; color:#64748b; cursor:pointer; padding:0; }
     .password-toggle:hover { background:#fff; color:#e04420; }
-    @media (max-width:640px) { .security-grid { grid-template-columns:1fr; } }
+    .email-status { display:grid; grid-template-columns:auto auto auto; align-items:center; gap:10px; width:max-content; max-width:100%; box-sizing:border-box; padding:8px 10px; margin:0 0 14px; border:1px solid #bfe8cf; border-radius:10px; background:linear-gradient(110deg,#f4fcf7,#effaf4); box-shadow:0 4px 12px rgba(22,132,71,.05); }
+    .email-status-copy { min-width:0; max-width:285px; }
+    .email-status-label { display:block; margin-bottom:2px; color:#537064; font-size:9px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; }
+    .email-status-address { display:block; color:#17212b; font-size:12px; font-weight:750; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .verified-badge { flex:0 0 auto; display:inline-flex; align-items:center; gap:4px; padding:5px 8px; border-radius:999px; background:#dff6e7; color:#168447; font-size:10px; font-weight:800; }
+    .email-change-link { border:0; background:transparent; color:#e04420; font:inherit; font-size:11px; font-weight:800; cursor:pointer; white-space:nowrap; }
+    .email-change-link:hover { text-decoration:underline; }
+    .email-modal { position:fixed; inset:0; z-index:3000; display:none; align-items:center; justify-content:center; padding:20px; background:rgba(15,23,42,.56); }
+    .email-modal.is-open { display:flex; }
+    .email-modal-card { width:min(480px,100%); overflow:hidden; border-radius:20px; background:#fff; box-shadow:0 28px 80px rgba(15,23,42,.28); }
+    .email-modal-head { display:flex; align-items:flex-start; justify-content:space-between; gap:15px; padding:23px 24px 18px; border-bottom:1px solid #eef1f4; }
+    .email-modal-head h3 { margin:0 0 5px; color:#17212b; font-size:21px; }
+    .email-modal-head p { margin:0; color:#64748b; font-size:13px; line-height:1.5; }
+    .email-modal-close { border:0; background:transparent; color:#64748b; font-size:25px; line-height:1; cursor:pointer; }
+    .email-modal-body { padding:22px 24px 24px; }
+    .email-modal-body label { display:block; margin-bottom:7px; color:#334155; font-size:13px; font-weight:750; }
+    .email-modal-body input { width:100%; box-sizing:border-box; padding:13px 14px; border:1px solid #d7e0e8; border-radius:11px; font:inherit; }
+    .email-modal-body input:focus { outline:2px solid rgba(224,68,32,.18); border-color:#e04420; }
+    .email-modal-submit { width:100%; margin-top:16px; border:0; border-radius:11px; padding:13px 18px; background:#e04420; color:#fff; font-weight:800; cursor:pointer; }
+    .email-modal-error { margin:0 0 14px; padding:10px 12px; border-radius:9px; background:#fff1f0; color:#b42318; font-size:13px; }
+    .email-otp-help { margin:12px 0 0; color:#64748b; font-size:12px; text-align:center; }
+    .email-resend { margin:13px 0 0; text-align:center; font-size:12px; color:#64748b; }
+    .email-resend button { border:0; background:none; color:#e04420; font:inherit; font-weight:800; cursor:pointer; }
+    .password-otp-state { padding:14px; border:1px solid #f2c3b5; border-radius:12px; background:#fff8f5; }
+    .password-otp-state h3 { margin:0 0 5px; color:#17212b; font-size:16px; }
+    .password-otp-state p { margin:0 0 14px; color:#64748b; font-size:13px; line-height:1.5; }
+    .password-otp-state label { display:block; margin-bottom:8px; color:#334155; font-size:13px; font-weight:750; }
+    .password-otp-state input { display:block; width:min(100%, 330px); box-sizing:border-box; padding:12px; border:1px solid #d7e0e8; border-radius:9px; text-align:center; font-size:20px; letter-spacing:.3em; }
+    .password-otp-state .password-otp-form { margin:0; }
+    .password-otp-actions { display:flex; align-items:center; justify-content:space-between; gap:18px; margin-top:22px; }
+    .password-otp-state button { border:0; border-radius:9px; padding:11px 16px; background:#e04420; color:#fff; font-weight:800; cursor:pointer; }
+    .password-otp-state .email-resend { margin:0; text-align:right; }
+    .password-otp-state .email-resend form { display:flex; align-items:center; justify-content:flex-end; gap:8px; }
+    .password-otp-state .email-resend button { margin-top:0; padding:7px 10px; border-radius:7px; font-size:12px; }
+    @media (max-width:640px) { .security-grid { grid-template-columns:1fr; } .email-status { width:100%; grid-template-columns:minmax(0,1fr) auto; gap:8px; } .email-change-link { grid-column:1/-1; justify-self:start; padding:0; } .password-otp-actions { align-items:flex-start; flex-direction:column; gap:10px; } .password-otp-state .email-resend { align-self:flex-end; } }
 </style>
 <section class="page-head"><div class="container"><h1>Manage Profile</h1><div class="breadcrumb"><a href="{% url 'storefront:home' %}">Home</a><span>/</span><a href="{% url 'storefront:customer-dashboard' %}">Your Account</a><span>/</span><span>Manage Profile</span></div></div></section>
 <main class="security-page">
     <a class="account-back-link" href="{% url 'storefront:customer-dashboard' %}">← Back to Account</a>
     <p class="security-intro">Keep your personal details and login credentials up to date.</p>
     <section class="security-card">
-        <h2>Personal details</h2><p>Update the name, email, and phone number used on your account.</p>
+        <h2>Personal details</h2><p>Update the name and phone number used on your account.</p>
+        <div class="email-status">
+            <div class="email-status-copy"><span class="email-status-label">Login email</span><span class="email-status-address">{{ request.user.email }}</span></div>
+            {% if request.user.is_email_verified %}<span class="verified-badge">✓ Verified</span>{% else %}<span class="verified-badge" style="background:#fff4d6;color:#9a6700">! Not verified</span>{% endif %}
+            <button class="email-change-link" type="button" data-open-email-change>Change email</button>
+        </div>
         {% if profile_form.non_field_errors %}<div class="security-errors">{{ profile_form.non_field_errors }}</div>{% endif %}
         <form method="post"><input type="hidden" name="action" value="profile">{% csrf_token %}<div class="security-grid">
             {% for field in profile_form %}<div class="security-field"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.errors %}<span class="security-errors">{{ field.errors|striptags }}</span>{% endif %}</div>{% endfor %}
@@ -44,15 +83,38 @@
     </section>
     <section class="security-card">
         <h2>Change password</h2><p>Use a strong password that you do not use on another website.</p>
-        {% if password_form.non_field_errors %}<div class="security-errors">{{ password_form.non_field_errors }}</div>{% endif %}
-        <form method="post"><input type="hidden" name="action" value="password">{% csrf_token %}<div class="security-grid">
-            {% for field in password_form %}<div class="security-field {% if field.field.widget.input_type == 'password' %}password-field{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.field.widget.input_type == 'password' %}<button type="button" class="password-toggle" data-password-toggle="{{ field.id_for_label }}" aria-label="Show password"><i class="fa-solid fa-eye"></i></button>{% endif %}{% if field.errors %}<span class="security-errors">{{ field.errors|striptags }}</span>{% endif %}</div>{% endfor %}
-        </div><button class="security-submit" type="submit">Change password</button></form>
+        {% if password_change_code %}
+            <div class="password-otp-state"><h3>Verify password change</h3><p>We sent a 6-digit verification code to your registered email. Enter it to complete the password change.</p>{% if password_change_error %}<div class="security-errors">{{ password_change_error }}</div>{% endif %}<form method="post" class="password-otp-form" id="password-otp-form"><input type="hidden" name="action" value="verify_password_change">{% csrf_token %}<label for="password-change-otp">Verification code</label><input id="password-change-otp" name="password_change_otp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required autofocus></form><div class="password-otp-actions"><button type="submit" form="password-otp-form">Verify and change password</button><div class="email-resend"><form method="post"><input type="hidden" name="action" value="resend_password_change">{% csrf_token %}Didn’t receive it? <button type="submit">Resend code</button></form></div></div></div>
+        {% else %}
+            {% if password_form.non_field_errors %}<div class="security-errors">{{ password_form.non_field_errors }}</div>{% endif %}{% if password_change_error %}<div class="security-errors">{{ password_change_error }}</div>{% endif %}
+            <form method="post"><input type="hidden" name="action" value="request_password_change">{% csrf_token %}<div class="security-grid">
+                {% for field in password_form %}<div class="security-field {% if field.field.widget.input_type == 'password' %}password-field{% endif %}"><label for="{{ field.id_for_label }}">{{ field.label }}</label>{{ field }}{% if field.field.widget.input_type == 'password' %}<button type="button" class="password-toggle" data-password-toggle="{{ field.id_for_label }}" aria-label="Show password"><i class="fa-solid fa-eye"></i></button>{% endif %}{% if field.errors %}<span class="security-errors">{{ field.errors|striptags }}</span>{% endif %}</div>{% endfor %}
+            </div><button class="security-submit" type="submit">Continue with email verification</button></form>
+        {% endif %}
     </section>
 </main>
+<div class="email-modal{% if email_change_code or email_change_error %} is-open{% endif %}" id="email-change-modal" role="dialog" aria-modal="true" aria-labelledby="email-change-title">
+    <div class="email-modal-card">
+        <div class="email-modal-head"><div><h3 id="email-change-title">{% if email_change_code %}Verify your new email{% else %}Change email address{% endif %}</h3><p>{% if email_change_code %}Enter the 6-digit code sent to <strong>{{ email_change_email }}</strong>.{% else %}Your new email will be verified before it replaces the current one.{% endif %}</p></div><button class="email-modal-close" type="button" data-close-email-change aria-label="Close">×</button></div>
+        <div class="email-modal-body">
+            {% if email_change_error %}<div class="email-modal-error">{{ email_change_error }}</div>{% endif %}
+            {% if email_change_code %}
+                <form method="post"><input type="hidden" name="action" value="verify_email_change">{% csrf_token %}<label for="email-change-otp">Verification code</label><input id="email-change-otp" name="email_change_otp" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required autofocus><button class="email-modal-submit" type="submit">Verify and change email</button></form>
+                <p class="email-otp-help">Code expires in 15 minutes.</p>
+                <form method="post" class="email-resend"><input type="hidden" name="action" value="resend_email_change">{% csrf_token %}Didn’t receive it? <button type="submit">Resend code</button></form>
+            {% else %}
+                <form method="post"><input type="hidden" name="action" value="request_email_change">{% csrf_token %}<label for="new-email">New email address</label><input id="new-email" name="new_email" type="email" autocomplete="email" placeholder="you@example.com" required><button class="email-modal-submit" type="submit">Send verification code</button></form>
+            {% endif %}
+        </div>
+    </div>
+</div>
 <script>
 document.querySelectorAll('[data-password-toggle]').forEach(function(button) {
     button.addEventListener('click', function() { const input = document.getElementById(button.dataset.passwordToggle); const visible = input.type === 'text'; input.type = visible ? 'password' : 'text'; button.innerHTML = visible ? '<i class="fa-solid fa-eye"></i>' : '<i class="fa-solid fa-eye-slash"></i>'; });
 });
+const emailModal = document.getElementById('email-change-modal');
+document.querySelector('[data-open-email-change]')?.addEventListener('click', () => emailModal.classList.add('is-open'));
+document.querySelector('[data-close-email-change]')?.addEventListener('click', () => emailModal.classList.remove('is-open'));
+emailModal?.addEventListener('click', (event) => { if (event.target === emailModal) emailModal.classList.remove('is-open'); });
 </script>
 {% endblock %}

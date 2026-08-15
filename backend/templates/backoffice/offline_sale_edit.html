@@ -1,0 +1,4 @@
+{% extends "backoffice/base.html" %}
+{% block content %}
+<section class="page-shell"><div class="panel" style="max-width:780px"><div class="panel-header"><div><p class="eyebrow">Operations</p><h3>Edit Offline Sale</h3><p class="subtle-copy">Product, variant, quantity and store are locked because the sale already affected stock. Update price, sold time, note or PIN coverage.</p></div></div><form method="post" class="ra-form" style="padding:20px">{% csrf_token %}{% for field in form %}<div style="margin-bottom:14px"><label style="display:block;font-weight:700;font-size:13px;margin-bottom:6px">{{ field.label }}</label>{{ field }}{% if field.errors %}<div style="color:#b42318;font-size:12px">{{ field.errors }}</div>{% endif %}</div>{% endfor %}<div style="display:flex;gap:8px"><button class="primary-button" type="submit">Save changes</button><a class="bo-nav-link" href="{% url 'backoffice:offline-sales' %}">Cancel</a></div></form></div></section>
+{% endblock %}

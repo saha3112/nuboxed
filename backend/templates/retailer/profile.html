@@ -31,6 +31,16 @@
                     </div>
                 {% endif %}
             {% endfor %}
+            {% for field in form %}
+                {% if field.name not in 'legal_name display_name vat_number registration_number business_type description business_document gst_certificate pan_card cancelled_cheque address_proof signature msme_certificate fssai_license support_email support_phone business_address' and 'library_id' not in field.name %}
+                    <div class="ra-field">
+                        <label class="ra-label">{{ field.label }}</label>
+                        {{ field }}
+                        {% if field.help_text %}<p style="font-size:11px; color:var(--text-muted); margin-top:3px;">{{ field.help_text }}</p>{% endif %}
+                        {% if field.errors %}<div class="ra-field-error">{{ field.errors.as_text }}</div>{% endif %}
+                    </div>
+                {% endif %}
+            {% endfor %}
         </div>
     </div>
 </div>
@@ -56,13 +66,14 @@
 </div>
 
 <!-- ─── Section 3: Seller Documents (Meesho/Amazon/Flipkart style) ─── -->
+{% if seller_verification_page_settings and seller_verification_page_settings.is_visible %}
 <div class="ra-card" style="max-width: 960px; margin-bottom: 20px;">
     <div class="ra-card-header" style="border-bottom: 1px solid var(--border);">
-        <span class="ra-card-title"><i class="ph ph-files" style="margin-right:6px; color: var(--primary);"></i> Seller Verification Documents</span>
+        <span class="ra-card-title"><i class="ph ph-files" style="margin-right:6px; color: var(--primary);"></i> {{ seller_verification_page_settings.section_title }}</span>
     </div>
     <div class="ra-card-body">
         <p style="font-size:13px; color: var(--text-muted); margin-bottom: 20px; line-height:1.6;">
-            Upload required documents to verify your seller account. These documents are processed securely and are mandatory for marketplace activation — similar to Meesho, Amazon, and Flipkart seller onboarding.
+            {{ seller_verification_page_settings.section_description }}
         </p>
 
         <div class="seller-docs-grid">
@@ -71,21 +82,21 @@
                     <div class="seller-doc-card" id="{{ field.name }}-doc-card" onclick="selectDocFromLibrary('{{ field.name }}')">
                         <div class="seller-doc-icon">
                             {% if field.name == 'business_document' %}
-                                <i class="ph ph-certificate"></i>
+                                <i class="{{ seller_verification_documents_map.business_document.icon_class|default:'ph ph-certificate' }}"></i>
                             {% elif field.name == 'gst_certificate' %}
-                                <i class="ph ph-receipt"></i>
+                                <i class="{{ seller_verification_documents_map.gst_certificate.icon_class|default:'ph ph-receipt' }}"></i>
                             {% elif field.name == 'pan_card' %}
-                                <i class="ph ph-identification-card"></i>
+                                <i class="{{ seller_verification_documents_map.pan_card.icon_class|default:'ph ph-identification-card' }}"></i>
                             {% elif field.name == 'cancelled_cheque' %}
-                                <i class="ph ph-bank"></i>
+                                <i class="{{ seller_verification_documents_map.cancelled_cheque.icon_class|default:'ph ph-bank' }}"></i>
                             {% elif field.name == 'address_proof' %}
-                                <i class="ph ph-map-pin-area"></i>
+                                <i class="{{ seller_verification_documents_map.address_proof.icon_class|default:'ph ph-map-pin-area' }}"></i>
                             {% elif field.name == 'signature' %}
-                                <i class="ph ph-pen-nib"></i>
+                                <i class="{{ seller_verification_documents_map.signature.icon_class|default:'ph ph-pen-nib' }}"></i>
                             {% elif field.name == 'msme_certificate' %}
-                                <i class="ph ph-factory"></i>
+                                <i class="{{ seller_verification_documents_map.msme_certificate.icon_class|default:'ph ph-factory' }}"></i>
                             {% elif field.name == 'fssai_license' %}
-                                <i class="ph ph-cookie"></i>
+                                <i class="{{ seller_verification_documents_map.fssai_license.icon_class|default:'ph ph-cookie' }}"></i>
                             {% endif %}
                         </div>
                         <div class="seller-doc-info">
@@ -106,9 +117,29 @@
                     </div>
                 {% endif %}
             {% endfor %}
+        {% for document in seller_verification_dynamic_documents %}
+        <div class="seller-doc-card" id="{{ document.field_name }}-doc-card">
+            <div class="seller-doc-icon"><i class="{{ document.icon_class|default:'fa-solid fa-file' }}"></i></div>
+            <div class="seller-doc-info"><div class="seller-doc-title">{{ document.title }}</div><div class="seller-doc-hint">{{ document.description|default:'Click to upload a document' }}</div><input type="file" name="{{ document.field_name }}" accept=".pdf,.png,.jpg,.jpeg"></div>
+            <div class="seller-doc-status"><span class="seller-doc-badge pending"><i class="ph ph-upload-simple"></i> Upload</span></div>
+        </div>
+        {% endfor %}
         </div>
     </div>
 </div>
+{{ seller_verification_visible_fields|json_script:"seller-verification-visible-fields-profile" }}
+<script>
+  (function () {
+    const node = document.getElementById('seller-verification-visible-fields-profile');
+    if (!node) return;
+    const allowed = JSON.parse(node.textContent || '[]');
+    document.querySelectorAll('.seller-doc-card').forEach((card) => {
+      const field = card.id.replace(/-doc-card$/, '');
+      if (!allowed.includes(field)) card.style.display = 'none';
+    });
+  })();
+</script>
+{% endif %}
 
 <!-- Hidden form fields (library_id fields) -->
 {% for field in form %}

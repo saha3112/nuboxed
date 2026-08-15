@@ -8,6 +8,7 @@
     <!-- Google Fonts & Phosphor Icons -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <link rel="stylesheet" href="{% static 'shared/icon-fallback.css' %}">
     <style>
         :root {
@@ -467,19 +468,19 @@
             <!-- TAB 2: OPTIONAL BUSINESS DETAILS -->
             <div class="form-section" id="section-2">
                 <div class="form-grid">
-                    <div class="form-field">
-                        <label class="label" for="id_vat_number">GST / VAT / Tax ID (Optional)</label>
+                    {% if registration_field_settings_map.vat_number %}<div class="form-field">
+                        <label class="label" for="id_vat_number">{{ registration_field_settings_map.vat_number.title }}</label>
                         <div class="input-wrapper">
                             <i class="ph ph-file-text input-icon"></i>
-                            <input type="text" name="vat_number" id="id_vat_number" class="input-field" placeholder="e.g. GSTIN12345" value="{{ form.vat_number.value|default:'' }}">
+                            <input type="text" name="vat_number" id="id_vat_number" class="input-field" placeholder="{{ registration_field_settings_map.vat_number.placeholder }}" value="{{ form.vat_number.value|default:'' }}" {% if form.vat_number.field.required %}required{% endif %}>
                         </div>
                         {% if form.vat_number.errors %}
                         <div class="error-message"><i class="ph ph-warning-circle"></i> {{ form.vat_number.errors.as_text }}</div>
                         {% endif %}
-                    </div>
+                    </div>{% endif %}
 
-                    <div class="form-field">
-                        <label class="label" for="id_business_type">Type of Entity (Optional)</label>
+                    {% if registration_field_settings_map.business_type %}<div class="form-field">
+                        <label class="label" for="id_business_type">{{ registration_field_settings_map.business_type.title }}</label>
                         <select name="business_type" id="id_business_type" class="input-field">
                             {% for val, label in form.fields.business_type.choices %}
                             <option value="{{ val }}" {% if form.business_type.value == val %}selected{% endif %}>{{ label }}</option>
@@ -488,36 +489,47 @@
                         {% if form.business_type.errors %}
                         <div class="error-message"><i class="ph ph-warning-circle"></i> {{ form.business_type.errors.as_text }}</div>
                         {% endif %}
-                    </div>
+                    </div>{% endif %}
 
-                    <div class="form-field full-width">
-                        <label class="label" for="id_business_address">Street Address (Optional)</label>
+                    {% if registration_field_settings_map.business_address %}<div class="form-field full-width">
+                        <label class="label" for="id_business_address">{{ registration_field_settings_map.business_address.title }}</label>
                         <div class="input-wrapper">
                             <i class="ph ph-map-pin input-icon"></i>
-                            <textarea name="business_address" id="id_business_address" class="input-field" rows="2" placeholder="123 Business Rd, Suite 100" style="padding-left: 38px; resize: vertical; min-height: 52px;">{{ form.business_address.value|default:'' }}</textarea>
+                            <textarea name="business_address" id="id_business_address" class="input-field" rows="2" placeholder="{{ registration_field_settings_map.business_address.placeholder }}" style="padding-left: 38px; resize: vertical; min-height: 52px;">{{ form.business_address.value|default:'' }}</textarea>
                         </div>
                         {% if form.business_address.errors %}
                         <div class="error-message"><i class="ph ph-warning-circle"></i> {{ form.business_address.errors.as_text }}</div>
                         {% endif %}
-                    </div>
+                    </div>{% endif %}
+                    {% for setting in registration_field_settings %}
+                        {% if not setting.is_system %}
+                        <div class="form-field {% if setting.field_type == 'textarea' %}full-width{% endif %}">
+                            <label class="label" for="id_{{ setting.field_name }}">{{ setting.title }}</label>
+                            {% if setting.field_type == 'textarea' %}<textarea name="{{ setting.field_name }}" id="id_{{ setting.field_name }}" class="input-field" placeholder="{{ setting.placeholder }}"{% if setting.is_required %} required{% endif %}></textarea>
+                            {% elif setting.field_type == 'select' %}<select name="{{ setting.field_name }}" id="id_{{ setting.field_name }}" class="input-field"{% if setting.is_required %} required{% endif %}><option value="">{{ setting.placeholder|default:'Select...' }}</option>{% for val,label in setting.choices_list %}<option value="{{ val }}">{{ label }}</option>{% endfor %}</select>
+                            {% else %}<input type="text" name="{{ setting.field_name }}" id="id_{{ setting.field_name }}" class="input-field" placeholder="{{ setting.placeholder }}"{% if setting.is_required %} required{% endif %}>{% endif %}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
                 </div>
 
                 <!-- Seller Documents Section -->
+                {% if seller_verification_page_settings and seller_verification_page_settings.is_visible %}
                 <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border);">
                     <div style="margin-bottom: 16px;">
                         <div style="font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 4px;">
-                            <i class="ph ph-files" style="margin-right: 4px;"></i> Seller Verification Documents
+                            <i class="ph ph-files" style="margin-right: 4px;"></i> {{ seller_verification_page_settings.section_title }}
                         </div>
                         <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5;">
-                            Upload documents to speed up your seller verification. All documents are optional during registration — you can upload them later from your profile.
+                            {{ seller_verification_page_settings.section_description }}
                         </p>
                     </div>
                     <div class="reg-docs-grid">
                         <!-- Business Registration Certificate -->
                         <label class="reg-doc-card" for="id_business_document">
-                            <div class="reg-doc-icon"><i class="ph ph-certificate"></i></div>
+                            <div class="reg-doc-icon"><i class="{{ seller_verification_documents_map.business_document.icon_class|default:'ph ph-certificate' }}"></i></div>
                             <div class="reg-doc-info">
-                                <div class="reg-doc-title">Business Registration</div>
+                                <div class="reg-doc-title">{{ seller_verification_documents_map.business_document.title|default:"Business Registration" }}</div>
                                 <div class="reg-doc-file-name" id="business_document-fname">No file selected</div>
                             </div>
                             <input type="file" name="business_document" id="id_business_document" accept=".pdf,.png,.jpg,.jpeg" style="display:none;" onchange="updateDocLabel(this, 'business_document-fname')">
@@ -525,9 +537,9 @@
 
                         <!-- GST Certificate -->
                         <label class="reg-doc-card" for="id_gst_certificate">
-                            <div class="reg-doc-icon"><i class="ph ph-receipt"></i></div>
+                            <div class="reg-doc-icon"><i class="{{ seller_verification_documents_map.gst_certificate.icon_class|default:'ph ph-receipt' }}"></i></div>
                             <div class="reg-doc-info">
-                                <div class="reg-doc-title">GST Certificate</div>
+                                <div class="reg-doc-title">{{ seller_verification_documents_map.gst_certificate.title|default:"GST Certificate" }}</div>
                                 <div class="reg-doc-file-name" id="gst_certificate-fname">No file selected</div>
                             </div>
                             <input type="file" name="gst_certificate" id="id_gst_certificate" accept=".pdf,.png,.jpg,.jpeg" style="display:none;" onchange="updateDocLabel(this, 'gst_certificate-fname')">
@@ -535,9 +547,9 @@
 
                         <!-- PAN Card -->
                         <label class="reg-doc-card" for="id_pan_card">
-                            <div class="reg-doc-icon"><i class="ph ph-identification-card"></i></div>
+                            <div class="reg-doc-icon"><i class="{{ seller_verification_documents_map.pan_card.icon_class|default:'ph ph-identification-card' }}"></i></div>
                             <div class="reg-doc-info">
-                                <div class="reg-doc-title">PAN Card / Tax ID</div>
+                                <div class="reg-doc-title">{{ seller_verification_documents_map.pan_card.title|default:"PAN Card / Tax ID" }}</div>
                                 <div class="reg-doc-file-name" id="pan_card-fname">No file selected</div>
                             </div>
                             <input type="file" name="pan_card" id="id_pan_card" accept=".pdf,.png,.jpg,.jpeg" style="display:none;" onchange="updateDocLabel(this, 'pan_card-fname')">
@@ -545,9 +557,9 @@
 
                         <!-- Cancelled Cheque -->
                         <label class="reg-doc-card" for="id_cancelled_cheque">
-                            <div class="reg-doc-icon"><i class="ph ph-bank"></i></div>
+                            <div class="reg-doc-icon"><i class="{{ seller_verification_documents_map.cancelled_cheque.icon_class|default:'ph ph-bank' }}"></i></div>
                             <div class="reg-doc-info">
-                                <div class="reg-doc-title">Cancelled Cheque</div>
+                                <div class="reg-doc-title">{{ seller_verification_documents_map.cancelled_cheque.title|default:"Cancelled Cheque" }}</div>
                                 <div class="reg-doc-file-name" id="cancelled_cheque-fname">No file selected</div>
                             </div>
                             <input type="file" name="cancelled_cheque" id="id_cancelled_cheque" accept=".pdf,.png,.jpg,.jpeg" style="display:none;" onchange="updateDocLabel(this, 'cancelled_cheque-fname')">
@@ -555,9 +567,9 @@
 
                         <!-- Address Proof -->
                         <label class="reg-doc-card" for="id_address_proof">
-                            <div class="reg-doc-icon"><i class="ph ph-map-pin-area"></i></div>
+                            <div class="reg-doc-icon"><i class="{{ seller_verification_documents_map.address_proof.icon_class|default:'ph ph-map-pin-area' }}"></i></div>
                             <div class="reg-doc-info">
-                                <div class="reg-doc-title">Address Proof</div>
+                                <div class="reg-doc-title">{{ seller_verification_documents_map.address_proof.title|default:"Address Proof" }}</div>
                                 <div class="reg-doc-file-name" id="address_proof-fname">No file selected</div>
                             </div>
                             <input type="file" name="address_proof" id="id_address_proof" accept=".pdf,.png,.jpg,.jpeg" style="display:none;" onchange="updateDocLabel(this, 'address_proof-fname')">
@@ -565,9 +577,9 @@
 
                         <!-- Signature -->
                         <label class="reg-doc-card" for="id_signature">
-                            <div class="reg-doc-icon"><i class="ph ph-pen-nib"></i></div>
+                            <div class="reg-doc-icon"><i class="{{ seller_verification_documents_map.signature.icon_class|default:'ph ph-pen-nib' }}"></i></div>
                             <div class="reg-doc-info">
-                                <div class="reg-doc-title">Signature</div>
+                                <div class="reg-doc-title">{{ seller_verification_documents_map.signature.title|default:"Signature" }}</div>
                                 <div class="reg-doc-file-name" id="signature-fname">No file selected</div>
                             </div>
                             <input type="file" name="signature" id="id_signature" accept=".pdf,.png,.jpg,.jpeg" style="display:none;" onchange="updateDocLabel(this, 'signature-fname')">
@@ -575,9 +587,9 @@
 
                         <!-- MSME Certificate -->
                         <label class="reg-doc-card" for="id_msme_certificate">
-                            <div class="reg-doc-icon"><i class="ph ph-factory"></i></div>
+                            <div class="reg-doc-icon"><i class="{{ seller_verification_documents_map.msme_certificate.icon_class|default:'ph ph-factory' }}"></i></div>
                             <div class="reg-doc-info">
-                                <div class="reg-doc-title">MSME / Udyam</div>
+                                <div class="reg-doc-title">{{ seller_verification_documents_map.msme_certificate.title|default:"MSME / Udyam" }}</div>
                                 <div class="reg-doc-file-name" id="msme_certificate-fname">No file selected</div>
                             </div>
                             <input type="file" name="msme_certificate" id="id_msme_certificate" accept=".pdf,.png,.jpg,.jpeg" style="display:none;" onchange="updateDocLabel(this, 'msme_certificate-fname')">
@@ -585,15 +597,25 @@
 
                         <!-- FSSAI License -->
                         <label class="reg-doc-card" for="id_fssai_license">
-                            <div class="reg-doc-icon"><i class="ph ph-cookie"></i></div>
+                            <div class="reg-doc-icon"><i class="{{ seller_verification_documents_map.fssai_license.icon_class|default:'ph ph-cookie' }}"></i></div>
                             <div class="reg-doc-info">
-                                <div class="reg-doc-title">FSSAI License</div>
+                                <div class="reg-doc-title">{{ seller_verification_documents_map.fssai_license.title|default:"FSSAI License" }}</div>
                                 <div class="reg-doc-file-name" id="fssai_license-fname">No file selected</div>
                             </div>
                             <input type="file" name="fssai_license" id="id_fssai_license" accept=".pdf,.png,.jpg,.jpeg" style="display:none;" onchange="updateDocLabel(this, 'fssai_license-fname')">
                         </label>
+
+                        {% for document in seller_verification_dynamic_documents %}
+                        <label class="reg-doc-card" for="id_{{ document.field_name }}">
+                            <div class="reg-doc-icon"><i class="{{ document.icon_class|default:'fa-solid fa-file' }}"></i></div>
+                            <div class="reg-doc-info"><div class="reg-doc-title">{{ document.title }}</div><div class="reg-doc-file-name" id="{{ document.field_name }}-fname">No file selected</div></div>
+                            <input type="file" name="{{ document.field_name }}" id="id_{{ document.field_name }}" accept=".pdf,.png,.jpg,.jpeg" style="display:none;" onchange="updateDocLabel(this, '{{ document.field_name }}-fname')">
+                        </label>
+                        {% endfor %}
                     </div>
                 </div>
+                {{ seller_verification_visible_fields|json_script:"seller-verification-visible-fields" }}
+                {% endif %}
             </div>
 
             <!-- Wizard Control Buttons -->
@@ -670,6 +692,15 @@
                 label.textContent = 'No file selected';
                 if (card) card.classList.remove('selected');
             }
+        }
+
+        const visibleDocumentFields = document.getElementById('seller-verification-visible-fields');
+        if (visibleDocumentFields) {
+            const allowed = JSON.parse(visibleDocumentFields.textContent || '[]');
+            document.querySelectorAll('.reg-doc-card').forEach((card) => {
+                const input = card.querySelector('input[type="file"]');
+                if (input && !allowed.includes(input.name)) card.style.display = 'none';
+            });
         }
     </script>
 <script src="{% static 'common/password-toggle.js' %}"></script>

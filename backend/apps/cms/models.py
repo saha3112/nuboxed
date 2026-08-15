@@ -209,6 +209,7 @@ class Page(BaseModel):
     slug = models.SlugField(max_length=255, unique=True)
     content = models.TextField(blank=True)
     is_published = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self) -> str:
         return self.title
@@ -225,6 +226,7 @@ class DynamicForm(BaseModel):
     success_message = models.CharField(max_length=255, default="Thanks! Your response has been submitted.")
     error_message = models.CharField(max_length=255, default="Please correct the highlighted fields and try again.")
     show_heading = models.BooleanField(default=True)
+    captcha_enabled = models.BooleanField(default=False, help_text="Show the configured captcha on this public form.")
     field_gap = models.PositiveIntegerField(default=18, help_text="Vertical spacing between form fields in pixels.")
     is_published = models.BooleanField(default=False)
     deleted_at = models.DateTimeField(null=True, blank=True)

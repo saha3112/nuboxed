@@ -5,15 +5,18 @@
 {% else %}
     {% url 'storefront:stores' as product_card_url %}
 {% endif %}
-<article class="product-card"
+<article class="product-card{% if store_page %} store-product-card{% endif %}"
     data-product-id="{{ product.id }}"
     data-qv-name="{{ product.model_name|default:product.name|escape }}"
     data-qv-brand="{{ product.brand.name|default:'Brand'|escape }}"
     data-qv-category="{{ product.category.name|default:'Category'|escape }}"
-    data-qv-price="{{ product.discount_price|default:product.price }}"
-    data-qv-old-price="{% if product.discount_price %}{{ product.price }}{% endif %}"
+    data-qv-price="{{ product.effective_discount_price|default:product.discount_price|default:product.price }}"
+    data-qv-old-price="{{ product.effective_compare_price|default:'' }}"
     data-qv-currency="{{ product.store.currency_code }}"
-    data-qv-save="{{ product.discount_percentage }}"
+    data-qv-save="{{ product.effective_discount_percentage|default:product.discount_percentage }}"
+    data-qv-default-variant="{{ product.effective_default_variant_id|default:'' }}"
+    data-qv-countdown-end="{% if product.effective_sale_ends_at %}{{ product.effective_sale_ends_at|date:'c' }}{% elif product.effective_discount_percentage|default:product.discount_percentage and product.sale_ends_at %}{{ product.sale_ends_at|date:'c' }}{% endif %}"
+    data-qv-countdown-message="{{ product.effective_sale_message|default:product.sale_title|default:'Hurry up! Sale ends in:'|escape }}"
     data-qv-description="{{ product.short_description|default:product.description|striptags|truncatewords:26|escape }}"
     data-qv-stock="{{ product.storefront_stock_label }}"
     data-qv-stock-class="{{ product.storefront_stock_tone }}"
@@ -23,23 +26,33 @@
     data-qv-images="{{ product.quickview_image_urls|join:'|'|escape }}"
     data-qv-image-colors="{{ product.quickview_image_colors|join:'|'|escape }}"
     data-qv-colors="{{ product.quickview_color_data|join:'|'|escape }}"
-    data-qv-variants="{{ product.variants_json|escape }}"
+    data-qv-variants="{{ product.effective_variants_json|default:product.variants_json|escape }}"
 >
-    {% if product.discount_percentage %}
-        <span class="discount">-{{ product.discount_percentage }}%</span>
+    {% if product.effective_discount_percentage|default:product.discount_percentage %}
+        <span class="discount">-{{ product.effective_discount_percentage|default:product.discount_percentage }}%</span>
     {% endif %}
     <div class="product-media">
         <a href="{{ product_card_url }}" style="display:contents; color:inherit; text-decoration:none;">
-            {% if product.primary_image %}
-                <img src="{{ product.primary_image.url }}" alt="{{ product.name }}">
+            {% if product.primary_image_url %}
+                <img src="{{ product.primary_image_url }}" alt="{{ product.name }}" loading="lazy">
             {% else %}
-                <div class="phone p2" aria-hidden="true"></div>
+                {% if product.category.name|lower == "tablet" %}
+                    <div class="tablet-fallback" aria-label="Tablet placeholder" role="img"><span></span></div>
+                {% elif product.category.name|lower == "laptop" or product.category.name|lower == "laptops" %}
+                    <div class="laptop-fallback" aria-label="Laptop placeholder" role="img"><span></span></div>
+                {% elif product.category.name|lower == "smartphones" or product.category.name|lower == "smartphone" or product.category.name|lower == "mobile" or product.category.name|lower == "mobiles" %}
+                    <div class="mobile-fallback" aria-label="Smartphone placeholder" role="img"><span></span></div>
+                {% else %}
+                    <div class="phone p2" aria-hidden="true"></div>
+                {% endif %}
             {% endif %}
         </a>
-        {% if store_page %}<div class="card-actions">
-            <button class="quick-view" type="button" data-open-quickview="{{ product.id }}" title="Quick view" aria-label="Quick view">
+        {# Quick View is available only for products that belong to a retailer/store. #}
+        {% if store_page and product.store_id and product.retailer_id %}<div class="card-actions">
+            <button class="quick-view" type="button" data-open-quickview="{{ product.id }}" onclick="if (typeof openQuickView === 'function') { openQuickView(this.closest('.product-card')); } return false;" title="Quick view" aria-label="Quick view">
                 <i class="fa-regular fa-eye"></i>
             </button>
+            {% if store_page %}
             {% with pid=product.id|stringformat:"s" %}
             <form method="post" action="{% url 'storefront:cart-add' product_id=product.id %}" class="ajax-cart-form">
                 {% csrf_token %}
@@ -61,11 +74,12 @@
                 </button>
             </form>
             {% endwith %}
+            {% endif %}
         </div>{% endif %}
     </div>
     <div class="card-body">
         {% if product.brand %}<div class="product-brand">{{ product.brand.name }}</div>{% endif %}
-        <div class="seller">{{ product.store.name|default:"Store" }}</div>
+        {% if not hide_store_name %}<div class="seller">{{ product.store.name|default:"Store" }}</div>{% endif %}
         <div class="product-name">
             <a href="{{ product_card_url }}" style="color:inherit; text-decoration:none;">
                 {% if listing_card %}
@@ -108,7 +122,10 @@
         </div>
         {% endif %}
         <div class="price">
-            {% if product.discount_price %}
+            {% if product.effective_compare_price %}
+                <span class="old">{{ product.effective_compare_price|format_currency:product.store.currency_code }}</span>
+                <span class="currency-symbol">{{ product.store.currency_code|currency_symbol }}</span><span class="price-amount">{{ product.effective_discount_price|currency_amount }}</span>
+            {% elif product.discount_price %}
                 <span class="old">{{ product.price|format_currency:product.store.currency_code }}</span>
                 <span class="currency-symbol">{{ product.store.currency_code|currency_symbol }}</span><span class="price-amount">{{ product.discount_price|currency_amount }}</span>
             {% else %}

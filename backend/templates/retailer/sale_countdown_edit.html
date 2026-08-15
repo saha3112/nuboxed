@@ -1,5 +1,106 @@
 {% extends "retailer/base.html" %}
 {% block content %}
+<style>
+    form.ra-form label.sale-countdown-active-field {
+        display: inline-flex !important;
+        flex: 0 0 auto !important;
+        flex-flow: row nowrap !important;
+        align-items: center !important;
+        gap: 10px !important;
+        width: fit-content !important;
+        padding: 12px 15px;
+        border: 1px solid #dce5f0;
+        border-radius: 12px;
+        background: #f8fbff;
+        cursor: pointer;
+    }
+    form.ra-form label.sale-countdown-active-field input[type="checkbox"] {
+        width: 20px;
+        min-width: 20px !important;
+        height: 20px;
+        margin: 0;
+        accent-color: var(--primary);
+        cursor: pointer;
+    }
+    form.ra-form label.sale-countdown-active-field .ra-label {
+        display: inline-block;
+        width: auto !important;
+        margin: 0;
+        cursor: pointer;
+    }
+    .sale-countdown-save-btn { width:fit-content !important; min-width:0; flex:0 0 auto !important; white-space:nowrap; }
+    .sale-countdown-datetime { display:grid; grid-template-columns:minmax(0, 1.25fr) minmax(0, 1fr); gap:10px; }
+    .sale-countdown-datetime input { cursor:pointer; }
+    .sale-countdown-clock { position:absolute; right:12px; bottom:12px; color:var(--text-muted); font-size:18px; pointer-events:none; }
+    .sale-countdown-clear { position:absolute; right:38px; bottom:10px; border:0; border-radius:6px; padding:3px 6px; color:#b42318; background:#fff1f0; cursor:pointer; font-size:11px; font-weight:700; }
+    .sale-countdown-datetime { position:relative; }
+    .sale-countdown-variants { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:8px 12px; margin:0; padding:0; list-style:none; }
+    .sale-countdown-variants li { display:flex; align-items:center; gap:8px; padding:9px 10px; border:1px solid #dce5f0; border-radius:9px; background:#f8fbff; }
+    .sale-countdown-variants > label { display:flex; align-items:center; gap:8px; padding:9px 10px; border:1px solid #dce5f0; border-radius:9px; background:#f8fbff; }
+    .sale-countdown-variants input { width:17px !important; min-width:17px !important; height:17px; margin:0; accent-color:var(--primary); }
+    .sale-countdown-variants label { margin:0; color:var(--text-main); font-size:13px; cursor:pointer; }
+    .sale-countdown-all-variants { display:flex; align-items:center; gap:8px; width:fit-content; cursor:pointer; }
+    .sale-time-picker { position:absolute; z-index:20; top:calc(100% + 6px); right:0; display:flex; align-items:end; gap:8px; padding:12px; border:1px solid #d9e2ee; border-radius:12px; background:#fff; box-shadow:0 12px 28px rgba(15,23,42,.18); }
+    .sale-time-picker label { display:flex; flex-direction:column; gap:4px; color:#526071; font-size:11px; font-weight:600; }
+    .sale-time-picker select { min-width:62px; padding:7px 8px; border:1px solid #cbd5e1; border-radius:7px; background:#fff; color:#1f2937; font:inherit; }
+    .sale-time-picker button { padding:8px 11px; border:0; border-radius:7px; background:var(--primary); color:#fff; cursor:pointer; font-weight:600; }
+    @media(max-width:480px){ .sale-countdown-datetime { grid-template-columns:1fr; gap:8px; } }
+</style>
 <div class="ra-page-header"><div><div class="ra-eyebrow">Storefront controls</div><h1>Edit Sale Countdown</h1></div></div>
-<section class="ra-card" style="max-width:760px;"><div class="ra-card-body"><form method="post" class="ra-form">{% csrf_token %}{% for field in form %}<div class="ra-field"><label class="ra-label">{{ field.label }}</label>{{ field }}{{ field.errors }}</div>{% endfor %}<div class="ra-form-actions-sticky" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;"><a class="ra-btn ra-btn-outline" style="margin-right:auto;" href="{% url 'retailers:sale-countdown' %}"><i class="ph ph-x"></i> Cancel</a><button class="ra-btn ra-btn-primary" type="submit"><i class="ph ph-floppy-disk"></i> Save setting</button></div></form></div></section>
+<section class="ra-card" style="max-width:760px;"><div class="ra-card-body"><form method="post" class="ra-form">{% csrf_token %}{% for field in form %}{% if field.name == 'is_active' %}<label class="ra-field sale-countdown-active-field"><span class="ra-label">{{ field.label }}</span>{{ field }}{% if field.errors %}<span class="ra-field-error">{{ field.errors }}</span>{% endif %}</label>{% else %}<div class="ra-field"><label class="ra-label">{{ field.label }}</label>{% if field.name == 'ends_at' or field.name == 'starts_at' %}<div class="sale-countdown-datetime">{{ field }}</div>{% else %}{{ field }}{% endif %}{{ field.errors }}</div>{% endif %}{% endfor %}<div class="ra-form-actions-sticky" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;"><a class="ra-btn ra-btn-outline" style="margin-right:auto;" href="{% url 'retailers:sale-countdown' %}"><i class="ph ph-x"></i> Cancel</a><button class="ra-btn ra-btn-primary sale-countdown-save-btn" type="submit"><i class="ph ph-floppy-disk"></i> Save setting</button></div></form></div></section>
+<script>
+    (function(){const form=document.querySelector('form.ra-form');if(!form)return;const category=form.querySelector('[name="category"]'),product=form.querySelector('[name="product"]'),variantBox=document.getElementById('id_variants'),all=form.querySelector('[name="all_variants"]');const url="{% url 'retailers:sale-countdown-options' %}";const fill=(el,items,placeholder)=>{if(!el)return;if(el===variantBox){el.innerHTML=(items||[]).map(x=>'<label><input type="checkbox" name="variants" value="'+x.id+'"> '+x.name+'</label>').join('');sync();return}el.innerHTML='<option value="">'+placeholder+'</option>'+(items||[]).map(x=>'<option value="'+x.id+'">'+x.name+'</option>').join('');el.disabled=!(items||[]).length;};const sync=()=>{if(variantBox)variantBox.querySelectorAll('input').forEach(input=>input.disabled=!product?.value||Boolean(all?.checked));};category?.addEventListener('change',async()=>{fill(product,[],"Loading products…");fill(variantBox,[]);if(!category.value){fill(product,[],"Select category first");return}const data=await fetch(url+'?category_id='+category.value).then(r=>r.json());fill(product,data.products,"Select product");});product?.addEventListener('change',async()=>{fill(variantBox,[]);if(!product.value){sync();return}const data=await fetch(url+'?product_id='+product.value).then(r=>r.json());fill(variantBox,data.variants);});all?.addEventListener('change',sync);sync();})();
+    document.querySelectorAll('.sale-countdown-datetime').forEach(function (pickerGroup) {
+        const inputs = Array.from(pickerGroup.querySelectorAll('input'));
+        const clearButton = document.createElement('button');
+        clearButton.type = 'button'; clearButton.className = 'sale-countdown-clear'; clearButton.textContent = 'Clear'; clearButton.title = 'Clear date and time';
+        clearButton.addEventListener('click', function (event) { event.preventDefault(); inputs.forEach(function(input){ input.value = ''; input.dispatchEvent(new Event('input', {bubbles:true})); input.dispatchEvent(new Event('change', {bubbles:true})); }); });
+        pickerGroup.appendChild(clearButton);
+        const timeInput = pickerGroup.querySelector('.sale-countdown-time');
+        if (timeInput) { const icon = document.createElement('i'); icon.className = 'ph ph-clock sale-countdown-clock'; pickerGroup.appendChild(icon); timeInput.style.paddingRight = '40px'; }
+        function openTimePicker(input) {
+            let popup = pickerGroup.querySelector('.sale-time-picker');
+            if (!popup) {
+                popup = document.createElement('div');
+                popup.className = 'sale-time-picker';
+                popup.innerHTML = '<label>Hour<select class="sale-time-hour"></select></label><label>Minute<select class="sale-time-minute"></select></label><button type="button">Apply</button>';
+                for (let hour = 0; hour < 24; hour += 1) popup.querySelector('.sale-time-hour').insertAdjacentHTML('beforeend', '<option value="' + String(hour).padStart(2, '0') + '">' + String(hour).padStart(2, '0') + '</option>');
+                for (let minute = 0; minute < 60; minute += 1) popup.querySelector('.sale-time-minute').insertAdjacentHTML('beforeend', '<option value="' + String(minute).padStart(2, '0') + '">' + String(minute).padStart(2, '0') + '</option>');
+                popup.querySelector('button').addEventListener('click', function () {
+                    input.value = popup.querySelector('.sale-time-hour').value + ':' + popup.querySelector('.sale-time-minute').value;
+                    input.dispatchEvent(new Event('input', {bubbles:true}));
+                    input.dispatchEvent(new Event('change', {bubbles:true}));
+                    popup.remove();
+                });
+                pickerGroup.appendChild(popup);
+            }
+            const parts = (input.value || '12:00').split(':');
+            popup.querySelector('.sale-time-hour').value = parts[0] || '12';
+            popup.querySelector('.sale-time-minute').value = parts[1] || '00';
+        }
+        pickerGroup.addEventListener('pointerdown', function (event) {
+            if (event.target.closest('.sale-time-picker') || event.target.closest('.sale-countdown-clear')) return;
+            let input = event.target.closest('input');
+            if (!input) {
+                const box = pickerGroup.getBoundingClientRect();
+                input = event.clientY - box.top < box.height / 2 ? inputs[0] : inputs[1];
+            }
+            event.preventDefault();
+            if (input.classList.contains('sale-countdown-time')) {
+                openTimePicker(input);
+                return;
+            }
+            input.focus();
+            if (typeof input.showPicker === 'function') {
+                try {
+                    input.showPicker();
+                } catch (error) {
+                    input.click();
+                }
+            } else {
+                input.click();
+            }
+        });
+    });
+</script>
 {% endblock %}

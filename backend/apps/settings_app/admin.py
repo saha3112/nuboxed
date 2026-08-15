@@ -12,14 +12,14 @@ class SettingAdmin(admin.ModelAdmin):
 
 @admin.register(SaleCountdownSetting)
 class SaleCountdownSettingAdmin(admin.ModelAdmin):
-    list_display = ("__str__", "message", "ends_at", "is_active", "updated_at")
+    list_display = ("name", "retailer", "category", "discount_percentage", "starts_at", "ends_at", "is_active", "updated_at")
     list_filter = ("is_active", "retailer", "category")
-    search_fields = ("message", "retailer__display_name", "category__name")
+    search_fields = ("name", "message", "retailer__display_name", "category__name", "product__name")
 
 
 @admin.register(BrandSettings)
 class BrandSettingsAdmin(admin.ModelAdmin):
-    list_display = ("brand_name", "brand_tagline", "is_active", "updated_at")
+    list_display = ("brand_name", "brand_tagline", "favicon", "drawer_menu_logo", "is_active", "updated_at")
     search_fields = ("brand_name", "brand_tagline")
     list_filter = ("is_active",)
 

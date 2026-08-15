@@ -3,7 +3,7 @@
 {% block content %}
 
 <!-- Stats -->
-<div class="ra-stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+<div class="ra-stats-grid" style="grid-template-columns: repeat(6, 1fr);">
     <div class="ra-stat">
         <div class="ra-stat-icon blue"><i class="ph ph-warehouse"></i></div>
         <div class="ra-stat-value">{{ warehouses|length }}</div>
@@ -19,6 +19,21 @@
         <div class="ra-stat-value">{{ low_stock_alerts|length }}</div>
         <div class="ra-stat-label">Low Stock Alerts</div>
     </div>
+    <div class="ra-stat">
+        <div class="ra-stat-icon blue"><i class="ph ph-cube"></i></div>
+        <div class="ra-stat-value">{{ stock_totals.on_hand }}</div>
+        <div class="ra-stat-label">Units On Hand</div>
+    </div>
+    <div class="ra-stat">
+        <div class="ra-stat-icon amber"><i class="ph ph-lock-key"></i></div>
+        <div class="ra-stat-value">{{ stock_totals.reserved }}</div>
+        <div class="ra-stat-label">Reserved Units</div>
+    </div>
+    <div class="ra-stat">
+        <div class="ra-stat-icon red"><i class="ph ph-warning"></i></div>
+        <div class="ra-stat-value">{{ stock_totals.damaged }}</div>
+        <div class="ra-stat-label">Damaged Units</div>
+    </div>
 </div>
 
 <!-- Product Stock Table -->
@@ -31,19 +46,21 @@
         <table class="ra-table">
             <thead>
                 <tr>
-                    <th>Product</th>
+                    <th>Product / SKU</th>
                     <th>Store</th>
                     <th>Warehouse</th>
                     <th>On Hand</th>
                     <th>Reserved</th>
                     <th>Available</th>
+                    <th>Damaged</th>
+                    <th>Threshold</th>
                     <th>Alert</th>
                 </tr>
             </thead>
             <tbody>
                 {% for stock in stock_items %}
                 <tr>
-                    <td>{{ stock.product.name }}{% if stock.variant %} · <span style="color: var(--text-muted);">{{ stock.variant.name }}</span>{% endif %}</td>
+                    <td><strong>{{ stock.product.name }}</strong>{% if stock.variant %}<div style="color:var(--text-muted);font-size:12px;">{{ stock.variant.name }}</div>{% endif %}<div style="color:var(--text-muted);font-size:11px;">SKU: {{ stock.product.sku }}</div></td>
                     <td>
                         {% if stock.product.store %}
                             {{ stock.product.store.name }}
@@ -53,10 +70,12 @@
                             Retailer-wide
                         {% endif %}
                     </td>
-                    <td>{{ stock.warehouse.name }}</td>
+                    <td>{{ stock.warehouse.name }}<div style="color:var(--text-muted);font-size:11px;">{{ stock.warehouse.code }}</div></td>
                     <td>{{ stock.on_hand_quantity }}</td>
                     <td>{{ stock.reserved_quantity }}</td>
                     <td><strong>{{ stock.available_quantity }}</strong></td>
+                    <td>{{ stock.damaged_quantity }}</td>
+                    <td>{{ stock.low_stock_threshold }}</td>
                     <td>
                         {% if stock.is_low_stock %}
                         <span class="ra-badge danger">Low</span>
@@ -66,41 +85,7 @@
                     </td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="7" class="ra-table-empty">No stock records yet.</td></tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<!-- Delivery Locations -->
-<div class="ra-card" style="margin-bottom: 20px;">
-    <div class="ra-card-header">
-        <span class="ra-card-title">Pincode & ETA Rules</span>
-        <span style="font-size: 12px; color: var(--text-muted);">Delivery coverage</span>
-    </div>
-    <div class="ra-table-wrap">
-        <table class="ra-table">
-            <thead>
-                <tr>
-                    <th>Delivery Location</th>
-                    <th>Warehouse</th>
-                    <th>Pincode</th>
-                    <th>Days</th>
-                    <th>Handling</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for location in delivery_locations %}
-                <tr>
-                    <td>{{ location.name }}</td>
-                    <td>{{ location.warehouse.name|default:location.store.name|default:"Retailer-wide" }}</td>
-                    <td>{{ location.postal_code|default:location.postal_code_prefix|default:"Geo radius" }}</td>
-                    <td>{{ location.delivery_days }}</td>
-                    <td>{{ location.handling_time_days }}</td>
-                </tr>
-                {% empty %}
-                <tr><td colspan="5" class="ra-table-empty">No delivery locations configured.</td></tr>
+                <tr><td colspan="9" class="ra-table-empty">No real stock records yet. Add stock through Inventory adjustments or receive stock against a warehouse.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -190,6 +175,7 @@
                     <th>Total</th>
                     <th>Sale Type</th>
                     <th>Sold At</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -201,13 +187,21 @@
                     <td><strong>{{ sale.total_amount }}</strong></td>
                     <td><span class="ra-badge info">Offline Sale</span></td>
                     <td style="color: var(--text-muted); font-size: 12.5px;">{{ sale.sold_at }}</td>
+                    <td><div style="display:flex;gap:6px;flex-wrap:wrap;"><a class="ra-btn ra-btn-outline ra-btn-sm" href="{% url 'inventory:offline-sale-edit' pk=sale.pk %}"><i class="ph ph-pencil-simple"></i> Edit</a><form method="post" action="{% url 'inventory:offline-sale-action' pk=sale.pk action='delete' %}" data-confirm="Move this offline sale to trash? Stock will be restored." data-confirm-title="Delete offline sale" data-confirm-text="Move to trash" data-confirm-tone="warning">{% csrf_token %}<button class="ra-btn ra-btn-outline ra-btn-sm" type="submit"><i class="ph ph-trash"></i> Delete</button></form></div></td>
                 </tr>
                 {% empty %}
-                <tr><td colspan="6" class="ra-table-empty">No offline sales logged.</td></tr>
+                <tr><td colspan="7" class="ra-table-empty">No offline sales logged.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+</div>
+
+<div class="ra-card" style="margin-top:20px;">
+    <div class="ra-card-header"><div><span class="ra-card-title">Offline Sales Trash</span><small style="display:block;color:var(--text-muted);margin-top:4px;">Restore or permanently delete inactive sales.</small></div></div>
+    <div class="ra-table-wrap"><table class="ra-table"><thead><tr><th>Product</th><th>Qty</th><th>Sold At</th><th>Actions</th></tr></thead><tbody>
+    {% for sale in deleted_offline_sales %}<tr><td>{{ sale.product.name }}</td><td>{{ sale.quantity }}</td><td>{{ sale.sold_at }}</td><td><div style="display:flex;gap:6px;flex-wrap:wrap;"><form method="post" action="{% url 'inventory:offline-sale-action' pk=sale.pk action='restore' %}" data-confirm="Restore this offline sale and reserve stock again?" data-confirm-title="Restore offline sale" data-confirm-text="Restore" data-confirm-tone="restore">{% csrf_token %}<button class="ra-btn ra-btn-outline ra-btn-sm" type="submit"><i class="ph ph-arrow-counter-clockwise"></i> Restore</button></form><form method="post" action="{% url 'inventory:offline-sale-action' pk=sale.pk action='delete-permanent' %}" data-confirm="Permanently delete this offline sale? This cannot be undone." data-confirm-title="Permanent delete" data-confirm-text="Delete permanently" data-confirm-tone="danger">{% csrf_token %}<button class="ra-btn ra-btn-soft-danger ra-btn-sm" type="submit"><i class="ph ph-trash"></i> Permanent delete</button></form></div></td></tr>{% empty %}<tr><td colspan="4" class="ra-table-empty">Trash is empty.</td></tr>{% endfor %}
+    </tbody></table></div>
 </div>
 
 {% endblock %}

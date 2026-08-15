@@ -12,36 +12,81 @@
     </div>
   </div>
 </section>
-<section class="page-shell" style="max-width: 500px; margin: 40px auto;">
-    <h2 style="margin-bottom: 20px; font-size: 24px; font-weight: 600;">Create an account</h2>
-    <form method="post" class="storefront-form">
-        {% csrf_token %}
-        {% if form.non_field_errors %}
-            <div style="color: var(--danger); margin-bottom: 15px; font-size: 13px;">
-                {{ form.non_field_errors }}
-            </div>
-        {% endif %}
-        
-        {% for field in form %}
-        <div style="margin-bottom: 15px;">
-            <label for="{{ field.id_for_label }}" style="display: block; margin-bottom: 5px; font-size: 13px; font-weight: 500;">{{ field.label }}</label>
-            {{ field }}
-            {% if field.help_text %}
-                <div style="color: var(--muted); font-size: 11px; margin-top: 5px;">{{ field.help_text }}</div>
-            {% endif %}
-            {% if field.errors %}
-                <div style="color: var(--danger); font-size: 12px; margin-top: 5px;">{{ field.errors }}</div>
-            {% endif %}
+<section class="page-shell auth-page auth-register-page{% if otp_pending or verification_complete %} auth-verification-page{% endif %}" style="max-width: 500px; margin: 40px auto;">
+    {% if verification_complete %}
+        <div class="verification-state verification-success">
+            <div class="verification-icon">✓</div>
+            <span class="verification-kicker">Email verified</span>
+            <h2>Verification complete</h2>
+            <p>Welcome, {{ verified_name }}. Your account is ready.</p>
+            <div class="verification-progress"><span></span></div>
+            <small>Taking you to your account…</small>
+            <a class="button verification-fallback" href="{% url 'storefront:customer-dashboard' %}">Open my account</a>
         </div>
-        {% endfor %}
-        
-        <button type="submit" class="button" style="width: 100%; padding: 12px; margin-top: 10px;">Register</button>
-    </form>
-    
-    <div style="margin-top: 20px; text-align: center; font-size: 14px; color: var(--muted);">
-        Already have an account? <a href="{% url 'storefront:login' %}" style="color: var(--primary); text-decoration: none; font-weight: 500;">Login here</a>
-    </div>
+        <script>window.setTimeout(function () { window.location.href = "{% url 'storefront:customer-dashboard' %}"; }, 1800);</script>
+    {% elif otp_pending %}
+        <div class="verification-state">
+            <div class="verification-icon verification-icon-mail">✉</div>
+            <span class="verification-kicker">One last step</span>
+            <h2>Verify your email</h2>
+            <p>We sent a 6-digit code to <strong>{{ pending_email }}</strong>. Enter it below to activate your account.</p>
+            {% if otp_message %}<div class="verification-alert verification-alert-success">{{ otp_message }}</div>{% endif %}
+            {% if otp_error %}<div class="verification-alert verification-alert-error">{{ otp_error }}</div>{% endif %}
+            <form method="post" class="storefront-form otp-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="verify">
+                <label for="otp-code">Verification code</label>
+                <input id="otp-code" name="otp" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required autofocus>
+                <button type="submit" class="button">Verify and continue</button>
+            </form>
+            <div class="otp-help">Code expires in <strong id="otp-countdown" data-expires-at="{{ otp_expires_at }}">15:00</strong></div>
+            <form method="post" class="resend-form">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="resend">
+                Didn’t receive it? <button type="submit">Resend code</button>
+            </form>
+        </div>
+    {% else %}
+        <h2 style="margin-bottom: 20px; font-size: 24px; font-weight: 600;">Create an account</h2>
+        <form method="post" class="storefront-form">
+            {% csrf_token %}
+            {% if form.non_field_errors %}<div style="color: var(--danger); margin-bottom: 15px; font-size: 13px;">{{ form.non_field_errors }}</div>{% endif %}
+            {% for field in form %}
+            <div style="margin-bottom: 15px;">
+                <label for="{{ field.id_for_label }}" style="display: block; margin-bottom: 5px; font-size: 13px; font-weight: 500;">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}<div style="color: var(--muted); font-size: 11px; margin-top: 5px;">{{ field.help_text }}</div>{% endif %}
+                {% if field.errors %}<div style="color: var(--danger); font-size: 12px; margin-top: 5px;">{{ field.errors }}</div>{% endif %}
+            </div>
+            {% endfor %}
+            {% include "shared/captcha_widget.html" with captcha=captcha_customer_register %}
+            <button type="submit" class="button" style="width: 100%; padding: 12px; margin-top: 10px;">Register</button>
+        </form>
+        <div style="margin-top: 20px; text-align: center; font-size: 14px; color: var(--muted);">Already have an account? <a href="{% url 'storefront:login' %}" style="color: var(--primary); text-decoration: none; font-weight: 500;">Login here</a></div>
+    {% endif %}
 </section>
+
+<style>
+.auth-verification-page{max-width:560px!important;text-align:center}.verification-state{position:relative;z-index:1}.verification-icon{width:72px;height:72px;margin:0 auto 18px;display:grid;place-items:center;border-radius:50%;background:#e9f9ef;color:#168447;font-size:38px;font-weight:800;box-shadow:0 0 0 10px #f3fcf6}.verification-icon-mail{background:#fff1ec;color:#e04420;font-size:30px}.verification-kicker{display:inline-block;color:#e04420;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}.verification-state h2{margin:10px 0 10px!important}.verification-state p{max-width:390px;margin:0 auto 24px;color:#667085;line-height:1.65;font-size:14px}.verification-state p strong{color:#182235}.otp-form{text-align:left;margin-top:24px}.otp-form label{display:block;margin-bottom:8px;color:#344054;font-size:13px;font-weight:800}.otp-form input{width:100%!important;min-height:58px!important;border:1px solid #d9dee8!important;border-radius:12px!important;background:#fff!important;color:#182235!important;font-size:25px!important;font-weight:800!important;letter-spacing:.38em!important;text-align:center!important}.otp-form input::placeholder{color:#c7ccd5;letter-spacing:.3em}.otp-form .button{width:100%;margin-top:16px}.verification-alert{margin:16px 0;padding:12px 14px;border-radius:10px;text-align:left;font-size:13px}.verification-alert-success{background:#ecfdf3;color:#137333}.verification-alert-error{background:#fff1f0;color:#b42318}.otp-help{margin-top:14px;color:#98a2b3;font-size:12px}.resend-form{margin-top:18px;color:#667085;font-size:13px}.resend-form button{border:0;background:none;color:#e04420;font:inherit;font-weight:800;cursor:pointer}.verification-progress{height:5px;max-width:230px;margin:28px auto 10px;border-radius:99px;background:#f2e0db;overflow:hidden}.verification-progress span{display:block;width:100%;height:100%;border-radius:inherit;background:#e04420;animation:verification-progress 1.8s linear forwards}.verification-success small{color:#98a2b3}.verification-fallback{display:block;width:100%;margin-top:24px;text-decoration:none}@keyframes verification-progress{from{width:0}to{width:100%}}
+</style>
+<script>
+(function () {
+    const countdown = document.getElementById('otp-countdown');
+    if (!countdown) return;
+    const expiresAt = new Date(countdown.dataset.expiresAt).getTime();
+    if (!Number.isFinite(expiresAt)) return;
+    const tick = function () {
+        const seconds = Math.max(0, Math.ceil((expiresAt - Date.now()) / 1000));
+        const minutes = String(Math.floor(seconds / 60)).padStart(2, '0');
+        const remainder = String(seconds % 60).padStart(2, '0');
+        countdown.textContent = minutes + ':' + remainder;
+        countdown.classList.toggle('is-expired', seconds === 0);
+        if (seconds === 0) window.clearInterval(timer);
+    };
+    const timer = window.setInterval(tick, 1000);
+    tick();
+})();
+</script>
 
 <style>
     /* Add basic styling to form fields rendered by Django */
@@ -61,5 +106,14 @@
         border-color: var(--primary);
     }
 </style>
+<style>
+.auth-page{max-width:560px!important;margin:64px auto!important;padding:34px!important;border:1px solid #e7eaf0;border-radius:24px;background:linear-gradient(145deg,#fff,#fff8f5);box-shadow:0 22px 60px rgba(28,36,52,.10)}.auth-page h2{margin:0 0 26px!important;color:#182235;font-size:28px!important;letter-spacing:-.7px}.auth-page .storefront-form>div{margin-bottom:16px!important;padding:0}.auth-page .storefront-form label{color:#344054!important;font-size:13px!important;font-weight:800!important}.auth-page .storefront-form input:not([type="checkbox"]),.auth-page .storefront-form select,.auth-page .storefront-form textarea{width:100%!important;min-height:50px!important;padding:12px 15px!important;border:1px solid #d9dee8!important;border-radius:12px!important;background:#fff!important;color:#182235!important;font-size:14px!important;transition:border-color .2s,box-shadow .2s}.auth-page .storefront-form input:focus,.auth-page .storefront-form select:focus,.auth-page .storefront-form textarea:focus{border-color:#e04420!important;outline:0!important;box-shadow:0 0 0 4px rgba(224,68,32,.12)!important}.auth-page .storefront-form input[type="checkbox"]{width:18px!important;min-height:18px!important;accent-color:#e04420}.auth-page .button{min-height:50px;border:0;border-radius:12px;background:#e04420;color:#fff;font-weight:800;box-shadow:0 10px 20px rgba(224,68,32,.22);transition:transform .2s,box-shadow .2s}.auth-page .button:hover{transform:translateY(-1px);box-shadow:0 14px 26px rgba(224,68,32,.28)}.auth-page .captcha-widget-wrap{margin:4px 0 20px}.auth-page .captcha-widget-wrap>div{display:inline-block}.auth-page a{color:#e04420!important;font-weight:700}.auth-page .storefront-form ul{margin:6px 0 0;padding-left:18px;color:#b42318;font-size:12px}@media(max-width:560px){.auth-page{margin:36px 16px!important;padding:24px!important;border-radius:18px}.auth-page h2{font-size:24px!important}}
+</style>
+<style>
+.auth-verification-page h2:after{margin-left:auto!important;margin-right:auto!important}
+.auth-page{position:relative;overflow:hidden}.auth-page:before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#e04420,#ff9a72,#e04420)}.auth-page:after{content:"";position:absolute;width:220px;height:220px;right:-120px;top:-130px;border-radius:50%;background:rgba(224,68,32,.08);pointer-events:none}.auth-page h2,.auth-page form,.auth-page>div:last-child{position:relative;z-index:1}.auth-page h2:after{content:"";display:block;width:42px;height:4px;margin-top:12px;border-radius:99px;background:#e04420}.auth-page .storefront-form{display:grid;gap:2px}.auth-page .storefront-form>div{position:relative}.auth-page .captcha-widget-wrap{padding:12px;border:1px solid #f0d8cf;border-radius:13px;background:#fffaf8}.auth-page .button{letter-spacing:.01em;cursor:pointer}.auth-page .button:active{transform:translateY(0);box-shadow:0 6px 12px rgba(224,68,32,.18)}
+</style>
+<style>.auth-page .captcha-widget-wrap{border:0!important;background:transparent!important;box-shadow:none!important;margin:14px 0!important}</style>
+<style>.auth-verification-page .verification-alert-success{text-align:center!important}</style>
 {% endblock %}
 {% block extra_scripts %}<script src="{% static 'common/password-toggle.js' %}"></script>{% endblock %}

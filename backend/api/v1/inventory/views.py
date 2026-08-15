@@ -5,7 +5,6 @@ from rest_framework.response import Response
 
 from apps.inventory.models import (
     CategoryDeliveryRule,
-    DeliveryHoliday,
     DeliveryLocation,
     LowStockAlert,
     OfflineSale,
@@ -20,7 +19,6 @@ from apps.rbac.permissions import CommerceAccessPermission
 from .serializers import (
     CategoryDeliveryRuleSerializer,
     DeliveryEstimateSerializer,
-    DeliveryHolidaySerializer,
     DeliveryLocationSerializer,
     LowStockAlertSerializer,
     OfflineSaleSerializer,
@@ -117,23 +115,6 @@ class ProductDeliveryRuleListCreateView(InventoryRetailerContextMixin, generics.
         if store_ids is None:
             return queryset
         return queryset.filter(product__store_id__in=store_ids)
-
-    def perform_create(self, serializer):
-        serializer.save(retailer=self.get_retailer())
-
-
-class DeliveryHolidayListCreateView(InventoryRetailerContextMixin, generics.ListCreateAPIView):
-    serializer_class = DeliveryHolidaySerializer
-    permission_classes = [CommerceAccessPermission]
-    required_permissions = ["inventory.manage"]
-
-    def get_queryset(self):
-        retailer = self.get_retailer()
-        queryset = DeliveryHoliday.objects.filter(retailer=retailer).select_related("store", "warehouse")
-        store_ids = self.get_store_ids()
-        if store_ids is None:
-            return queryset
-        return queryset.filter(Q(store_id__in=store_ids) | Q(store__isnull=True))
 
     def perform_create(self, serializer):
         serializer.save(retailer=self.get_retailer())

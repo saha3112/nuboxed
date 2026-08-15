@@ -1,5 +1,6 @@
 const navToggle = document.querySelector("[data-toggle-nav]");
 const mainNav = document.getElementById("main-nav");
+const navClose = document.querySelector("[data-close-nav]");
 const deliveryToggle = document.querySelector("[data-toggle-delivery]");
 const deliveryPopover = document.getElementById("delivery-popover");
 const detectLocationButton = document.querySelector("[data-detect-location]");
@@ -24,7 +25,69 @@ setTimeout(hidePageLoader, 1800);
 
 if (navToggle && mainNav) {
     navToggle.addEventListener("click", () => {
-        mainNav.classList.toggle("open");
+        const opening = !mainNav.classList.contains("open");
+        mainNav.classList.toggle("open", opening);
+        if (!opening) {
+            mainNav.querySelectorAll(".drawer-submenu-open").forEach((item) => item.classList.remove("drawer-submenu-open"));
+            mainNav.querySelectorAll("a.nav-button[aria-expanded]").forEach((item) => item.setAttribute("aria-expanded", "false"));
+        }
+    });
+}
+
+if (navClose && mainNav) {
+    navClose.addEventListener("click", () => mainNav.classList.remove("open"));
+    mainNav.addEventListener("click", (event) => {
+        if (event.target === mainNav && mainNav.classList.contains("open")) {
+            mainNav.classList.remove("open");
+        }
+    });
+}
+
+// In the mobile/tablet drawer, dropdown arrows expand their submenu instead
+// of following the parent URL. Desktop navigation keeps its normal links.
+if (mainNav) {
+    mainNav.addEventListener("click", (event) => {
+        const submenuLink = event.target.closest(".nav-dropdown > a.nav-button");
+        if (!submenuLink || submenuLink.parentElement.parentElement !== mainNav || !mainNav.classList.contains("open")) return;
+        event.preventDefault();
+        const dropdown = submenuLink.parentElement;
+        const isOpen = dropdown.classList.toggle("drawer-submenu-open");
+        submenuLink.setAttribute("aria-expanded", isOpen ? "true" : "false");
+        Array.from(mainNav.children).filter((child) => child.classList.contains("nav-dropdown") && child.classList.contains("drawer-submenu-open")).forEach((other) => {
+            if (other === dropdown) return;
+            other.classList.remove("drawer-submenu-open");
+            other.querySelector("a.nav-button")?.setAttribute("aria-expanded", "false");
+        });
+    });
+}
+
+// Account menu must be tappable on touch devices; hover alone is unreliable
+// on mobile and tablet browsers.
+const accountToggle = document.querySelector("[data-account-toggle]");
+const accountDropdown = accountToggle?.closest(".account-nav-dropdown");
+if (accountToggle && accountDropdown) {
+    const setAccountMenuState = (open) => {
+        accountDropdown.classList.toggle("account-menu-open", open);
+        accountToggle.setAttribute("aria-expanded", open ? "true" : "false");
+        accountDropdown.querySelector(".amazon-account-dropdown")?.style.setProperty("display", open ? "block" : "none", "important");
+    };
+
+    accountToggle.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        setAccountMenuState(!accountDropdown.classList.contains("account-menu-open"));
+    });
+
+    document.addEventListener("click", (event) => {
+        if (!accountDropdown.contains(event.target)) {
+            setAccountMenuState(false);
+        }
+    });
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+            setAccountMenuState(false);
+        }
     });
 }
 
@@ -256,7 +319,10 @@ document.querySelectorAll("[data-filter-toggle]").forEach((button) => {
     });
 });
 
-const quickModal = document.getElementById("quickModal");
+// The modal is rendered by the page template. Keep the reference recoverable
+// so Quick View still works if the script is cached or evaluated before the
+// page content has finished being inserted.
+let quickModal = document.getElementById("quickModal");
 const quickClose = document.getElementById("quickClose");
 const quickPhoneImage = document.getElementById("quickPhoneImage");
 const quickPhoneFallback = document.getElementById("quickPhoneFallback");
@@ -270,6 +336,10 @@ const quickBrand = document.getElementById("quickBrand");
 const quickPrice = document.getElementById("quickPrice");
 const quickOldPrice = document.getElementById("quickOldPrice");
 const quickSave = document.getElementById("quickSave");
+const quickSaleCountdown = document.getElementById("quickSaleCountdown");
+const quickSaleMessage = document.getElementById("quickSaleMessage");
+const quickSaleTimer = document.getElementById("quickSaleTimer");
+let quickSaleInterval = null;
 const quickStorageLabel = document.getElementById("quickStorageLabel");
 const quickStorageButtons = document.getElementById("quickStorageButtons");
 const quickRamLabel = document.getElementById("quickRamLabel");
@@ -325,6 +395,19 @@ function normalizeQuickOption(value) {
     return (value || "").toLowerCase().replace(/\s+/g, "");
 }
 
+function quickVariantAttribute(variant, type) {
+    const attributes = variant.attributes || {};
+    if (attributes[type] !== undefined) return attributes[type];
+    const key = Object.keys(attributes).find((name) => {
+        const normalizedName = normalizeQuickOption(name);
+        if (type === "storage") return normalizedName.includes("storage") || normalizedName.includes("internal");
+        if (type === "ram") return normalizedName.includes("ram") || normalizedName.includes("memory");
+        if (type === "color") return normalizedName.includes("color");
+        return normalizedName === normalizeQuickOption(type);
+    });
+    return key ? attributes[key] : "";
+}
+
 function setQuickActiveButton(container, value, datasetKey) {
     if (!container || !value) return;
     const target = normalizeQuickOption(value);
@@ -337,11 +420,23 @@ function setQuickActiveButton(container, value, datasetKey) {
 
 function selectFirstAvailableQuickVariant() {
     const variants = window.quickVariants || [];
-    const firstAvailable = variants.find((variant) => Number(variant.stock || 0) > 0);
+    const preferredId = window.quickDefaultVariantId || "";
+    const preferred = variants.find((variant) => String(variant.id || "") === preferredId && Number(variant.stock ?? variant.available_qty ?? 0) > 0);
+    const targetPrice = Number(window.quickTargetPrice);
+    const targetComparePrice = Number(window.quickTargetComparePrice);
+    const sameCardPrice = Number.isFinite(targetPrice)
+        ? variants.find((variant) => {
+            if (Number(variant.stock ?? variant.available_qty ?? 0) <= 0) return false;
+            if (Math.abs(Number(variant.price) - targetPrice) > 0.005) return false;
+            return !Number.isFinite(targetComparePrice)
+                || Math.abs(Number(variant.compare_price || 0) - targetComparePrice) <= 0.005;
+        })
+        : null;
+    const firstAvailable = preferred || sameCardPrice || variants.find((variant) => Number(variant.stock ?? variant.available_qty ?? 0) > 0);
     if (!firstAvailable) return;
-    const ram = firstAvailable.attributes.ram || "";
-    const storage = firstAvailable.attributes.storage || "";
-    const color = firstAvailable.attributes.color || "";
+    const ram = quickVariantAttribute(firstAvailable, "ram");
+    const storage = quickVariantAttribute(firstAvailable, "storage");
+    const color = quickVariantAttribute(firstAvailable, "color");
     setQuickActiveButton(quickRamButtons, ram);
     setQuickActiveButton(quickStorageButtons, storage);
     setQuickActiveButton(quickColorButtons, color, "color");
@@ -356,20 +451,32 @@ function selectFirstAvailableQuickVariant() {
     if (activeColorBtn && quickColorLabel) quickColorLabel.textContent = activeColorBtn.dataset.color || activeColorBtn.textContent;
 }
 
-function applyQuickOptionStockState(button, attrKey, value) {
+function applyQuickOptionStockState(button, attrKey, value, activeSelections = null) {
     const variants = window.quickVariants || [];
     const optionValue = normalizeQuickOption(value || "");
-    const relatedVariants = variants.filter((variant) => normalizeQuickOption(variant.attributes[attrKey] || "") === optionValue);
-    const isOutOfStock = relatedVariants.length > 0 && relatedVariants.every((variant) => Number(variant.stock || 0) <= 0);
+    const relatedVariants = variants.filter((variant) => {
+        if (normalizeQuickOption(quickVariantAttribute(variant, attrKey)) !== optionValue) return false;
+        if (!activeSelections) return true;
+        return Object.entries(activeSelections).every(([type, selectedValue]) => {
+            if (type === attrKey || !selectedValue) return true;
+            return normalizeQuickOption(quickVariantAttribute(variant, type)) === selectedValue;
+        });
+    });
+    const stockFor = (variant) => Number(variant.stock ?? variant.available_qty ?? 0);
+    const isOutOfStock = variants.length > 0 && (
+        relatedVariants.length === 0 || relatedVariants.every((variant) => stockFor(variant) <= 0)
+    );
     button.classList.toggle("out-of-stock", isOutOfStock);
     button.classList.toggle("faded", isOutOfStock);
     button.dataset.stockState = isOutOfStock ? "out" : "in";
     button.setAttribute("aria-disabled", isOutOfStock ? "true" : "false");
+    button.title = isOutOfStock ? "Out of stock" : (button.dataset.color || button.textContent.trim());
 }
 
 function renderQuickThumbs() {
     if (!quickThumbs) return;
     quickThumbs.innerHTML = "";
+    quickThumbOffset = 0;
     quickImages.forEach((url, index) => {
         const button = document.createElement("button");
         button.type = "button";
@@ -380,6 +487,51 @@ function renderQuickThumbs() {
             setQuickImage(index);
         });
         quickThumbs.appendChild(button);
+    });
+    updateQuickThumbRail();
+}
+
+function updateQuickThumbRail() {
+    if (!quickThumbs) return;
+    const viewport = quickThumbs.parentElement;
+    if (!viewport) return;
+    const maxOffset = Math.max(0, quickThumbs.scrollWidth - viewport.clientWidth);
+    quickThumbOffset = Math.max(0, Math.min(quickThumbOffset, maxOffset));
+    quickThumbs.style.transform = `translateX(-${quickThumbOffset}px)`;
+    if (quickThumbPrev) quickThumbPrev.disabled = quickThumbOffset <= 0;
+    if (quickThumbNext) quickThumbNext.disabled = quickThumbOffset >= maxOffset - 1;
+}
+
+// Keep the active thumbnail visible whenever the large-image carousel moves.
+// The thumbnail list is translated, so offsetLeft/offsetWidth must be read
+// from the un-transformed list and then converted into the rail offset.
+function revealQuickThumbnail(index) {
+    if (!quickThumbs) return;
+    const viewport = quickThumbs.parentElement;
+    const thumbnail = quickThumbs.children[index];
+    if (!viewport || !thumbnail) return;
+
+    const viewportStart = quickThumbOffset;
+    const viewportEnd = viewportStart + viewport.clientWidth;
+    const thumbnailStart = thumbnail.offsetLeft;
+    const thumbnailEnd = thumbnailStart + thumbnail.offsetWidth;
+
+    if (thumbnailStart < viewportStart) {
+        quickThumbOffset = thumbnailStart;
+    } else if (thumbnailEnd > viewportEnd) {
+        quickThumbOffset = thumbnailEnd - viewport.clientWidth;
+    }
+    updateQuickThumbRail();
+}
+
+function updateQuickThumbColorBorder() {
+    if (!quickThumbs) return;
+    const selectedColorButton = quickColorButtons?.querySelector("button.active");
+    const selectedColor = selectedColorButton?.style.getPropertyValue("--swatch").trim() || "";
+    const borderColor = selectedColor || "#e04420";
+    quickThumbs.style.setProperty("--quick-selected-color", borderColor);
+    Array.from(quickThumbs.children).forEach((button, index) => {
+        button.style.borderColor = index === quickIndex ? borderColor : "";
     });
 }
 
@@ -397,10 +549,12 @@ function setQuickImage(index) {
     }
     if (quickPhoneFallback) quickPhoneFallback.style.display = "none";
     if (quickThumbs) {
+        updateQuickThumbColorBorder();
         Array.from(quickThumbs.children).forEach((button, idx) => {
             button.classList.toggle("active", idx === quickIndex);
         });
     }
+    revealQuickThumbnail(quickIndex);
 }
 
 function updateQuickSelectedVariant() {
@@ -461,8 +615,9 @@ function updateQuickSelectedVariant() {
                 quickSave.style.display = "none";
             }
         }
+        const availableStock = Number(matching.stock || matching.available_qty || 0);
         if (quickStock) {
-            if (matching.stock > 0) {
+            if (availableStock > 0) {
                 quickStock.innerHTML = `<i class="fa-solid fa-circle-check"></i> ${productPageSettings.quick_stock || "Available Stock"}`;
                 quickStock.className = "quick-stock success";
             } else {
@@ -470,7 +625,7 @@ function updateQuickSelectedVariant() {
                 quickStock.className = "quick-stock danger";
             }
         }
-        updateQuickPurchaseState(matching.stock);
+        updateQuickPurchaseState(availableStock);
     } else {
         updateQuickPurchaseState(0);
     }
@@ -541,20 +696,20 @@ function updateQuickOptionAvailability(changedAttr) {
     if (quickColorButtons) {
         Array.from(quickColorButtons.children).forEach(btn => {
             const btnVal = normalizeQuickOption(btn.dataset.color || "");
-            applyQuickOptionStockState(btn, "color", btnVal);
+            applyQuickOptionStockState(btn, "color", btnVal, { color: activeColor, storage: activeStorage, ram: activeRam });
         });
     }
 
     if (quickStorageButtons) {
         Array.from(quickStorageButtons.children).forEach(btn => {
             const btnVal = normalizeQuickOption(btn.textContent || "");
-            applyQuickOptionStockState(btn, "storage", btnVal);
+            applyQuickOptionStockState(btn, "storage", btnVal, { color: activeColor, storage: activeStorage, ram: activeRam });
         });
     }
     if (quickRamButtons) {
         Array.from(quickRamButtons.children).forEach(btn => {
             const btnVal = normalizeQuickOption(btn.textContent || "");
-            applyQuickOptionStockState(btn, "ram", btnVal);
+            applyQuickOptionStockState(btn, "ram", btnVal, { color: activeColor, storage: activeStorage, ram: activeRam });
         });
     }
 }
@@ -581,6 +736,7 @@ function renderRamButtons(labels) {
         applyQuickOptionStockState(button, "ram", label);
         if (index === 0) button.classList.add("active");
         button.addEventListener("click", () => {
+            if (button.dataset.stockState === "out") return;
             Array.from(quickRamButtons.children).forEach((child) => child.classList.remove("active"));
             button.classList.add("active");
             if (quickRamLabel) quickRamLabel.textContent = label;
@@ -604,6 +760,7 @@ function renderStorageButtons(labels) {
         applyQuickOptionStockState(button, "storage", label);
         if (index === 0) button.classList.add("active");
         button.addEventListener("click", () => {
+            if (button.dataset.stockState === "out") return;
             Array.from(quickStorageButtons.children).forEach((child) => child.classList.remove("active"));
             button.classList.add("active");
             if (quickStorageLabel) quickStorageLabel.textContent = label;
@@ -646,9 +803,11 @@ function renderColorButtons(colors) {
         applyQuickOptionStockState(btn, "color", label);
 
         btn.addEventListener("click", () => {
+            if (btn.dataset.stockState === "out") return;
             Array.from(quickColorButtons.children).forEach((b) => b.classList.remove("active"));
             btn.classList.add("active");
             if (quickColorLabel) quickColorLabel.textContent = label;
+            updateQuickThumbColorBorder();
             
             if (window.quickImagesColors) {
                 const targetColor = label.toLowerCase().trim();
@@ -671,6 +830,7 @@ function renderColorButtons(colors) {
 }
 
 function openQuickView(card) {
+    quickModal = quickModal || document.getElementById("quickModal");
     if (!quickModal || !card) return;
     activeQuickProductId = card.dataset.productId || null;
     const name = card.dataset.qvName || "Product";
@@ -680,6 +840,8 @@ function openQuickView(card) {
     const oldPriceRaw = card.dataset.qvOldPrice || "";
     const currency = card.dataset.qvCurrency || "USD";
     const save = card.dataset.qvSave || "";
+    const countdownEnd = card.dataset.qvCountdownEnd || "";
+    const countdownMessage = card.dataset.qvCountdownMessage || "Hurry up! Sale ends in:";
     const description = card.dataset.qvDescription || "";
     const delivery = card.dataset.qvDelivery || "";
     const stock = card.dataset.qvStock || productPageSettings.quick_stock || "Available";
@@ -694,7 +856,18 @@ function openQuickView(card) {
     quickIndex = 0;
     quickThumbOffset = 0;
 
-    window.quickVariants = JSON.parse(card.dataset.qvVariants || "[]");
+    try {
+        window.quickVariants = JSON.parse(card.dataset.qvVariants || "[]");
+        if (!Array.isArray(window.quickVariants)) window.quickVariants = [];
+    } catch (error) {
+        // A malformed legacy card must not prevent the Quick View from
+        // opening. The product-level values remain usable as a fallback.
+        console.warn("Quick View variant data could not be parsed", error);
+        window.quickVariants = [];
+    }
+    window.quickDefaultVariantId = card.dataset.qvDefaultVariant || "";
+    window.quickTargetPrice = Number(card.dataset.qvPrice);
+    window.quickTargetComparePrice = card.dataset.qvOldPrice ? Number(card.dataset.qvOldPrice) : NaN;
     window.quickCurrency = currency;
     window.quickImagesColors = card.dataset.qvImageColors ? card.dataset.qvImageColors.split("|") : [];
 
@@ -709,8 +882,53 @@ function openQuickView(card) {
         quickSave.textContent = save ? `Save ${save}%` : "";
         quickSave.style.display = save ? "inline-flex" : "none";
     }
+    if (quickSaleInterval) window.clearInterval(quickSaleInterval);
+    const hasQuickSaleMessage = Boolean(countdownMessage && countdownMessage.trim());
+    const hasQuickSaleEnd = Boolean(countdownEnd && !Number.isNaN(new Date(countdownEnd).getTime()));
+    // Reset the popup state on every open. The message must not appear without
+    // a valid end timestamp, and the timer must be made visible again after a
+    // previous product without a countdown hid it.
+    if (quickSaleCountdown) quickSaleCountdown.style.display = "none";
+    if (quickSaleTimer) {
+        quickSaleTimer.textContent = "";
+        quickSaleTimer.style.display = "none";
+    }
+    if (quickSaleCountdown && quickSaleTimer && hasQuickSaleEnd) {
+        const end = new Date(countdownEnd).getTime();
+        if (quickSaleMessage) quickSaleMessage.textContent = countdownMessage;
+        quickSaleTimer.style.display = "inline";
+        const updateQuickCountdown = () => {
+            const seconds = Math.max(0, Math.floor((end - Date.now()) / 1000));
+            const days = Math.floor(seconds / 86400);
+            const hours = Math.floor((seconds % 86400) / 3600);
+            const minutes = Math.floor((seconds % 3600) / 60);
+            const remainder = seconds % 60;
+            quickSaleTimer.textContent = `${days}d ${String(hours).padStart(2, "0")}h ${String(minutes).padStart(2, "0")}m ${String(remainder).padStart(2, "0")}s`;
+            quickSaleCountdown.style.display = seconds > 0 ? "inline-flex" : "none";
+            if (!seconds) window.clearInterval(quickSaleInterval);
+        };
+        updateQuickCountdown();
+        quickSaleInterval = window.setInterval(updateQuickCountdown, 1000);
+    } else if (quickSaleCountdown) {
+        quickSaleCountdown.style.display = "none";
+    }
     const quickDelivery = document.getElementById("quickDelivery");
-    if (quickDelivery) quickDelivery.textContent = delivery;
+    if (quickDelivery) {
+        const currentLocation = document.getElementById("product-delivery-location-label")?.textContent.trim()
+            || document.getElementById("loc-pin")?.textContent.trim()
+            || "Set location";
+        quickDelivery.innerHTML = `
+            <span class="quick-delivery-icon" aria-hidden="true"><i class="fa-solid fa-truck-fast"></i></span>
+            <span class="quick-delivery-copy">
+                <span>Estimated delivery</span>
+                <strong>${delivery || "Delivery time unavailable"}</strong>
+            </span>
+            <button type="button" class="quick-delivery-location" onclick="document.getElementById('locationModal').style.display='flex'" aria-label="Change delivery location">
+                <i class="fa-solid fa-location-dot" aria-hidden="true"></i>
+                <span id="quick-delivery-location-label">${currentLocation}</span>
+                <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+            </button>`;
+    }
     if (quickPoints) {
         quickPoints.innerHTML = "";
         if (description) {
@@ -752,6 +970,7 @@ function openQuickView(card) {
     quickModal.classList.add("open");
     quickModal.setAttribute("aria-hidden", "false");
     document.body.classList.add("quick-modal-open");
+    requestAnimationFrame(updateQuickThumbRail);
 }
 
 function closeQuickView() {
@@ -760,6 +979,9 @@ function closeQuickView() {
     quickModal.setAttribute("aria-hidden", "true");
     document.body.classList.remove("quick-modal-open");
 }
+
+// Keep the handler available to the inline fallback on product cards.
+window.openQuickView = openQuickView;
 
 function formatMoney(value, currency) {
     const number = Number(value || 0);
@@ -809,19 +1031,16 @@ document.addEventListener("click", (event) => {
     }
     if (event.target.closest("#quickThumbPrev") && quickThumbs) {
         quickThumbOffset = Math.max(0, quickThumbOffset - 124);
-        quickThumbs.style.transform = `translateX(-${quickThumbOffset}px)`;
+        updateQuickThumbRail();
     }
     if (event.target.closest("#quickThumbNext") && quickThumbs) {
         quickThumbOffset += 124;
-        quickThumbs.style.transform = `translateX(-${quickThumbOffset}px)`;
+        updateQuickThumbRail();
     }
 });
 
 window.addEventListener("resize", () => {
-    if (!quickThumbs) return;
-    const max = Math.max(0, quickThumbs.scrollWidth - quickThumbs.parentElement.clientWidth);
-    quickThumbOffset = Math.min(quickThumbOffset, max);
-    quickThumbs.style.transform = `translateX(-${quickThumbOffset}px)`;
+    updateQuickThumbRail();
 });
 
 document.addEventListener("submit", (event) => {
@@ -874,6 +1093,8 @@ if (liveSearchInput && liveSearchResults) {
                             let imgHtml = item.image_url ? `<img src="${item.image_url}" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; margin-right: 10px;">` : `<div style="width: 40px; height: 40px; background: #eee; border-radius: 4px; margin-right: 10px;"></div>`;
                             
                             let variantsHtml = item.variants ? `<div style="font-size: 11px; color: var(--muted); margin-top: 2px;">${item.variants}</div>` : '';
+                            const stockLabel = item.stock_label || (Number(item.stock || 0) > 0 ? "In Stock" : "Out of Stock");
+                            const stockColor = Number(item.stock || 0) > 0 ? "#15803d" : "#b91c1c";
 
                             link.innerHTML = `
                                 ${imgHtml}
@@ -881,6 +1102,7 @@ if (liveSearchInput && liveSearchResults) {
                                     <div style="font-weight: 500; font-size: 13px;">${item.name}</div>
                                     ${variantsHtml}
                                     <div style="font-weight: bold; color: var(--primary); font-size: 12px; margin-top: 2px;">€${item.price}</div>
+                                    <div style="font-size: 11px; font-weight: 700; color: ${stockColor}; margin-top: 2px;">${stockLabel}</div>
                                 </div>
                             `;
                             liveSearchResults.appendChild(link);

@@ -24,6 +24,57 @@
         color: #fff !important;
         border-color: var(--primary) !important;
     }
+    .ra-boolean-options {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 24px;
+    }
+    .ra-boolean-option {
+        display: flex;
+        align-items: center;
+        gap: 13px;
+        min-height: 74px;
+        padding: 15px 17px;
+        border: 1px solid #dce5f0;
+        border-radius: 14px;
+        background: linear-gradient(135deg, #ffffff, #f8fbff);
+        color: #1e293b;
+        cursor: pointer;
+        transition: border-color .2s ease, box-shadow .2s ease, transform .2s ease;
+    }
+    .ra-boolean-option:hover {
+        border-color: var(--primary);
+        box-shadow: 0 7px 18px rgba(15, 23, 42, .08);
+        transform: translateY(-1px);
+    }
+    .ra-boolean-option input[type="checkbox"] {
+        flex: 0 0 auto;
+        width: 21px;
+        height: 21px;
+        margin: 0;
+        accent-color: var(--primary);
+        cursor: pointer;
+    }
+    .ra-boolean-option span {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+    }
+    .ra-boolean-option strong {
+        font-size: 14px;
+        line-height: 1.25;
+        color: #172033;
+    }
+    .ra-boolean-option small {
+        font-size: 12px;
+        line-height: 1.35;
+        color: #718096;
+    }
+    @media(max-width: 640px) {
+        .ra-boolean-options { grid-template-columns: 1fr; }
+    }
 </style>
 <div class="ra-card ra-hero" style="margin-bottom:20px;">
     <div class="ra-card-body ra-hero-body">
@@ -48,6 +99,7 @@
             <form method="post" enctype="multipart/form-data" class="ra-form" id="retailer-product-form">
                 {% csrf_token %}
                 {{ form.phone_variant_id }}
+                {{ form.brand.as_hidden }}
                 {{ form.variants_payload }}
                 {{ form.price }}
                 {{ form.discount_price }}
@@ -59,6 +111,15 @@
                     {% if form.name.errors %}
                     <div class="ra-field-error">{{ form.name.errors.as_text }}</div>
                     {% endif %}
+                </div>
+                <div class="ra-section" style="margin-top:18px;">
+                    <div class="ra-section-title">Amazon France mapping</div>
+                    <div class="ra-section-copy">Add the Amazon Seller SKU and ASIN from Seller Central. This keeps the Nuboxed SKU unchanged and lets automatic product and stock sync update the correct France offer.</div>
+                    <div class="ra-form-grid" style="grid-template-columns:repeat(3,minmax(0,1fr));">
+                        <div class="ra-field"><label class="ra-label">Barcode / EAN / UPC</label>{{ form.barcode }}{% if form.barcode.errors %}<div class="ra-field-error">{{ form.barcode.errors.as_text }}</div>{% endif %}</div>
+                        <div class="ra-field"><label class="ra-label">Amazon Seller SKU</label>{{ form.amazon_seller_sku }}{% if form.amazon_seller_sku.help_text %}<small class="ra-help">{{ form.amazon_seller_sku.help_text }}</small>{% endif %}{% if form.amazon_seller_sku.errors %}<div class="ra-field-error">{{ form.amazon_seller_sku.errors.as_text }}</div>{% endif %}</div>
+                        <div class="ra-field"><label class="ra-label">Amazon ASIN</label>{{ form.amazon_asin }}{% if form.amazon_asin.help_text %}<small class="ra-help">{{ form.amazon_asin.help_text }}</small>{% endif %}{% if form.amazon_asin.errors %}<div class="ra-field-error">{{ form.amazon_asin.errors.as_text }}</div>{% endif %}</div>
+                    </div>
                 </div>
                 {% if form.sale_mode %}<div class="ra-section" style="margin-top: 18px;">
                     <div class="ra-section-title">Sale Countdown</div>
@@ -79,8 +140,8 @@
                     })();
                 </script>
                 {% for field in form %}
-                {% if field.name != "name" and field.name != "model_name" and field.name != "store" and field.name != "price" and field.name != "discount_price" and field.name != "sale_mode" and field.name != "sale_title" and field.name != "sale_ends_at" and field.name != "sale_override_enabled" and field.name != "product_images" and field.name != "product_videos" and field.name != "product_360_images" and field.name != "product_video_urls" and field.name != "remove_asset_ids" and field.name != "phone_variant_id" and field.name != "variants_payload" and field.name != "default_variant" and field.name != "tax_rate" and field.name != "product_type" and field.name != "weight" and field.name != "length" and field.name != "width" and field.name != "height" and field.name != "warranty" and field.name|slice:":4" != "attr_" %}
-                <div class="ra-field">
+                {% if field.name != "name" and field.name != "model_name" and field.name != "barcode" and field.name != "amazon_seller_sku" and field.name != "amazon_asin" and field.name != "store" and field.name != "brand" and field.name != "price" and field.name != "discount_price" and field.name != "sale_mode" and field.name != "sale_title" and field.name != "sale_ends_at" and field.name != "sale_override_enabled" and field.name != "product_images" and field.name != "product_videos" and field.name != "product_360_images" and field.name != "product_video_urls" and field.name != "remove_asset_ids" and field.name != "phone_variant_id" and field.name != "variants_payload" and field.name != "default_variant" and field.name != "tax_rate" and field.name != "product_type" and field.name != "weight" and field.name != "length" and field.name != "width" and field.name != "height" and field.name != "warranty" and field.name != "is_featured" and field.name != "is_active" and field.name|slice:":4" != "attr_" %}
+                <div class="ra-field{% if field.name == 'is_featured' or field.name == 'is_active' %} ra-boolean-field{% endif %}">
                     <label class="ra-label">{{ field.label }}</label>
                     {{ field }}
                     {% if field.errors %}
@@ -89,6 +150,21 @@
                 </div>
                 {% endif %}
                 {% endfor %}
+
+                <div class="ra-boolean-options">
+                    {% if form.is_featured %}
+                    <label class="ra-boolean-option">
+                        {{ form.is_featured }}
+                        <span><strong>Is featured</strong><small>Show in featured sections</small></span>
+                    </label>
+                    {% endif %}
+                    {% if form.is_active %}
+                    <label class="ra-boolean-option">
+                        {{ form.is_active }}
+                        <span><strong>Is active</strong><small>Available on storefront</small></span>
+                    </label>
+                    {% endif %}
+                </div>
 
                 <div class="ra-section" style="margin-top: 18px;">
                     <div class="ra-section-title">Product Specs</div>
@@ -145,14 +221,14 @@
                             </select>
                         </div>
                         <div class="ra-field" id="ret-phone-brand-wrap" style="display:none;">
-                            <label class="ra-label">Brand (optional)</label>
+                            <label class="ra-label">Brand</label>
                             <select id="ret-phone-brand" class="ra-input">
                                 <option value="">Select brand</option>
                             </select>
                         </div>
                         <div class="ra-field">
                             <label class="ra-label">Model</label>
-                            <select id="ret-phone-model" class="ra-input">
+                            <select id="ret-phone-model" class="ra-input" disabled>
                                 <option value="">Select model</option>
                             </select>
                         </div>
@@ -454,7 +530,7 @@
                 <span class="ra-card-title">Product Gallery, Video, 360</span>
             </div>
             <div class="ra-table-wrap">
-                <table class="ra-table">
+                <table class="ra-table ra-assets-table">
                     <thead>
                         <tr>
                             <th>Asset</th>
@@ -548,6 +624,8 @@
 
     const platforms = data.platforms || [];
     const brands = data.brands || [];
+    const catalogBrands = data.catalog_brands || [];
+    const productBrandField = document.querySelector('input[name="brand"]');
     function cleanModelLabel(model) {
         let label = String(model.display_name || model.name || '').trim();
         const brand = brands.find((item) => String(item.id) === String(model.brand_id || ''));
@@ -591,8 +669,21 @@
     }
 
     function refreshModelOptions(platformId, brandId) {
+        if (!brandId) {
+            fillOptions(modelSel, [], 'Select a brand first', 'display_name');
+            modelSel.disabled = true;
+            return;
+        }
         const items = models.filter((item) => (item.platform_id === platformId || item.platform_name === platformId) && (!brandId || item.brand_id === brandId));
         fillOptions(modelSel, items, 'Select model', 'display_name');
+        modelSel.disabled = false;
+    }
+
+    function syncProductBrand(phoneBrandId) {
+        if (!productBrandField) return;
+        const phoneBrand = brands.find((item) => String(item.id) === String(phoneBrandId || ''));
+        const catalogBrand = phoneBrand && catalogBrands.find((item) => String(item.name || '').trim().toLowerCase() === String(phoneBrand.name || '').trim().toLowerCase());
+        productBrandField.value = catalogBrand ? catalogBrand.id : '';
     }
 
     function modelVariants(modelId) {
@@ -778,9 +869,11 @@
     platformSel.addEventListener('change', () => {
         const platformId = platformSel.value;
         brandSel.innerHTML = '<option value="">Select brand</option>';
-        modelSel.innerHTML = '<option value="">Select model</option>';
+        modelSel.innerHTML = '<option value="">Select a brand first</option>';
+        modelSel.disabled = true;
         if (!platformId) {
             brandWrap.style.display = 'none';
+            syncProductBrand('');
             if (badge) badge.style.display = 'none';
             if (hidden) hidden.value = '';
             return;
@@ -792,6 +885,7 @@
     });
 
     brandSel.addEventListener('change', () => {
+        syncProductBrand(brandSel.value);
         refreshModelOptions(platformSel.value, brandSel.value);
         if (hidden) hidden.value = '';
     });
@@ -819,6 +913,7 @@
             platformSel.value = selectedModel.platform_id;
             refreshBrandOptions(selectedModel.platform_id);
             if (selectedModel.brand_id) brandSel.value = selectedModel.brand_id;
+            syncProductBrand(selectedModel.brand_id);
             refreshModelOptions(selectedModel.platform_id, selectedModel.brand_id);
             modelSel.value = selectedModel.id;
         }
@@ -850,6 +945,8 @@
             price: row.querySelector('[data-field="price"]').value.trim(),
             discount_price: row.querySelector('[data-field="discount_price"]').value.trim(),
             quantity: row.querySelector('[data-field="quantity"]').value.trim(),
+            amazon_seller_sku: row.querySelector('[data-field="amazon_seller_sku"]')?.value.trim() || '',
+            amazon_asin: row.querySelector('[data-field="amazon_asin"]')?.value.trim() || '',
             ram: row.querySelector('[data-field="ram"]') ? row.querySelector('[data-field="ram"]').value.trim() : '',
             storage: row.querySelector('[data-field="storage"]').value.trim(),
             color: row.querySelector('[data-field="color"]').value.trim(),
@@ -900,8 +997,8 @@
                     <input data-field="sku" type="text" class="ra-input" placeholder="Optional SKU" value="${(data.sku || '').replace(/"/g, '&quot;')}">
                 </div>
                 <div>
-                    <label style="font-size:11px; font-weight:600; color:var(--muted);">Barcode</label>
-                    <input data-field="barcode" type="text" class="ra-input" placeholder="Optional barcode" value="${(data.barcode || '').replace(/"/g, '&quot;')}">
+                    <label style="font-size:11px; font-weight:600; color:var(--muted);">IMEI No.</label>
+                    <input data-field="barcode" type="text" class="ra-input" placeholder="Optional IMEI No." value="${(data.barcode || '').replace(/"/g, '&quot;')}">
                 </div>
                 <div>
                     <label style="font-size:11px; font-weight:600; color:var(--muted);">RAM</label>
@@ -919,7 +1016,7 @@
                     </div>
                 </div>
             </div>
-            <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; gap:10px; align-items:end;">
+            <div style="display:grid; grid-template-columns: repeat(5, minmax(0, 1fr)) auto; gap:10px; align-items:end;">
                 <div>
                     <label style="font-size:11px; font-weight:600; color:var(--muted);">Price</label>
                     <input data-field="price" type="number" step="0.01" class="ra-input" placeholder="0.00" value="${data.price || ''}">
@@ -931,6 +1028,14 @@
                 <div>
                     <label style="font-size:11px; font-weight:600; color:var(--muted);">Quantity</label>
                     <input data-field="quantity" type="number" min="0" step="1" class="ra-input" placeholder="0" value="${data.quantity || ''}">
+                </div>
+                <div>
+                    <label style="font-size:11px; font-weight:600; color:var(--muted);">Amazon Seller SKU</label>
+                    <input data-field="amazon_seller_sku" type="text" class="ra-input" placeholder="Same as Amazon" value="${(data.amazon_seller_sku || '').replace(/"/g, '&quot;')}">
+                </div>
+                <div>
+                    <label style="font-size:11px; font-weight:600; color:var(--muted);">Amazon ASIN</label>
+                    <input data-field="amazon_asin" type="text" class="ra-input" placeholder="B0XXXXXXXXX" value="${(data.amazon_asin || '').replace(/"/g, '&quot;')}">
                 </div>
                 <button type="button" class="ra-btn ra-btn-soft-danger" title="Remove variant" aria-label="Remove variant">Remove</button>
             </div>
@@ -976,7 +1081,7 @@
                 syncRows();
             });
         }
-        row.querySelectorAll('input[data-field="sku"], input[data-field="barcode"], input[data-field="price"], input[data-field="discount_price"], input[data-field="quantity"]').forEach((input) => input.addEventListener('input', syncRows));
+        row.querySelectorAll('input[data-field="sku"], input[data-field="barcode"], input[data-field="price"], input[data-field="discount_price"], input[data-field="quantity"], input[data-field="amazon_seller_sku"], input[data-field="amazon_asin"]').forEach((input) => input.addEventListener('input', syncRows));
         populateRowOptions(row, data.model_id || '', data);
         return row;
     }
@@ -1023,6 +1128,7 @@
                 platformSel.value = selectedModel.platform_id;
                 refreshBrandOptions(selectedModel.platform_id);
                 if (selectedBrand) brandSel.value = selectedBrand.id;
+                syncProductBrand(selectedBrand ? selectedBrand.id : '');
                 refreshModelOptions(selectedModel.platform_id, selectedBrand ? selectedBrand.id : '');
                 modelSel.value = selectedModel.id;
                 updateSelection(selectedModel.id);

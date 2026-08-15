@@ -1,6 +1,50 @@
 {% extends "retailer/base.html" %}
 
 {% block content %}
+<style>
+    .ra-grid-2 { display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:20px; }
+    @media(max-width:900px){ .ra-grid-2 { grid-template-columns:1fr; row-gap:20px; } }
+    .sale-countdown-save-btn { width:fit-content !important; min-width:0; flex:0 0 auto !important; white-space:nowrap; }
+    .sale-countdown-datetime { display:grid; grid-template-columns:minmax(0, 1.25fr) minmax(0, 1fr); gap:10px; }
+    .sale-countdown-datetime input { cursor:pointer; }
+    .sale-countdown-datetime { position:relative; }
+    .sale-countdown-clock { position:absolute; right:12px; bottom:12px; color:var(--text-muted); font-size:18px; pointer-events:none; }
+    .sale-countdown-clear { position:absolute; right:38px; bottom:10px; border:0; border-radius:6px; padding:3px 6px; color:#b42318; background:#fff1f0; cursor:pointer; font-size:11px; font-weight:700; }
+    form.ra-form label.sale-countdown-active-field { display:inline-flex !important; flex:0 0 auto !important; flex-flow:row nowrap !important; align-items:center !important; gap:10px !important; width:fit-content !important; padding:10px 12px; border:1px solid #dce5f0; border-radius:10px; background:#f8fbff; cursor:pointer; }
+    form.ra-form label.sale-countdown-active-field .ra-label { display:inline-block; width:auto !important; margin:0; cursor:pointer; }
+    form.ra-form label.sale-countdown-active-field input[type="checkbox"] { display:block; width:20px !important; min-width:20px !important; height:20px; margin:0; cursor:pointer; }
+    .sale-time-picker { position:absolute; z-index:20; top:calc(100% + 6px); right:0; display:flex; align-items:end; gap:8px; padding:12px; border:1px solid #d9e2ee; border-radius:12px; background:#fff; box-shadow:0 12px 28px rgba(15,23,42,.18); }
+    .sale-time-picker label { display:flex; flex-direction:column; gap:4px; color:#526071; font-size:11px; font-weight:600; }
+    .sale-time-picker select { min-width:62px; padding:7px 8px; border:1px solid #cbd5e1; border-radius:7px; background:#fff; color:#1f2937; font:inherit; }
+    .sale-time-picker button { padding:8px 11px; border:0; border-radius:7px; background:var(--primary); color:#fff; cursor:pointer; font-weight:600; }
+    .sale-rules-list { display:flex; flex-direction:column; gap:12px; }
+    .sale-rule-item { display:flex; align-items:center; justify-content:space-between; gap:18px; padding:16px; border:1px solid var(--border); border-radius:14px; background:var(--card-bg); transition:border-color .15s, box-shadow .15s; }
+    .sale-rule-item:hover { border-color:#cbd5e1; box-shadow:0 6px 18px rgba(15,23,42,.06); }
+    .sale-rule-main { display:flex; align-items:flex-start; gap:12px; min-width:0; }
+    .sale-rule-icon { display:grid; flex:0 0 38px; width:38px; height:38px; place-items:center; border-radius:10px; color:var(--primary); background:#fff1ec; font-size:18px; }
+    .sale-rule-name { margin:0; color:var(--text-main); font-size:14px; font-weight:700; }
+    .sale-rule-backend-name { grid-column:1 / -1; color:var(--text-muted); font-size:11px; font-weight:700; letter-spacing:.02em; }
+    .sale-rule-meta { margin:5px 0 0; color:var(--text-muted); font-size:12.5px; }
+    .sale-rule-meta i { margin-right:4px; color:var(--primary); }
+    .sale-rule-status { display:inline-flex; align-items:center; gap:5px; margin-top:7px; padding:3px 8px; border-radius:99px; font-size:11px; font-weight:700; }
+    .sale-rule-status.is-active { color:#047857; background:#ecfdf5; }
+    .sale-rule-status.is-inactive { color:#64748b; background:#f1f5f9; }
+    .sale-rule-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
+    .sale-rule-actions .ra-btn { padding:7px 11px; font-size:12px; }
+    .sale-rule-actions form { margin:0; }
+    .sale-rule-actions .ra-btn-soft-danger { color:#be123c; background:#fff1f2; border:1px solid #fecdd3; }
+    .sale-rule-actions .ra-btn-soft-danger:hover { background:#ffe4e6; }
+    .sale-trash-card { margin-top:20px; }
+    .sale-trash-card .ra-card-header { color:#64748b; }
+    .sale-countdown-variants { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:8px 12px; margin:0; padding:0; list-style:none; }
+    .sale-countdown-variants li { display:flex; align-items:center; gap:8px; padding:9px 10px; border:1px solid #dce5f0; border-radius:9px; background:#f8fbff; }
+    .sale-countdown-variants > label { display:flex; align-items:center; gap:8px; padding:9px 10px; border:1px solid #dce5f0; border-radius:9px; background:#f8fbff; }
+    .sale-countdown-variants input { width:17px !important; min-width:17px !important; height:17px; margin:0; accent-color:var(--primary); }
+    .sale-countdown-variants label { margin:0; color:var(--text-main); font-size:13px; cursor:pointer; }
+    .sale-countdown-all-variants { display:flex; align-items:center; gap:8px; width:fit-content; cursor:pointer; }
+    @media(max-width:600px){ .sale-rule-item { align-items:flex-start; flex-direction:column; } .sale-rule-actions { width:100%; justify-content:flex-start; } }
+    @media(max-width:480px){ .sale-countdown-datetime { grid-template-columns:1fr; gap:8px; } }
+</style>
 <div class="ra-page-header">
     <div><div class="ra-eyebrow">Storefront controls</div><h1>Sale Countdown</h1><p>Set a retailer-wide default or a category-specific countdown. Product overrides are managed from the product form.</p></div>
 </div>
@@ -9,23 +53,89 @@
         <div class="ra-card-header"><span class="ra-card-title">Add countdown rule</span></div>
         <div class="ra-card-body">
             <form method="post" class="ra-form">{% csrf_token %}
-                {% for field in form %}<div class="ra-field"><label class="ra-label">{{ field.label }}</label>{{ field }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{{ field.errors }}</div>{% endfor %}
-                <button class="ra-btn ra-btn-primary" type="submit">Save setting</button>
+                {% for field in form %}{% if field.name == 'is_active' %}<label class="ra-field sale-countdown-active-field"><span class="ra-label">{{ field.label }}</span>{{ field }}{% if field.errors %}<span class="ra-field-error">{{ field.errors }}</span>{% endif %}</label>{% else %}<div class="ra-field"><label class="ra-label">{{ field.label }}</label>{% if field.name == 'ends_at' or field.name == 'starts_at' %}<div class="sale-countdown-datetime">{{ field }}</div>{% else %}{{ field }}{% endif %}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}{{ field.errors }}</div>{% endif %}{% endfor %}
+                <button class="ra-btn ra-btn-primary sale-countdown-save-btn" type="submit"><i class="ph ph-floppy-disk"></i> Save setting</button>
             </form>
         </div>
     </section>
     <section class="ra-card">
         <div class="ra-card-header"><span class="ra-card-title">Your retailer rules</span></div>
         <div class="ra-card-body">
+            <div class="sale-rules-list">
             {% for setting in sale_settings %}
-            <div style="padding:14px 0;border-bottom:1px solid var(--border);">
-                <strong>{% if setting.category %}{{ setting.category.name }}{% else %}All categories{% endif %}</strong>
-                <div style="color:var(--muted);margin:5px 0;">{{ setting.message }} · {% if setting.ends_at %}{{ setting.ends_at|date:"M j, Y, P" }}{% else %}No end time{% endif %}</div>
-                <a class="ra-btn ra-btn-secondary" href="{% url 'retailers:sale-countdown-edit' pk=setting.pk %}">Edit</a>
-                <form method="post" action="{% url 'retailers:sale-countdown-disable' pk=setting.pk %}" style="display:inline;">{% csrf_token %}<button class="ra-btn ra-btn-secondary" type="submit">Disable</button></form>
-            </div>
+            <article class="sale-rule-item">
+                <div class="sale-rule-backend-name"><i class="ph ph-tag"></i> {{ setting.name|default:"Sale Countdown" }}</div>
+                <div class="sale-rule-main"><span class="sale-rule-icon"><i class="ph ph-timer"></i></span><div><h3 class="sale-rule-name">{% if setting.category %}{{ setting.category.name }}{% else %}All categories{% endif %}</h3><p class="sale-rule-meta"><i class="ph ph-calendar-blank"></i>{% if setting.ends_at %}Ends {{ setting.ends_at|date:"M j, Y" }}{% else %}No end time{% endif %}{% if setting.ends_at %}<span aria-hidden="true"> · </span>{{ setting.ends_at|date:"P" }}{% endif %}</p><span class="sale-rule-status {% if setting.is_active %}is-active{% else %}is-inactive{% endif %}"><i class="ph {% if setting.is_active %}ph-check-circle{% else %}ph-pause-circle{% endif %}"></i>{% if setting.is_active %}Active{% else %}Inactive{% endif %}</span></div></div>
+                <div class="sale-rule-actions"><a class="ra-btn ra-btn-secondary" href="{% url 'retailers:sale-countdown-edit' pk=setting.pk %}"><i class="ph ph-pencil-simple"></i> Edit</a><form method="post" action="{% url 'retailers:sale-countdown-disable' pk=setting.pk %}">{% csrf_token %}<button class="ra-btn {% if setting.is_active %}ra-btn-danger{% else %}ra-btn-primary{% endif %}" type="submit"><i class="ph {% if setting.is_active %}ph-pause{% else %}ph-play{% endif %}"></i>{% if setting.is_active %}Disable{% else %}Activate{% endif %}</button></form><form method="post" action="{% url 'retailers:sale-countdown-trash' pk=setting.pk %}" data-confirm="Move this rule to trash?" data-confirm-title="Move rule to trash" data-confirm-text="Move to Trash" data-confirm-tone="warning">{% csrf_token %}<button class="ra-btn ra-btn-soft-danger" type="submit"><i class="ph ph-trash"></i> Delete</button></form></div>
+            </article>
             {% empty %}<p>No retailer-specific countdown rules yet.</p>{% endfor %}
+            </div>
         </div>
     </section>
 </div>
+{% if deleted_sale_settings %}
+<section class="ra-card sale-trash-card">
+    <div class="ra-card-header"><span class="ra-card-title"><i class="ph ph-trash"></i> Trash</span></div>
+    <div class="ra-card-body"><div class="sale-rules-list">
+        {% for setting in deleted_sale_settings %}
+        <article class="sale-rule-item"><div class="sale-rule-main"><span class="sale-rule-icon"><i class="ph ph-trash"></i></span><div><h3 class="sale-rule-name">{% if setting.category %}{{ setting.category.name }}{% else %}All categories{% endif %}</h3><p class="sale-rule-meta">Deleted {{ setting.deleted_at|date:"M j, Y, P" }}</p><span class="sale-rule-status is-inactive"><i class="ph ph-trash"></i> In trash</span></div></div><div class="sale-rule-actions"><form method="post" action="{% url 'retailers:sale-countdown-restore' pk=setting.pk %}" data-confirm="Restore this rule from trash?" data-confirm-title="Restore rule" data-confirm-text="Restore" data-confirm-tone="restore">{% csrf_token %}<button class="ra-btn ra-btn-primary" type="submit"><i class="ph ph-arrow-counter-clockwise"></i> Restore</button></form><form method="post" action="{% url 'retailers:sale-countdown-delete-permanent' pk=setting.pk %}" data-confirm="Permanently delete this rule? This cannot be undone." data-confirm-title="Delete rule permanently" data-confirm-text="Delete Permanently" data-confirm-tone="danger">{% csrf_token %}<button class="ra-btn ra-btn-soft-danger" type="submit"><i class="ph ph-trash"></i> Permanent delete</button></form></div></article>
+        {% endfor %}
+    </div></div>
+</section>
+{% endif %}
+<script>
+    (function(){const form=document.querySelector('form.ra-form');if(!form)return;const category=form.querySelector('[name="category"]'),product=form.querySelector('[name="product"]'),variantBox=document.getElementById('id_variants'),all=form.querySelector('[name="all_variants"]');const url="{% url 'retailers:sale-countdown-options' %}";const fill=(el,items,placeholder)=>{if(!el)return;if(el===variantBox){el.innerHTML=(items||[]).map(x=>'<label><input type="checkbox" name="variants" value="'+x.id+'"> '+x.name+'</label>').join('');sync();return}el.innerHTML='<option value="">'+placeholder+'</option>'+(items||[]).map(x=>'<option value="'+x.id+'">'+x.name+'</option>').join('');el.disabled=!(items||[]).length;};const sync=()=>{if(variantBox)variantBox.querySelectorAll('input').forEach(input=>input.disabled=!product?.value||Boolean(all?.checked));};category?.addEventListener('change',async()=>{fill(product,[],"Loading products…");fill(variantBox,[]);if(!category.value){fill(product,[],"Select category first");return}const data=await fetch(url+'?category_id='+category.value).then(r=>r.json());fill(product,data.products,"Select product");});product?.addEventListener('change',async()=>{fill(variantBox,[]);if(!product.value){sync();return}const data=await fetch(url+'?product_id='+product.value).then(r=>r.json());fill(variantBox,data.variants);});all?.addEventListener('change',sync);sync();})();
+    document.querySelectorAll('.sale-countdown-datetime').forEach(function (pickerGroup) {
+        const inputs = Array.from(pickerGroup.querySelectorAll('input'));
+        const clearButton = document.createElement('button');
+        clearButton.type = 'button'; clearButton.className = 'sale-countdown-clear'; clearButton.textContent = 'Clear'; clearButton.title = 'Clear date and time';
+        clearButton.addEventListener('click', function (event) { event.preventDefault(); inputs.forEach(function(input){ input.value = ''; input.dispatchEvent(new Event('input', {bubbles:true})); input.dispatchEvent(new Event('change', {bubbles:true})); }); });
+        pickerGroup.appendChild(clearButton);
+        const timeInput = pickerGroup.querySelector('.sale-countdown-time');
+        if (timeInput) { const icon = document.createElement('i'); icon.className = 'ph ph-clock sale-countdown-clock'; pickerGroup.appendChild(icon); timeInput.style.paddingRight = '40px'; }
+        function openTimePicker(input) {
+            let popup = pickerGroup.querySelector('.sale-time-picker');
+            if (!popup) {
+                popup = document.createElement('div');
+                popup.className = 'sale-time-picker';
+                popup.innerHTML = '<label>Hour<select class="sale-time-hour"></select></label><label>Minute<select class="sale-time-minute"></select></label><button type="button">Apply</button>';
+                for (let hour = 0; hour < 24; hour += 1) popup.querySelector('.sale-time-hour').insertAdjacentHTML('beforeend', '<option value="' + String(hour).padStart(2, '0') + '">' + String(hour).padStart(2, '0') + '</option>');
+                for (let minute = 0; minute < 60; minute += 1) popup.querySelector('.sale-time-minute').insertAdjacentHTML('beforeend', '<option value="' + String(minute).padStart(2, '0') + '">' + String(minute).padStart(2, '0') + '</option>');
+                popup.querySelector('button').addEventListener('click', function () {
+                    input.value = popup.querySelector('.sale-time-hour').value + ':' + popup.querySelector('.sale-time-minute').value;
+                    input.dispatchEvent(new Event('input', {bubbles:true}));
+                    input.dispatchEvent(new Event('change', {bubbles:true}));
+                    popup.remove();
+                });
+                pickerGroup.appendChild(popup);
+            }
+            const parts = (input.value || '12:00').split(':');
+            popup.querySelector('.sale-time-hour').value = parts[0] || '12';
+            popup.querySelector('.sale-time-minute').value = parts[1] || '00';
+        }
+        pickerGroup.addEventListener('pointerdown', function (event) {
+            if (event.target.closest('.sale-time-picker') || event.target.closest('.sale-countdown-clear')) return;
+            let input = event.target.closest('input');
+            if (!input) {
+                const box = pickerGroup.getBoundingClientRect();
+                input = event.clientY - box.top < box.height / 2 ? inputs[0] : inputs[1];
+            }
+            event.preventDefault();
+            if (input.classList.contains('sale-countdown-time')) {
+                openTimePicker(input);
+                return;
+            }
+            input.focus();
+            if (typeof input.showPicker === 'function') {
+                try {
+                    input.showPicker();
+                } catch (error) {
+                    input.click();
+                }
+            } else {
+                input.click();
+            }
+        });
+    });
+</script>
 {% endblock %}

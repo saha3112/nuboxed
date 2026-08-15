@@ -1,12 +1,18 @@
 from collections import defaultdict
 from decimal import Decimal, InvalidOperation
 from urllib.parse import quote_plus
+from urllib.request import Request as UrlRequest, urlopen
+from urllib.error import URLError, HTTPError
 from datetime import timedelta
 import json
 
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.contrib.auth.views import LoginView
 from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth.hashers import make_password
+from django import forms
 from django.contrib import messages
+from django.db import transaction
 from django.db.models import Avg, Count, F, Max, Min, Prefetch, Q, Sum, Value
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404, redirect, render
@@ -18,8 +24,16 @@ from django.views.generic import TemplateView
 from django.http import JsonResponse
 from django.core.paginator import Paginator
 
-from apps.catalog.models import Category, Product, ProductMedia, ProductReview, Brand, AttributeValue
-from apps.cms.models import FeaturedBanner, HomePageSettings, Slider
+from apps.catalog.models import (
+    Category,
+    Product,
+    ProductMedia,
+    ProductReview,
+    Brand,
+    AttributeValue,
+    ProductVariantAttributeValue,
+)
+from apps.cms.models import FeaturedBanner, HomePageSettings, Slider, Page
 from apps.inventory.delivery import (
     clear_request_location,
     estimate_product_delivery,
@@ -27,7 +41,9 @@ from apps.inventory.delivery import (
     resolve_geolocation_label,
     serialize_delivery_context,
     set_request_location,
+    split_postal_codes,
 )
+from apps.inventory.models import DeliveryLocation
 from apps.orders.forms import CheckoutSelectionForm, UserAddressForm, build_payment_method_choices
 from .forms import CustomerPasswordChangeForm, CustomerProfileForm
 from apps.orders.models import DeliveryLabel, Order
@@ -35,6 +51,7 @@ from apps.payments.models import Invoice
 from apps.payments.services import amount_in_words, generate_invoice_for_order
 from apps.returns_app.models import ReturnRequest
 from apps.returns_app.services import create_return_request
+from apps.common.captcha import verify_captcha
 from apps.orders.services import (
     add_product_to_cart,
     apply_coupon_to_cart,
@@ -52,7 +69,9 @@ from apps.orders.services import (
 from apps.retailers.models import Retailer
 from apps.stores.models import Store, StoreRating
 from apps.settings_app.models import StorefrontLocationMessages
+from apps.settings_app.services import get_effective_sale_countdown, get_effective_sale_price
 from apps.common.security import build_public_url
+from apps.notifications.services import send_notification_event
 
 
 def cart_session_key(product, variant=None):
@@ -70,6 +89,58 @@ APPROVED_PRODUCT_QS = Product.objects.filter(
 
 
 class StorefrontBaseMixin:
+    def enrich_sale_countdown_products(self, products):
+        """Expose active Sale Countdown prices to cards and Quick View."""
+        seen_product_ids = set()
+        for product in products or []:
+            if product.id in seen_product_ids:
+                continue
+            seen_product_ids.add(product.id)
+            variants = list(product.variants.all()) if hasattr(product, "variants") else []
+            default_variant = next((item for item in variants if item.is_default and item.available_qty > 0), None)
+            default_variant = default_variant or next((item for item in variants if item.available_qty > 0), None)
+            effective = get_effective_sale_price(product, default_variant)
+            product.effective_discount_price = effective["price"]
+            product.effective_compare_price = effective["compare_price"]
+            product.effective_discount_percentage = int(effective["discount_percentage"])
+            product.effective_default_variant_id = str(default_variant.id) if default_variant else ""
+            countdown = get_effective_sale_countdown(product, default_variant)
+            product.effective_sale_ends_at = countdown.get("ends_at") if countdown.get("enabled") else None
+            product.effective_sale_message = countdown.get("message") if countdown.get("enabled") else ""
+            variant_rows = []
+            for variant in variants:
+                price = get_effective_sale_price(product, variant)
+                row = {
+                    "id": str(variant.id),
+                    "sku": variant.sku,
+                    "price": str(price["price"]),
+                    "compare_price": str(price["compare_price"] or ""),
+                    "stock": variant.available_qty,
+                    "attributes": {
+                        av.attribute.name.lower(): (av.value or "").lower()
+                        for av in variant.attribute_values.all()
+                        if av.attribute
+                    },
+                }
+                variant_rows.append(row)
+            product.effective_variants_json = json.dumps(variant_rows)
+        return products
+
+    def deduplicate_catalogue_products(self, products):
+        """Show one catalogue offer per model when the same model is sold by multiple stores."""
+        unique = []
+        seen = set()
+        for product in products:
+            model_label = (getattr(product, "model_name", "") or product.name or "").strip().casefold()
+            brand_key = getattr(product, "brand_id", None) or "no-brand"
+            category_key = getattr(product, "category_id", None) or "no-category"
+            key = (brand_key, category_key, model_label)
+            if key in seen:
+                continue
+            seen.add(key)
+            unique.append(product)
+        return unique
+
     def prioritize_available_products(self, products, *ordering):
         """Keep products with positive available stock ahead of unavailable products."""
         products = products.annotate(
@@ -108,13 +179,133 @@ class StorefrontBaseMixin:
         return Brand.objects.filter(id__in=brand_ids).order_by("name")
 
     def get_available_colors(self, products, selected_ids=None):
-        color_ids = set(products.filter(variants__attribute_values__attribute__code="color").values_list(
-            "variants__attribute_values__option_id",
-            flat=True,
-        ).distinct())
+        in_stock_products = products.filter(
+            stock_items__on_hand_quantity__gt=F("stock_items__reserved_quantity")
+        ).distinct()
+        product_ids = in_stock_products.order_by().values("pk")
+        color_values = set(
+            ProductVariantAttributeValue.objects.filter(
+                variant__product_id__in=product_ids,
+                attribute__code="color",
+                variant__stock_items__on_hand_quantity__gt=F("variant__stock_items__reserved_quantity"),
+            ).values_list("value", flat=True)
+        )
+        color_values.update(
+            ProductVariantAttributeValue.objects.filter(
+                variant__product_id__in=product_ids,
+                attribute__code="color",
+                variant__stock_items__on_hand_quantity__gt=F("variant__stock_items__reserved_quantity"),
+            ).values_list("option__value", flat=True)
+        )
+        color_values.update(
+            in_stock_products.values_list("phone_variant__color", flat=True).distinct()
+        )
+        color_values = {str(value).strip() for value in color_values if str(value or "").strip()}
         if selected_ids:
-            color_ids.update(int(value) for value in selected_ids if str(value).strip().isdigit())
-        return AttributeValue.objects.filter(attribute__code="color", id__in=color_ids).order_by("sort_order", "label")
+            # AttributeValue uses UUID primary keys, not numeric IDs.
+            selected_ids = [str(value).strip() for value in selected_ids if str(value).strip()]
+        return AttributeValue.objects.filter(attribute__code="color").filter(
+            Q(product_assignments__product_id__in=product_ids)
+            | Q(label__in=color_values)
+            | Q(value__in=color_values)
+            | Q(id__in=selected_ids or [])
+        ).distinct().order_by("sort_order", "label")
+
+    def get_available_variant_options(self, products, attribute_codes, legacy_field):
+        """Return only Storage/RAM values actually used by the current products."""
+        values = {}
+        in_stock_products = products.filter(
+            stock_items__on_hand_quantity__gt=F("stock_items__reserved_quantity")
+        ).distinct()
+        product_ids = in_stock_products.order_by().values("pk")
+
+        def add(value):
+            value = str(value or "").strip()
+            if value:
+                values.setdefault(value.casefold(), value)
+
+        # Modern variant attributes may store the value directly or through
+        # the compatibility option relation.
+        rows = ProductVariantAttributeValue.objects.filter(
+            variant__product_id__in=product_ids,
+            attribute__code__in=attribute_codes,
+            variant__stock_items__on_hand_quantity__gt=F("variant__stock_items__reserved_quantity"),
+        ).values_list("value", "option__value")
+        for direct_value, option_value in rows:
+            add(direct_value or option_value)
+
+        # Product-level attribute assignments use the canonical AttributeValue
+        # records and should also appear in the filter.
+        assignment_values = AttributeValue.objects.filter(
+            attribute__code__in=attribute_codes,
+            product_assignments__product_id__in=product_ids,
+        ).values_list("label", "value")
+        for label, value in assignment_values:
+            add(label or value)
+
+        # Older phone catalogue products keep RAM/storage on PhoneModelVariant.
+        for value in in_stock_products.values_list(f"phone_variant__{legacy_field}", flat=True).distinct():
+            add(value)
+
+        return [{"value": value, "label": value} for value in sorted(values.values(), key=str.casefold)]
+
+    def filter_variant_options(self, products, storage_values=None, ram_values=None):
+        """Filter products by modern variant attributes and legacy phone variants."""
+        for values, codes, legacy_field in (
+            (storage_values or [], ("storage", "internal-storage"), "storage"),
+            (ram_values or [], ("ram",), "ram"),
+        ):
+            if not values:
+                continue
+            products = products.filter(
+                Q(
+                    variants__attribute_values__attribute__code__in=codes,
+                    variants__attribute_values__value__in=values,
+                )
+                | Q(
+                    variants__attribute_values__attribute__code__in=codes,
+                    variants__attribute_values__option__value__in=values,
+                )
+                | Q(
+                    attribute_assignments__attribute__code__in=codes,
+                    attribute_assignments__chosen_values__label__in=values,
+                )
+                | Q(
+                    attribute_assignments__attribute__code__in=codes,
+                    attribute_assignments__chosen_values__value__in=values,
+                )
+                | Q(**{f"phone_variant__{legacy_field}__in": values})
+            ).distinct()
+        return products
+
+    def filter_color_options(self, products, color_ids):
+        """Match Color filters by canonical AttributeValue, variant text, or legacy phone color."""
+        selected = AttributeValue.objects.filter(
+            attribute__code="color",
+            id__in=[str(value).strip() for value in color_ids if str(value).strip()],
+        ).values_list("label", "value")
+        selected_values = {str(value).strip() for row in selected for value in row if str(value or "").strip()}
+        if not selected_values:
+            return products.none()
+        return products.filter(
+            Q(
+                variants__attribute_values__attribute__code="color",
+                variants__attribute_values__value__in=selected_values,
+            )
+            | Q(
+                variants__attribute_values__attribute__code="color",
+                variants__attribute_values__option__value__in=selected_values,
+            )
+            | Q(
+                attribute_assignments__attribute__code="color",
+                attribute_assignments__chosen_values__label__in=selected_values,
+            )
+            | Q(
+                attribute_assignments__attribute__code="color",
+                attribute_assignments__chosen_values__value__in=selected_values,
+            )
+            | Q(phone_variant__color__in=selected_values)
+        ).distinct()
 
     def resolve_product_family_value(self, product):
         return product.model_name or product.barcode or product.qr_code or product.name
@@ -207,8 +398,41 @@ class StorefrontBaseMixin:
                 is_active=True,
             )
         ordered_stores = self.order_stores_by_location(stores, payload=location_payload)
-        # Keep stores with score <= 3 (same city or pincode prefix)
-        nearby_store_ids = [s.id for s in ordered_stores if self.get_store_proximity_score(s, payload=location_payload) <= 3]
+        # Configured delivery locations take priority over the store's own
+        # address. A store can therefore serve one PIN, many PINs, or a PIN
+        # prefix/area entered by the retailer.
+        store_list = list(stores)
+        store_ids = {store.id for store in store_list}
+        retailer_ids = {store.retailer_id for store in store_list}
+        configured_locations = list(
+            DeliveryLocation.objects.filter(retailer_id__in=retailer_ids, is_active=True)
+            .filter(Q(store_id__in=store_ids) | Q(store__isnull=True))
+        )
+        pincode = self.normalize_query_value(location_payload.get("pincode"), default="").upper()
+        city = self.normalize_query_value(location_payload.get("city"), default="").lower()
+        configured_matches = set()
+        for store in store_list:
+            locations = [
+                location for location in configured_locations
+                if location.retailer_id == store.retailer_id
+                and (location.store_id is None or location.store_id == store.id)
+            ]
+            for location in locations:
+                exact_codes = split_postal_codes(location.postal_code)
+                prefix_codes = split_postal_codes(location.postal_code_prefix)
+                if pincode and (pincode in exact_codes or any(pincode.startswith(prefix) for prefix in prefix_codes if prefix)):
+                    configured_matches.add(store.id)
+                    break
+                if city and location.city and city == self.normalize_query_value(location.city, default="").lower():
+                    configured_matches.add(store.id)
+                    break
+
+        if configured_locations:
+            nearby_store_ids = list(configured_matches)
+        else:
+            # Keep stores with score <= 3 (same city or pincode prefix) when
+            # no delivery coverage has been configured yet.
+            nearby_store_ids = [s.id for s in ordered_stores if self.get_store_proximity_score(s, payload=location_payload) <= 3]
         # Store directory must remain location-accurate. If there is no nearby
         # store, keep the result empty and show the alternate-location CTA
         # instead of silently replacing it with the nearest distant store.
@@ -245,7 +469,7 @@ class StorefrontBaseMixin:
             Prefetch("media_items", queryset=ProductMedia.objects.filter(media_type=ProductMedia.TYPE_IMAGE).order_by("sort_order"))
         )
         qs, _, _ = self.apply_location_filter(qs, location_payload, ignore_location=ignore_location)
-        featured = list(qs[:limit])
+        featured = self.deduplicate_catalogue_products(list(qs[: limit * 2]))[:limit]
         if len(featured) < limit:
             existing_ids = [product.id for product in featured]
             fallback = APPROVED_PRODUCT_QS.exclude(id__in=existing_ids).filter(
@@ -254,8 +478,10 @@ class StorefrontBaseMixin:
                 Prefetch("media_items", queryset=ProductMedia.objects.filter(media_type=ProductMedia.TYPE_IMAGE).order_by("sort_order"))
             ).order_by("-created_at")
             fallback, _, _ = self.apply_location_filter(fallback, location_payload, ignore_location=ignore_location)
-            featured.extend(list(fallback[: limit - len(featured)]))
-        return featured[:limit]
+            featured = self.deduplicate_catalogue_products(
+                featured + list(fallback[: limit * 2])
+            )[:limit]
+        return featured
 
     def get_category_sections(self, limit=4, items_per_category=8, location_payload=None, ignore_location=False):
         sections = []
@@ -263,7 +489,7 @@ class StorefrontBaseMixin:
         for category in categories:
             products = APPROVED_PRODUCT_QS.filter(category=category)
             products, _, _ = self.apply_location_filter(products, location_payload, ignore_location=ignore_location)
-            products = products[:items_per_category]
+            products = self.deduplicate_catalogue_products(list(products[: items_per_category * 2]))[:items_per_category]
             if products:
                 sections.append({"category": category, "products": products})
         return sections
@@ -293,6 +519,31 @@ class StorefrontBaseMixin:
 
     def with_delivery_context(self, context):
         payload = self.get_delivery_payload()
+        product_objects = []
+
+        def collect(value):
+            if hasattr(value, "variants") and hasattr(value, "store_id"):
+                product_objects.append(value)
+            elif isinstance(value, dict):
+                for key, item in value.items():
+                    if key == "products":
+                        for product in item or []:
+                            product_objects.append(product)
+                    else:
+                        collect(item)
+            elif isinstance(value, (list, tuple)) or (
+                hasattr(value, "__iter__")
+                and not isinstance(value, (str, bytes, set))
+            ):
+                for item in value:
+                    collect(item)
+
+        collect(context.get("products", []))
+        collect(context.get("category_sections", []))
+        collect(context.get("featured_products", []))
+        collect(context.get("store_category_groups", []))
+        collect(context.get("store_page_sections", []))
+        self.enrich_sale_countdown_products(product_objects)
         context["selected_delivery_location"] = serialize_delivery_context(payload)
         return context
 
@@ -390,6 +641,30 @@ class StoreListingPageView(StorefrontBaseMixin, TemplateView):
             }
         )
         return self.with_delivery_context(context)
+
+
+class OtherLocationStoresView(StorefrontBaseMixin, View):
+    """Return all active stores for the Store mega-menu's AJAX fallback."""
+
+    def get(self, request, *args, **kwargs):
+        stores = Store.objects.filter(
+            status=Store.STATUS_ACTIVE,
+            is_active=True,
+        ).order_by("name")
+        if request.GET.get("mode") == "nearby":
+            stores, _, _ = self.apply_location_filter(
+                stores,
+                self.get_delivery_payload(),
+                ignore_location=False,
+                is_store_qs=True,
+            )
+        return JsonResponse({
+            "ok": True,
+            "stores": [
+                {"name": store.name, "slug": store.slug}
+                for store in stores[:100]
+            ],
+        })
 
 
 class RetailerStorePageView(StorefrontBaseMixin, TemplateView):
@@ -497,7 +772,11 @@ class RetailerStorePageView(StorefrontBaseMixin, TemplateView):
                     setattr(store, field_name, getattr(sibling, field_name))
         products = self.prioritize_available_products(
             APPROVED_PRODUCT_QS.filter(store=store).prefetch_related(
-                "media_items", "variants__attribute_values__attribute", "variants__attribute_values__option"
+                "media_items",
+                "stock_items",
+                "variants__stock_items",
+                "variants__attribute_values__attribute",
+                "variants__attribute_values__option",
             )
         )
         category_groups = self._build_store_category_tree(products)
@@ -646,8 +925,11 @@ class CategoryPageView(StorefrontBaseMixin, TemplateView):
         products, other_location_msg, other_location_url = self.apply_location_filter(
             products, location_payload, ignore_location=ignore_location, is_store_qs=False
         )
+
         brand_ids = self.request.GET.getlist("brand_id")
         color_ids = self.request.GET.getlist("color_id")
+        storage_values = [value.strip() for value in self.request.GET.getlist("storage") if value.strip()]
+        ram_values = [value.strip() for value in self.request.GET.getlist("ram") if value.strip()]
         in_stock_only = self.request.GET.get("in_stock", "").strip() in {"1", "true", "yes", "on"}
         min_price_raw = self.request.GET.get("min_price")
         max_price_raw = self.request.GET.get("max_price")
@@ -657,8 +939,11 @@ class CategoryPageView(StorefrontBaseMixin, TemplateView):
         if brand_ids:
             products = products.filter(brand_id__in=brand_ids)
         if color_ids:
-            products = products.filter(variants__attribute_values__option_id__in=color_ids).distinct()
-        available_count = products.filter(stock_items__on_hand_quantity__gt=0).distinct().count()
+            products = self.filter_color_options(products, color_ids)
+        products = self.filter_variant_options(products, storage_values, ram_values)
+        filter_products = products
+        available_products = list(products.filter(stock_items__on_hand_quantity__gt=0).distinct())
+        available_count = len(self.deduplicate_catalogue_products(available_products))
         products = self.apply_stock_filter(products, in_stock_only=in_stock_only)
 
         if min_price is not None:
@@ -673,21 +958,29 @@ class CategoryPageView(StorefrontBaseMixin, TemplateView):
         elif sort_by == "newest":
             products = products.order_by("-created_at")
 
+        # Each store has its own offer row, but a category page should not show
+        # the same device twice. Keep the first row after the requested sorting.
+        products = self.deduplicate_catalogue_products(list(products))
+
         context["selected_category_ids"] = [str(category.id)]  # CategoryPageView implies the category is selected
         context["selected_brand_ids"] = brand_ids
         context["selected_color_ids"] = color_ids
         context["in_stock_only"] = in_stock_only
         context["in_stock_count"] = available_count
-        context["all_brands"] = self.get_available_brands(products, selected_ids=brand_ids)
-        context["all_categories"] = self.get_available_categories(products, selected_ids=context["selected_category_ids"])
-        context["all_colors"] = self.get_available_colors(products, selected_ids=color_ids)
+        context["all_brands"] = self.get_available_brands(filter_products, selected_ids=brand_ids)
+        context["all_categories"] = self.get_available_categories(filter_products, selected_ids=context["selected_category_ids"])
+        context["all_colors"] = self.get_available_colors(filter_products, selected_ids=color_ids)
+        context["all_storage"] = self.get_available_variant_options(filter_products, ("storage", "internal-storage"), "storage")
+        context["all_ram"] = self.get_available_variant_options(filter_products, ("ram",), "ram")
+        context["selected_storage_values"] = storage_values
+        context["selected_ram_values"] = ram_values
         context["min_price"] = self.normalize_query_value(min_price_raw, default="")
         context["max_price"] = self.normalize_query_value(max_price_raw, default="")
         context["sort_by"] = sort_by
-        context["products_count"] = products.count()
-        price_bounds = products.aggregate(min_price=Min("price"), max_price=Max("price"))
-        context["price_floor"] = price_bounds["min_price"] if price_bounds["min_price"] is not None else Decimal("0.00")
-        context["price_ceiling"] = price_bounds["max_price"] if price_bounds["max_price"] is not None else Decimal("0.00")
+        context["products_count"] = len(products)
+        prices = [product.price for product in products if product.price is not None]
+        context["price_floor"] = min(prices) if prices else Decimal("0.00")
+        context["price_ceiling"] = max(prices) if prices else Decimal("0.00")
 
         context.update(
             {
@@ -715,6 +1008,8 @@ class ProductListingPageView(StorefrontBaseMixin, TemplateView):
         category_ids = self.request.GET.getlist("category_id")
         brand_ids = self.request.GET.getlist("brand_id")
         color_ids = self.request.GET.getlist("color_id")
+        storage_values = [value.strip() for value in self.request.GET.getlist("storage") if value.strip()]
+        ram_values = [value.strip() for value in self.request.GET.getlist("ram") if value.strip()]
         in_stock_only = self.request.GET.get("in_stock", "").strip() in {"1", "true", "yes", "on"}
         min_price_raw = self.request.GET.get("min_price")
         max_price_raw = self.request.GET.get("max_price")
@@ -723,7 +1018,10 @@ class ProductListingPageView(StorefrontBaseMixin, TemplateView):
         
         products = APPROVED_PRODUCT_QS.prefetch_related(
             Prefetch("media_items", queryset=ProductMedia.objects.filter(media_type=ProductMedia.TYPE_IMAGE).order_by("sort_order", "-is_primary")),
-            "variants",
+            "stock_items",
+            "variants__stock_items",
+            "variants__attribute_values__attribute",
+            "variants__attribute_values__option",
         ).order_by("-created_at")
 
         retailer_filter = getattr(self, "retailer_filter", None)
@@ -735,6 +1033,16 @@ class ProductListingPageView(StorefrontBaseMixin, TemplateView):
         products, other_location_msg, other_location_url = self.apply_location_filter(
             products, location_payload, ignore_location=ignore_location, is_store_qs=False
         )
+
+        deals_only = (
+            self.request.resolver_match.url_name == "top-deals"
+            or self.request.GET.get("deals", "").strip().lower() in {"1", "true", "yes", "on"}
+        )
+        if deals_only:
+            # A product is a deal only when its sale price is present and
+            # strictly lower than the regular price. This excludes products
+            # with a blank, equal, or higher discount_price.
+            products = products.filter(discount_price__isnull=False, discount_price__lt=F("price"))
         
         if query:
             products = products.filter(Q(name__icontains=query) | Q(sku__icontains=query) | Q(description__icontains=query))
@@ -748,8 +1056,11 @@ class ProductListingPageView(StorefrontBaseMixin, TemplateView):
         if brand_ids:
             products = products.filter(brand_id__in=brand_ids)
         if color_ids:
-            products = products.filter(variants__attribute_values__option_id__in=color_ids).distinct()
-        available_count = products.filter(stock_items__on_hand_quantity__gt=0).distinct().count()
+            products = self.filter_color_options(products, color_ids)
+        products = self.filter_variant_options(products, storage_values, ram_values)
+        filter_products = products
+        available_products = list(products.filter(stock_items__on_hand_quantity__gt=0).distinct())
+        available_count = len(self.deduplicate_catalogue_products(available_products))
         products = self.apply_stock_filter(products, in_stock_only=in_stock_only)
 
         if min_price is not None:
@@ -771,18 +1082,26 @@ class ProductListingPageView(StorefrontBaseMixin, TemplateView):
             "newest": ("-created_at",),
         }.get(sort_by, ("-created_at",))))
 
-        context["all_categories"] = self.get_available_categories(products, selected_ids=category_ids)
-        context["all_brands"] = self.get_available_brands(products, selected_ids=brand_ids)
-        context["all_colors"] = self.get_available_colors(products, selected_ids=color_ids)
-        price_bounds = products.aggregate(min_price=Min("price"), max_price=Max("price"))
-        context["price_floor"] = price_bounds["min_price"] if price_bounds["min_price"] is not None else Decimal("0.00")
-        context["price_ceiling"] = price_bounds["max_price"] if price_bounds["max_price"] is not None else Decimal("0.00")
+        # The public marketplace aggregates offers from both stores. Render one
+        # model card only; store-specific pages still scope the queryset first.
+        products = self.deduplicate_catalogue_products(list(products))
+
+        context["all_categories"] = self.get_available_categories(filter_products, selected_ids=category_ids)
+        context["all_brands"] = self.get_available_brands(filter_products, selected_ids=brand_ids)
+        context["all_colors"] = self.get_available_colors(filter_products, selected_ids=color_ids)
+        context["all_storage"] = self.get_available_variant_options(filter_products, ("storage", "internal-storage"), "storage")
+        context["all_ram"] = self.get_available_variant_options(filter_products, ("ram",), "ram")
+        context["selected_storage_values"] = storage_values
+        context["selected_ram_values"] = ram_values
+        prices = [product.price for product in products if product.price is not None]
+        context["price_floor"] = min(prices) if prices else Decimal("0.00")
+        context["price_ceiling"] = max(prices) if prices else Decimal("0.00")
         
         context.update(
             {
                 "page_title": "Products",
                 "products": products,
-                "products_count": products.count(),
+                "products_count": len(products),
                 "search_query": query,
                 "selected_category": category_slug,
                 "selected_store": store_slug,
@@ -797,8 +1116,11 @@ class ProductListingPageView(StorefrontBaseMixin, TemplateView):
                 "other_location_msg": other_location_msg,
                 "other_location_url": other_location_url,
                 "store_page": False,
+                "deals_only": deals_only,
             }
         )
+        if deals_only:
+            context["page_title"] = "Top Deals"
         return self.with_delivery_context(context)
 
 
@@ -820,7 +1142,7 @@ class RetailerShopPageView(ProductListingPageView):
                 "retailer": retailer,
                 "page_title": retailer.display_name or retailer.legal_name,
                 "products": products,
-                "products_count": products.count(),
+                "products_count": len(products),
                 "store_page": True,
             }
         )
@@ -848,7 +1170,7 @@ class SellerComparisonPageView(StorefrontBaseMixin, TemplateView):
                         "product": product,
                         "retailer_name": product.store.name,
                         "location": ", ".join(filter(None, [product.store.city, product.store.country_code])),
-                        "price": product.discount_price or product.price,
+                        "price": get_effective_sale_price(product)["price"],
                         "stock": stock["label"],
                         "delivery_estimate": delivery["date_label"],
                         "rating": product.store.rating,
@@ -945,21 +1267,121 @@ from django.contrib.auth import login
 from django.urls import reverse_lazy
 from django.views.generic import CreateView
 from apps.storefront.forms import CustomerRegistrationForm
+from apps.users.models import User, UserSecurityCode
+from apps.users.services import issue_security_code
+from apps.rbac.services import assign_customer_role
+
+class CustomerLoginView(LoginView):
+    template_name = "storefront/login.html"
+
+    def form_valid(self, form):
+        valid, message = verify_captcha(self.request, "customer_login")
+        if not valid:
+            form.add_error(None, message)
+            return self.form_invalid(form)
+        return super().form_valid(form)
+
 
 class CustomerRegisterView(StorefrontBaseMixin, CreateView):
     template_name = "storefront/register.html"
+
     form_class = CustomerRegistrationForm
     success_url = reverse_lazy("storefront:customer-dashboard")
+    pending_user_session_key = "pending_customer_registration_user_id"
+
+    def get_pending_user(self):
+        user_id = self.request.session.get(self.pending_user_session_key)
+        if not user_id:
+            return None
+        return User.objects.filter(
+            pk=user_id,
+            is_active=True,
+            is_email_verified=False,
+        ).first()
+
+    def get_pending_code(self, user):
+        if not user:
+            return None
+        return UserSecurityCode.objects.filter(
+            user=user,
+            purpose=UserSecurityCode.PURPOSE_EMAIL_VERIFICATION,
+            channel=UserSecurityCode.CHANNEL_EMAIL,
+            consumed_at__isnull=True,
+        ).order_by("-created_at").first()
 
     def get_context_data(self, **kwargs):
+        # OTP resend/verification renders this CreateView directly, outside
+        # Django's normal handler that initializes self.object.
+        if not hasattr(self, "object"):
+            self.object = None
         context = super().get_context_data(**kwargs)
-        context.update({"page_title": "Register"})
+        pending_user = self.get_pending_user()
+        pending_code = self.get_pending_code(pending_user)
+        context.update({
+            "page_title": "Verify your email" if pending_user else "Register",
+            "otp_pending": pending_user is not None,
+            "pending_email": pending_user.email if pending_user else "",
+            "otp_expires_at": pending_code.expires_at.isoformat() if pending_code else "",
+        })
         return self.with_delivery_context(context)
 
+    def post(self, request, *args, **kwargs):
+        pending_user = self.get_pending_user()
+        action = request.POST.get("action", "").strip()
+
+        if action in {"verify", "resend"}:
+            if not pending_user:
+                request.session.pop(self.pending_user_session_key, None)
+                return redirect("storefront:register")
+
+            if action == "resend":
+                context = self.get_context_data()
+                try:
+                    with transaction.atomic():
+                        issue_security_code(pending_user, UserSecurityCode.PURPOSE_EMAIL_VERIFICATION)
+                    context = self.get_context_data()
+                    context["otp_message"] = "A fresh verification code has been sent to your email."
+                except Exception:
+                    context["otp_error"] = "We could not send a new code. Please check the email settings and try again."
+                return self.render_to_response(context)
+
+            submitted_code = request.POST.get("otp", "").strip()
+            code_record = self.get_pending_code(pending_user)
+            if not code_record or not code_record.is_valid(submitted_code):
+                context = self.get_context_data()
+                context["otp_error"] = "That code is invalid or expired. Please check your email and try again."
+                return self.render_to_response(context)
+
+            code_record.mark_consumed()
+            pending_user.is_email_verified = True
+            pending_user.save(update_fields=["is_email_verified", "updated_at"])
+            request.session.pop(self.pending_user_session_key, None)
+            login(request, pending_user)
+            context = self.get_context_data()
+            context.update({
+                "otp_pending": False,
+                "verification_complete": True,
+                "verified_name": pending_user.get_full_name() or pending_user.username,
+            })
+            return self.render_to_response(context)
+
+        return super().post(request, *args, **kwargs)
+
     def form_valid(self, form):
-        response = super().form_valid(form)
-        login(self.request, self.object)
-        return response
+        valid, message = verify_captcha(self.request, "customer_register")
+        if not valid:
+            form.add_error(None, message)
+            return self.form_invalid(form)
+        try:
+            with transaction.atomic():
+                self.object = form.save()
+                assign_customer_role(self.object)
+                issue_security_code(self.object, UserSecurityCode.PURPOSE_EMAIL_VERIFICATION)
+        except Exception:
+            form.add_error(None, "We could not send the verification email. Please check the email settings and try again.")
+            return self.form_invalid(form)
+        self.request.session[self.pending_user_session_key] = str(self.object.pk)
+        return redirect("storefront:register")
 
 class CustomerDashboardView(LoginRequiredMixin, StorefrontBaseMixin, TemplateView):
     template_name = "storefront/customer_dashboard.html"
@@ -1285,17 +1707,157 @@ class CustomerSecurityView(LoginRequiredMixin, StorefrontBaseMixin, TemplateView
     template_name = "storefront/account_security.html"
     login_url = reverse_lazy("storefront:login")
 
+    email_change_session_key = "customer_email_change_address"
+    password_change_hash_session_key = "customer_password_change_hash"
+
+    def get_email_change_code(self):
+        return UserSecurityCode.objects.filter(
+            user=self.request.user,
+            purpose=UserSecurityCode.PURPOSE_EMAIL_CHANGE,
+            channel=UserSecurityCode.CHANNEL_EMAIL,
+            consumed_at__isnull=True,
+        ).order_by("-created_at").first()
+
+    def get_password_change_code(self):
+        return UserSecurityCode.objects.filter(
+            user=self.request.user,
+            purpose=UserSecurityCode.PURPOSE_PASSWORD_CHANGE,
+            channel=UserSecurityCode.CHANNEL_EMAIL,
+            consumed_at__isnull=True,
+        ).order_by("-created_at").first()
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context.update({
             "page_title": "Login & Security",
             "profile_form": CustomerProfileForm(instance=self.request.user),
             "password_form": CustomerPasswordChangeForm(self.request.user),
+            "email_change_email": self.request.session.get(self.email_change_session_key, ""),
+            "email_change_code": self.get_email_change_code(),
+            "password_change_code": self.get_password_change_code(),
         })
         return self.with_delivery_context(context)
 
     def post(self, request, *args, **kwargs):
         action = request.POST.get("action")
+        if action in {"request_email_change", "verify_email_change", "resend_email_change"}:
+            pending_email = request.session.get(self.email_change_session_key, "")
+            if action == "request_email_change":
+                new_email = request.POST.get("new_email", "").strip().lower()
+                email_form = forms.EmailField()
+                try:
+                    new_email = email_form.clean(new_email)
+                except forms.ValidationError:
+                    context = self.get_context_data()
+                    context["email_change_error"] = "Please enter a valid email address."
+                    return self.render_to_response(context)
+                if new_email == request.user.email.casefold():
+                    context = self.get_context_data()
+                    context["email_change_error"] = "This is already your current email address."
+                    return self.render_to_response(context)
+                if User.objects.filter(email__iexact=new_email).exclude(pk=request.user.pk).exists():
+                    context = self.get_context_data()
+                    context["email_change_error"] = "An account with this email already exists."
+                    return self.render_to_response(context)
+                try:
+                    with transaction.atomic():
+                        issue_security_code(
+                            request.user,
+                            UserSecurityCode.PURPOSE_EMAIL_CHANGE,
+                            recipient_email=new_email,
+                        )
+                    request.session[self.email_change_session_key] = new_email
+                    request.session.modified = True
+                    messages.success(request, "A verification code has been sent to your new email address.")
+                except Exception:
+                    context = self.get_context_data()
+                    context["email_change_error"] = "We could not send the verification email. Please check your email settings and try again."
+                    return self.render_to_response(context)
+                return redirect("storefront:account-security")
+
+            if not pending_email:
+                return redirect("storefront:account-security")
+            if action == "resend_email_change":
+                try:
+                    issue_security_code(
+                        request.user,
+                        UserSecurityCode.PURPOSE_EMAIL_CHANGE,
+                        recipient_email=pending_email,
+                    )
+                    messages.success(request, "A fresh verification code has been sent to your new email address.")
+                except Exception:
+                    messages.error(request, "We could not send a new code. Please check the email settings and try again.")
+                return redirect("storefront:account-security")
+
+            code = self.get_email_change_code()
+            submitted_code = request.POST.get("email_change_otp", "").strip()
+            if not code or not code.is_valid(submitted_code):
+                context = self.get_context_data()
+                context["email_change_error"] = "That code is invalid or expired. Please check your email and try again."
+                return self.render_to_response(context)
+            if User.objects.filter(email__iexact=pending_email).exclude(pk=request.user.pk).exists():
+                request.session.pop(self.email_change_session_key, None)
+                context = self.get_context_data()
+                context["email_change_error"] = "This email address is no longer available. Please try another email."
+                return self.render_to_response(context)
+            code.mark_consumed()
+            request.user.email = pending_email
+            request.user.is_email_verified = True
+            request.user.save(update_fields=["email", "is_email_verified", "updated_at"])
+            request.session.pop(self.email_change_session_key, None)
+            request.session.modified = True
+            messages.success(request, "Your email address was changed and verified successfully.")
+            return redirect("storefront:account-security")
+        if action in {"request_password_change", "verify_password_change", "resend_password_change"}:
+            pending_hash = request.session.get(self.password_change_hash_session_key, "")
+            if action == "request_password_change":
+                form = CustomerPasswordChangeForm(request.user, request.POST)
+                if not form.is_valid():
+                    context = self.get_context_data()
+                    context["password_form"] = form
+                    return self.render_to_response(context)
+                try:
+                    with transaction.atomic():
+                        issue_security_code(request.user, UserSecurityCode.PURPOSE_PASSWORD_CHANGE)
+                    request.session[self.password_change_hash_session_key] = make_password(form.cleaned_data["new_password1"])
+                    request.session.modified = True
+                    messages.success(request, "A verification code has been sent to your email address.")
+                except Exception:
+                    context = self.get_context_data()
+                    context["password_form"] = form
+                    context["password_change_error"] = "We could not send the verification email. Please check the email settings and try again."
+                    return self.render_to_response(context)
+                return redirect("storefront:account-security")
+
+            if not pending_hash:
+                return redirect("storefront:account-security")
+            if action == "resend_password_change":
+                try:
+                    issue_security_code(request.user, UserSecurityCode.PURPOSE_PASSWORD_CHANGE)
+                    messages.success(request, "A fresh verification code has been sent to your email address.")
+                except Exception:
+                    messages.error(request, "We could not send a new code. Please check the email settings and try again.")
+                return redirect("storefront:account-security")
+
+            code = self.get_password_change_code()
+            submitted_code = request.POST.get("password_change_otp", "").strip()
+            if not code or not code.is_valid(submitted_code):
+                context = self.get_context_data()
+                context["password_change_error"] = "That code is invalid or expired. Please check your email and try again."
+                return self.render_to_response(context)
+            code.mark_consumed()
+            request.user.password = pending_hash
+            request.user.save(update_fields=["password", "updated_at"])
+            request.session.pop(self.password_change_hash_session_key, None)
+            request.session.modified = True
+            update_session_auth_hash(request, request.user)
+            send_notification_event(
+                "password_changed",
+                {"name": request.user.get_full_name() or request.user.username},
+                user=request.user,
+            )
+            messages.success(request, "Your password was changed successfully.")
+            return redirect("storefront:account-security")
         if action == "profile":
             form = CustomerProfileForm(request.POST, instance=request.user)
             if form.is_valid():
@@ -1306,14 +1868,18 @@ class CustomerSecurityView(LoginRequiredMixin, StorefrontBaseMixin, TemplateView
             context["profile_form"] = form
         else:
             form = CustomerPasswordChangeForm(request.user, request.POST)
-            if form.is_valid():
-                user = form.save()
-                update_session_auth_hash(request, user)
-                messages.success(request, "Your password was changed successfully.")
-                return redirect("storefront:account-security")
             context = self.get_context_data()
             context["password_form"] = form
         return self.render_to_response(context)
+
+
+class PagePublicView(StorefrontBaseMixin, TemplateView):
+    template_name = "storefront/page.html"
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["page"] = get_object_or_404(Page, slug=self.kwargs["slug"], is_published=True, is_active=True, deleted_at__isnull=True)
+        return context
 
 
 class ContactPageView(StorefrontBaseMixin, TemplateView):
@@ -1322,7 +1888,9 @@ class ContactPageView(StorefrontBaseMixin, TemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         primary_store = Store.objects.filter(status=Store.STATUS_ACTIVE, is_active=True).order_by("name").first()
-        context.update({"page_title": "Contact", "primary_store": primary_store})
+        policy_pages = Page.objects.filter(slug__in=["privacy-policy", "terms-and-conditions"], is_published=True, is_active=True, deleted_at__isnull=True)
+        policy_by_slug = {item.slug: item for item in policy_pages}
+        context.update({"page_title": "Contact", "primary_store": primary_store, "privacy_page": policy_by_slug.get("privacy-policy"), "terms_page": policy_by_slug.get("terms-and-conditions")})
         return self.with_delivery_context(context)
 
 
@@ -1376,12 +1944,13 @@ class AddToCartView(View):
 
         variant_id = request.POST.get("variant_id")
         variant = None
-        unit_price = float(product.discount_price or product.price)
+        from apps.settings_app.services import get_effective_sale_price
+        unit_price = float(get_effective_sale_price(product)["price"])
         if variant_id:
             from apps.catalog.models import ProductVariant
             variant = ProductVariant.objects.filter(product=product, id=variant_id).first()
             if variant:
-                unit_price = float(variant.discount_price or variant.price)
+                unit_price = float(get_effective_sale_price(product, variant)["price"])
 
         cart = ensure_request_cart(request)
         try:
@@ -1422,12 +1991,13 @@ class BuyNowView(View):
 
         variant_id = request.POST.get("variant_id")
         variant = None
-        unit_price = float(product.discount_price or product.price)
+        from apps.settings_app.services import get_effective_sale_price
+        unit_price = float(get_effective_sale_price(product)["price"])
         if variant_id:
             from apps.catalog.models import ProductVariant
             variant = ProductVariant.objects.filter(product=product, id=variant_id).first()
             if variant:
-                unit_price = float(variant.discount_price or variant.price)
+                unit_price = float(get_effective_sale_price(product, variant)["price"])
 
         request.session["cart"] = {
             cart_session_key(product, variant): {
@@ -1627,7 +2197,9 @@ class LiveSearchView(StorefrontBaseMixin, View):
                 Q(variants__attribute_values__option__value__icontains=word) |
                 Q(variants__attribute_values__value__icontains=word)
             )
-        products = qs.distinct()[:5]
+        # The top search is purchase-oriented, so unavailable products/variants
+        # must not appear in its dropdown.
+        products = self.prioritize_available_products(qs.distinct(), "-created_at")[:8]
         
         results = []
         for p in products:
@@ -1639,7 +2211,12 @@ class LiveSearchView(StorefrontBaseMixin, View):
             has_variants = any(v.name and v.name.lower() != "default variant" for v in variants)
             
             if has_variants:
-                real_variants = [v for v in variants if v.name and v.name.lower() != "default variant" and v.available_qty > 0]
+                real_variants = [
+                    v for v in variants
+                    if v.name
+                    and v.name.lower() != "default variant"
+                    and v.available_qty > 0
+                ]
                 
                 # Check if the product name/brand/category directly matches the full query
                 product_matched = (q.lower() in p.name.lower()) or (p.brand and q.lower() in p.brand.name.lower()) or (p.category and q.lower() in p.category.name.lower())
@@ -1662,22 +2239,28 @@ class LiveSearchView(StorefrontBaseMixin, View):
                         real_variants = filtered_variants
                 
                 for v in real_variants:
+                    effective_variant_price = get_effective_sale_price(p, v)
                     results.append({
                         "id": f"{p.id}-{v.id}",
                         "name": f"{p.name} - {v.name}",
-                        "price": str(v.discount_price or v.price),
+                        "price": str(effective_variant_price["price"]),
                         "image_url": image_url,
                         "variants": "",
+                        "stock": v.available_qty,
+                        "stock_label": "In Stock" if v.available_qty > 0 else "Out of Stock",
                         "url": reverse("catalog:product-detail", kwargs={"slug": p.slug}) + f"?variant={v.id}"
                     })
             else:
                 if p.available_qty > 0:
+                    effective_product_price = get_effective_sale_price(p)
                     results.append({
                         "id": str(p.id),
                         "name": p.name,
-                        "price": str(p.discount_price or p.price),
+                        "price": str(effective_product_price["price"]),
                         "image_url": image_url,
                         "variants": "",
+                        "stock": p.available_qty,
+                        "stock_label": "In Stock",
                         "url": reverse("catalog:product-detail", kwargs={"slug": p.slug})
                     })
         
@@ -1691,7 +2274,91 @@ class SetLocationView(View):
             from apps.inventory.delivery import clear_request_location
             clear_request_location(request)
             return JsonResponse({"status": "cleared"})
-            
+
+        if request.GET.get("reverse") == "1":
+            latitude = request.GET.get("latitude", "").strip()
+            longitude = request.GET.get("longitude", "").strip()
+            try:
+                lat = float(latitude)
+                lon = float(longitude)
+                if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+                    raise ValueError
+            except (TypeError, ValueError):
+                return JsonResponse({"status": "error", "message": "Invalid coordinates."}, status=400)
+
+            matched_label = resolve_geolocation_label(latitude, longitude)
+            coverage_pincode = ""
+            if matched_label and matched_label != "Detected location":
+                possible_pincode = str(matched_label).strip()
+                if possible_pincode.isdigit() and len(possible_pincode) == 6:
+                    coverage_pincode = possible_pincode
+
+            # Reverse-geocode server-side. This avoids browser CORS/rate-limit
+            # failures on production hosts while keeping the provider's
+            # required identifying User-Agent header in one place.
+            try:
+                query = f"https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1&lat={lat}&lon={lon}"
+                response = urlopen(
+                    UrlRequest(query, headers={"User-Agent": "Nuboxed storefront location lookup/1.0"}),
+                    timeout=8,
+                )
+                data = json.loads(response.read().decode("utf-8"))
+            except (HTTPError, URLError, TimeoutError, ValueError, json.JSONDecodeError):
+                if coverage_pincode:
+                    return JsonResponse({
+                        "status": "success",
+                        "pincode": coverage_pincode,
+                        "city": "",
+                        "latitude": str(lat),
+                        "longitude": str(lon),
+                    })
+                return JsonResponse({"status": "error", "message": "Location lookup is temporarily unavailable."}, status=502)
+
+            address = data.get("address") or {}
+            pincode = str(address.get("postcode") or "").strip()
+            city = str(
+                address.get("city")
+                or address.get("town")
+                or address.get("municipality")
+                or address.get("village")
+                or address.get("suburb")
+                or ""
+            ).strip()
+
+            # Some Indian map records do not include a postcode even when
+            # the coordinates are inside one of the retailer's configured
+            # delivery areas. Use the same saved-location coverage logic as
+            # manual pincode delivery filtering as a reliable fallback.
+            if not pincode:
+                pincode = coverage_pincode
+
+            # Keep live-location labels identical to the manual pincode and
+            # page-refresh flow: prefer the first post-office area name from
+            # the Postal Pincode service over the broader map city label.
+            if pincode:
+                try:
+                    postal_url = f"https://api.postalpincode.in/pincode/{quote_plus(pincode)}"
+                    postal_response = urlopen(
+                        UrlRequest(postal_url, headers={"User-Agent": "Nuboxed storefront location lookup/1.0"}),
+                        timeout=6,
+                    )
+                    postal_data = json.loads(postal_response.read().decode("utf-8"))
+                    post_offices = postal_data[0].get("PostOffice") if postal_data else None
+                    if postal_data and postal_data[0].get("Status") == "Success" and post_offices:
+                        city = str(post_offices[0].get("Name") or post_offices[0].get("District") or city).strip()
+                except (HTTPError, URLError, TimeoutError, ValueError, json.JSONDecodeError, IndexError, AttributeError, TypeError):
+                    # Keep the map/coverage label if the postal provider is
+                    # temporarily unavailable; the pincode remains valid.
+                    pass
+
+            return JsonResponse({
+                "status": "success",
+                "pincode": pincode,
+                "city": city,
+                "latitude": str(lat),
+                "longitude": str(lon),
+            })
+
         pincode = request.GET.get("pincode", "")
         latitude = request.GET.get("latitude")
         longitude = request.GET.get("longitude")
@@ -1711,9 +2378,10 @@ class ComparePageView(StorefrontBaseMixin, TemplateView):
         
         product_data = []
         for p in products:
+            effective_price = get_effective_sale_price(p)
             product_data.append({
                 "product": p,
-                "price": p.discount_price or p.price,
+                "price": effective_price["price"],
                 "stock": self.get_stock_snapshot(p),
                 "delivery": self.get_delivery_estimate(p, location_payload=self.get_delivery_payload())
             })

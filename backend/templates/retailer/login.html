@@ -252,6 +252,7 @@
                 {% endif %}
             </div>
 
+            {% include "shared/captcha_widget.html" with captcha=captcha_retailer_login %}
             <button type="submit" class="btn-submit">
                 <span>Sign In to Dashboard</span>
                 <i class="ph ph-arrow-right"></i>

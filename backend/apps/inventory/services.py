@@ -15,6 +15,30 @@ from apps.inventory.models import (
     StockReservation,
     Warehouse,
 )
+from apps.settings_app.models import Setting
+
+
+OFFLINE_SALES_SETTING_PREFIX = "retailer.offline_sales."
+
+
+def offline_sales_setting_key(retailer_or_id):
+    return f"{OFFLINE_SALES_SETTING_PREFIX}{getattr(retailer_or_id, 'pk', retailer_or_id)}"
+
+
+def offline_sales_enabled(retailer):
+    """Return the retailer's switch value; enabled is the safe default for legacy retailers."""
+    setting = Setting.objects.filter(key=offline_sales_setting_key(retailer)).first()
+    return bool((setting.value or {}).get("enabled", True)) if setting else True
+
+
+def set_offline_sales_enabled(retailer, enabled, actor=None):
+    setting, _ = Setting.objects.get_or_create(
+        key=offline_sales_setting_key(retailer),
+        defaults={"value": {"enabled": bool(enabled)}},
+    )
+    setting.value = {**(setting.value or {}), "enabled": bool(enabled), "updated_by": str(getattr(actor, "pk", ""))}
+    setting.save(update_fields=["value", "updated_at"])
+    return setting
 
 
 def canonical_stock_items(queryset=None):
@@ -163,6 +187,8 @@ def manual_stock_adjustment(*, warehouse, product, variant=None, quantity, adjus
         actor=actor,
     )
     _refresh_low_stock_alert(stock_item)
+    from apps.marketplace.services import enqueue_product_stock_sync
+    enqueue_product_stock_sync(product, variant)
     return adjustment
 
 
@@ -262,6 +288,9 @@ def consume_reserved_stock_for_order(order):
         _refresh_low_stock_alert(stock_item)
     order.stock_deducted_at = timezone.now()
     order.save(update_fields=["stock_deducted_at", "updated_at"])
+    from apps.marketplace.services import enqueue_product_stock_sync
+    for item in order.items.select_related("product", "variant"):
+        enqueue_product_stock_sync(item.product, item.variant)
     return order
 
 
@@ -317,11 +346,14 @@ def restore_stock_for_cancelled_order(order):
         _refresh_low_stock_alert(stock_item)
     order.stock_restored_at = timezone.now()
     order.save(update_fields=["stock_restored_at", "updated_at"])
+    from apps.marketplace.services import enqueue_product_stock_sync
+    for item in order.items.select_related("product", "variant"):
+        enqueue_product_stock_sync(item.product, item.variant)
     return order
 
 
 @transaction.atomic
-def create_offline_sale(*, warehouse, store, product, variant=None, quantity, unit_price=Decimal("0"), sold_at=None, note="", actor=None):
+def create_offline_sale(*, warehouse, store, product, variant=None, delivery_location=None, selected_pincode="", quantity, unit_price=Decimal("0"), sold_at=None, note="", actor=None):
     if quantity <= 0:
         raise ValueError("Quantity must be greater than zero.")
     if product.variants.exists() and variant is None:
@@ -354,6 +386,8 @@ def create_offline_sale(*, warehouse, store, product, variant=None, quantity, un
         store=store,
         product=product,
         variant=variant,
+        delivery_location=delivery_location,
+        selected_pincode=selected_pincode,
         quantity=quantity,
         unit_price=unit_price,
         total_amount=unit_price * quantity,
@@ -382,6 +416,35 @@ def create_offline_sale(*, warehouse, store, product, variant=None, quantity, un
     )
 
     build_fulfillment_for_offline_sale(sale, actor=actor)
+    return sale
+
+
+@transaction.atomic
+def set_offline_sale_active(sale, active, actor=None):
+    """Trash/restore an offline sale while keeping stock and the ledger balanced."""
+    if sale.is_active == active:
+        return sale
+    stock_item = StockItem.objects.select_for_update().filter(
+        warehouse=sale.warehouse, product=sale.product, variant=sale.variant
+    ).first()
+    if stock_item is None:
+        raise ValueError("The stock record for this offline sale no longer exists.")
+    if active:
+        if stock_item.available_quantity < sale.quantity:
+            raise ValueError("Insufficient stock to restore this offline sale.")
+        stock_item.on_hand_quantity -= sale.quantity
+        movement = StockLedger.TYPE_OFFLINE_SALE
+        delta = -sale.quantity
+        note = "Offline sale restored"
+    else:
+        stock_item.on_hand_quantity += sale.quantity
+        movement = StockLedger.TYPE_CANCEL_RESTORE
+        delta = sale.quantity
+        note = "Offline sale moved to trash"
+    stock_item.save(update_fields=["on_hand_quantity", "updated_at"])
+    _log_stock_movement(stock_item=stock_item, movement_type=movement, quantity_delta=delta, reference_type="offline_sale", reference_id=sale.id, note=note, actor=actor)
+    sale.is_active = active
+    sale.save(update_fields=["is_active", "updated_at"])
     return sale
 
 

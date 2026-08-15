@@ -1,0 +1,36 @@
+{% extends "backoffice/base.html" %}
+{% block content %}
+<style>
+  .svd-create-field input:not([type=checkbox]) { width:100%; box-sizing:border-box; border:1px solid #dbe3ee; border-radius:10px; padding:11px 12px; font:inherit; }
+  .svd-check-pair { grid-column:1/-1; display:flex; gap:14px; flex-wrap:wrap; padding-top:4px; }
+  .svd-check-card { flex:1 1 260px; display:flex; align-items:center; gap:12px; padding:14px 16px; border:1px solid #dbe3ee; border-radius:12px; background:#f8fafc; color:#334155; font-weight:700; }
+  .svd-check-card input { width:20px; height:20px; accent-color:#ee4b27; }
+</style>
+<div style="max-width:900px;margin:28px auto;padding:24px;background:#fff;border:1px solid #e5eaf2;border-radius:16px;box-shadow:0 8px 28px rgba(30,55,90,.06)">
+  <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e8edf4;padding-bottom:18px;margin-bottom:22px">
+    <div><h1 style="margin:0;font-size:24px">Add New Verification Field</h1><p style="margin:7px 0 0;color:#718096">Create a new file uploader for retailer registration and profile forms.</p></div>
+    <i class="fa-solid fa-file-circle-plus" style="font-size:34px;color:#ee4b27"></i>
+  </div>
+  <form method="post" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px">
+    {% csrf_token %}
+    {% for field in form %}
+      {% if field.name != 'is_visible' and field.name != 'is_required' %}
+      <div class="svd-create-field" style="{% if field.name == 'description' %}grid-column:1/-1;{% endif %}">
+        <label for="{{ field.id_for_label }}" style="display:block;font-size:12px;font-weight:700;color:#64748b;margin-bottom:7px;text-transform:uppercase">{{ field.label }}</label>
+        {{ field }}{% if field.help_text %}<small style="display:block;color:#94a3b8;margin-top:5px">{{ field.help_text }}</small>{% endif %}
+        {% for error in field.errors %}<div style="color:#dc2626;font-size:12px;margin-top:5px">{{ error }}</div>{% endfor %}
+      </div>
+      {% endif %}
+    {% endfor %}
+    <div class="svd-check-pair">
+      <label class="svd-check-card" for="id_is_visible">{{ form.is_visible }} <span><strong>Visible</strong><small style="display:block;color:#94a3b8;font-weight:500">Show this uploader on retailer forms</small></span></label>
+      <label class="svd-check-card" for="id_is_required">{{ form.is_required }} <span><strong>Required</strong><small style="display:block;color:#94a3b8;font-weight:500">Require this document during onboarding</small></span></label>
+    </div>
+    <div style="grid-column:1/-1;display:flex;justify-content:flex-end;gap:10px;border-top:1px solid #e8edf4;padding-top:20px">
+      <a href="{% url 'backoffice:seller-verification-documents' %}" style="padding:11px 18px;border:1px solid #dbe3ee;border-radius:9px;text-decoration:none;color:#334155">Cancel</a>
+      <button type="submit" style="padding:11px 20px;border:0;border-radius:9px;background:#ee4b27;color:#fff;font-weight:700">Create field</button>
+    </div>
+  </form>
+</div>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+{% endblock %}
