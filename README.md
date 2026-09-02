@@ -1,6 +1,14 @@
 # Nuboxed
 
 <p align="center">
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/python/python-original.svg" width="140" alt="Python Logo" />
+</p>
+
+<p align="center">
+  <img src="./media/logos/nuboxed-logo.webp" width="220" alt="Nuboxed Logo" />
+</p>
+
+<p align="center">
   Europe-focused multi-retailer ecommerce marketplace platform built with Django and Django REST Framework.
 </p>
 
