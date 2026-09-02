@@ -40,3 +40,4 @@ See [backend/README.md](/usr/local/var/www/Nuboxed/backend/README.md:1) for setu
 
 Phase 1 is the platform foundation: environment setup, project bootstrap, authentication, RBAC, catalog primitives, tenant boundaries, and API standards.
 # nuboxed
+# webshop
